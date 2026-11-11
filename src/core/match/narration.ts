@@ -1,0 +1,67 @@
+/** Frases da narração. Placeholders: {p} jogador, {d} defensor, {g} goleiro, {a} assistente, {o} quem sai, {t} time, {std} estádio, {x} extra. */
+export const NARR: Record<string, string[]> = {
+  kick: ['Rola a bola!', 'Bola rolando no {std}!', 'Começa o jogo!'],
+  prog1: ['{p} sai jogando com calma.', '{p} toca curto na saída.', '{p} arrisca o lançamento.'],
+  prog2: [
+    '{p} encontra espaço no meio.',
+    '{p} gira e acha o passe.',
+    'Bela triangulação, {p} avança.',
+    '{p} conduz pelo meio-campo.',
+  ],
+  prog3: [
+    '{p} invade a área!',
+    '{p} chega na linha de fundo!',
+    'Lindo passe de {p} em profundidade!',
+    '{p} costura a marcação!',
+  ],
+  tack: [
+    '{d} desarma {p}.',
+    'Boa chegada de {d}, rouba a bola.',
+    '{d} intercepta o passe.',
+    '{d} corta, perigo afastado.',
+  ],
+  lose: ['{p} erra o passe.', '{p} perde a bola no meio.', 'Passe longo demais de {p}.'],
+  saida_err: ['Erro na saída de bola! {d} rouba perto da área!', '{p} entrega nos pés de {d}!'],
+  shot_off: [
+    '{p} finaliza... para fora!',
+    '{p} bate por cima do gol!',
+    '{p} chuta e a bola tira tinta da trave!',
+    'Pancada de {p}, longe do gol.',
+  ],
+  shot_blk: ['{p} chuta e a zaga bloqueia!', 'Chute de {p} travado por {d}.'],
+  save: [
+    '{p} finaliza e {g} defende!',
+    'Que defesa de {g}! Chute de {p}!',
+    '{g} espalma o chute de {p}!',
+    '{p} cabeceia e {g} segura firme.',
+  ],
+  long: ['{p} arrisca de longe!', '{p} solta a bomba de fora da área!'],
+  head: ['Cruzamento na área... {p} sobe para cabecear!', '{a} cruza e {p} testa!'],
+  thru: ['{a} enfia para {p}, que fica cara a cara!', '{p} sai na cara do gol!'],
+  drib: ['{p} dribla um, dribla dois e bate!', '{p} limpa a marcação e chuta!'],
+  goal: [
+    'GOOOOOOL! {p} balança a rede!',
+    'É GOL! {p} não perdoa!',
+    'GOOOOL do {t}! {p} manda pro fundo da rede!',
+    'GOLAÇO! {p} marca!',
+  ],
+  corner: ['Escanteio para o {t}.', 'A bola sai, escanteio.'],
+  cornhead: ['Escanteio cobrado... {p} sobe mais alto!'],
+  foul: ['Falta de {d} em {p}.', '{d} chega atrasado e derruba {p}.', 'Falta dura de {d}.'],
+  yel: ['Cartão amarelo para {d}.', '{d} recebe o amarelo.'],
+  red: ['CARTÃO VERMELHO! {d} está expulso!', 'Segundo amarelo, {d} vai mais cedo para o chuveiro!'],
+  pen: ['PÊNALTI! {d} derruba {p} dentro da área!'],
+  penkick: ['{p} vai para a cobrança...'],
+  fk: ['Falta perigosa! {p} cobra direto...'],
+  off: ['Impedimento de {p}.', 'Bandeira levantada, {p} estava impedido.'],
+  inj: ['{p} sente a lesão e pede atendimento.', '{p} cai sentindo dores. Parece sério.'],
+  sub: ['Substituição no {t}: sai {o}, entra {p}.'],
+  counter: ['Contra-ataque do {t}!', 'Saída rápida em velocidade!'],
+  ht: ['Fim do primeiro tempo.'],
+  ft: ['Fim de jogo!'],
+  st2: ['Começa o segundo tempo!'],
+  tac: ['{t} muda a postura: {x}.'],
+};
+
+export const fmt = (s: string, o: Record<string, string>): string =>
+  s.replace(/\{(\w)\w*\}/g, (m, k: string) => (o[k] !== undefined ? o[k] : m));

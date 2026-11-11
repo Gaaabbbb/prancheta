@@ -1,0 +1,23 @@
+/* Extraído do Prancheta.html original. */
+:root {
+  --ink: #0e1828;
+  --ink2: #0a1220;
+  --panel: #15233a;
+  --panel2: #1b2c48;
+  --line: #2a3d5d;
+  --line2: #22344f;
+  --chalk: #edeae0;
+  --muted: #93a1b8;
+  --dim: #66758e;
+  --yellow: #ffd23f;
+  --yellow2: #e6b91e;
+  --grass: #2e7a4c;
+  --grass2: #29704594;
+  --red: #e5484d;
+  --ok: #4cc38a;
+  --blue: #6fa8ff;
+  --orange: #f59e42;
+  --r: 6px;
+  --fd: 'Saira Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --fb: 'Saira Semi Condensed', 'Saira', system-ui, sans-serif;
+}

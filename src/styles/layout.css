@@ -1,0 +1,97 @@
+/* Extraído do Prancheta.html original. */
+/* shell */
+#app {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 64px 1fr;
+  height: 100vh;
+}
+#top {
+  grid-column: 1/3;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 18px;
+  background: var(--ink2);
+  border-bottom: 1px solid var(--line2);
+}
+#top .club {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+#top .club h1 {
+  font-size: 26px;
+  line-height: 1;
+  white-space: nowrap;
+}
+#top .status {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+#top .status b {
+  color: var(--chalk);
+  font-weight: 600;
+}
+#top .spacer {
+  flex: 1;
+}
+#top .next {
+  text-align: right;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.25;
+}
+#top .next b {
+  color: var(--chalk);
+  font-weight: 600;
+}
+#nav {
+  background: var(--ink2);
+  border-right: 1px solid var(--line2);
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+#nav button {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  padding: 9px 18px;
+  font-family: var(--fd);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--muted);
+  border-left: 3px solid transparent;
+}
+#nav button:hover {
+  color: var(--chalk);
+  background: #ffffff08;
+}
+#nav button.on {
+  color: var(--chalk);
+  border-left-color: var(--yellow);
+  background: #ffd23f0d;
+}
+#nav button:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: -2px;
+}
+#nav .sep {
+  height: 1px;
+  background: var(--line2);
+  margin: 8px 14px;
+}
+#nav .foot {
+  margin-top: auto;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: var(--dim);
+}
+#main {
+  overflow: auto;
+  padding: 20px 24px 40px;
+}

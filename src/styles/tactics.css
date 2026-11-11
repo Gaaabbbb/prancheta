@@ -1,0 +1,87 @@
+/* Extraído do Prancheta.html original. */
+/* prancheta (tática) */
+.board {
+  position: relative;
+  aspect-ratio: 68/80;
+  width: 100%;
+  max-width: calc((100vh - 170px) * 0.85);
+  background: repeating-linear-gradient(180deg, #2e7a4c 0 10%, #2a7146 10% 20%);
+  border-radius: 8px;
+  border: 2px solid #ffffff22;
+  overflow: hidden;
+  margin: 0 auto;
+}
+.board .ln {
+  position: absolute;
+  border: 2px solid #ffffff55;
+}
+.tok {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 92px;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+.tok .sh {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  margin: 0 auto 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--fd);
+  font-weight: 800;
+  font-size: 16px;
+  border: 3px solid;
+  box-shadow: 0 2px 6px #0006;
+}
+.tok .nm {
+  font-size: 12px;
+  font-weight: 600;
+  background: #0e1828cc;
+  border-radius: 3px;
+  padding: 1px 4px;
+  display: inline-block;
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tok .rl {
+  font-size: 10px;
+  color: #ffffffaa;
+  display: block;
+}
+.tok.sel .sh {
+  outline: 3px solid var(--yellow);
+  outline-offset: 2px;
+}
+.tok.empty .sh {
+  background: #00000055;
+  border-style: dashed;
+  color: #fff8;
+}
+.tok .fit {
+  height: 3px;
+  width: 38px;
+  margin: 2px auto 0;
+  background: #0005;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.tok .fit i {
+  display: block;
+  height: 100%;
+}
+.ctl {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px 12px;
+  align-items: center;
+  font-size: 13px;
+}
+.ctl label {
+  color: var(--muted);
+}

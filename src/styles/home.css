@@ -1,0 +1,59 @@
+/* Extraído do Prancheta.html original. */
+/* início */
+.nextmatch {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 16px;
+  padding: 8px 0;
+}
+.nextmatch .tm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  font-family: var(--fd);
+  font-size: 20px;
+  font-weight: 700;
+}
+.nextmatch .vs {
+  font-family: var(--fd);
+  font-size: 15px;
+  color: var(--muted);
+  text-align: center;
+}
+.news {
+  display: flex;
+  flex-direction: column;
+}
+.news .it {
+  padding: 9px 0;
+  border-bottom: 1px solid #ffffff0a;
+}
+.news .it:last-child {
+  border-bottom: 0;
+}
+.news .it b {
+  display: block;
+  font-weight: 600;
+}
+.news .it span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.news .it .when {
+  float: right;
+  color: var(--dim);
+  font-size: 12px;
+}
+.meter {
+  height: 10px;
+  border-radius: 5px;
+  background: #ffffff12;
+  overflow: hidden;
+}
+.meter i {
+  display: block;
+  height: 100%;
+}

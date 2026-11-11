@@ -1,0 +1,102 @@
+/* Extraído do Prancheta.html original. */
+/* botões */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--chalk);
+  padding: 7px 14px;
+  border-radius: var(--r);
+  font-weight: 600;
+  font-size: 14px;
+}
+.btn:hover {
+  border-color: var(--muted);
+}
+.btn.pri {
+  background: var(--yellow);
+  border-color: var(--yellow);
+  color: #1a1400;
+}
+.btn.pri:hover {
+  background: #ffdc66;
+}
+.btn.big {
+  font-family: var(--fd);
+  font-size: 20px;
+  padding: 8px 22px;
+  letter-spacing: 0.02em;
+}
+.btn.sm {
+  padding: 4px 9px;
+  font-size: 13px;
+}
+.btn.ghost {
+  background: transparent;
+}
+.btn.danger {
+  border-color: #e5484d88;
+  color: #ffb3b5;
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  padding: 6px 11px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  border-right: 1px solid var(--line);
+}
+.seg button:last-child {
+  border-right: 0;
+}
+.seg button.on {
+  background: var(--yellow);
+  color: #1a1400;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.tabs button {
+  all: unset;
+  cursor: pointer;
+  padding: 8px 14px;
+  font-family: var(--fd);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabs button.on {
+  color: var(--chalk);
+  border-bottom-color: var(--yellow);
+}
+select,
+input[type='text'],
+input[type='number'],
+textarea {
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 6px 9px;
+}
+input[type='range'] {
+  accent-color: var(--yellow);
+}
