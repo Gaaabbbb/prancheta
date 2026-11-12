@@ -50,6 +50,12 @@ export const table = (W: World, comp: Competition, si: number, gi: number): Tabl
 export const tieResult = (comp: Competition, tie: Tie, seedDecides: boolean): number | null => {
   const f1 = comp.fx[tie.f[0]],
     f2 = comp.fx[tie.f[1]];
+  // jogo único: quem fez mais gols, ou os pênaltis
+  if (tie.f[0] === tie.f[1]) {
+    if (!f1.pl) return null;
+    if (f1.hg! !== f1.ag!) return f1.hg! > f1.ag! ? f1.h : f1.a;
+    return (f1.hp ?? 0) > (f1.ap ?? 0) ? f1.h : f1.a;
+  }
   if (!f1.pl || !f2.pl) return null;
   const ga = f1.hg! + f2.ag!,
     gb = f1.ag! + f2.hg!;

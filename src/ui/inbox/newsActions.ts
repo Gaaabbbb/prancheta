@@ -14,6 +14,7 @@ export const NEWS_KIND: Record<string, { label: string; color: string }> = {
   mkt: { label: 'Mercado', color: 'var(--blue)' },
   spon: { label: 'Patrocínio', color: 'var(--yellow2)' },
   info: { label: 'Clube', color: 'var(--muted)' },
+  cup: { label: 'Copa', color: 'var(--ok)' },
 };
 export const newsKind = (k: string) => NEWS_KIND[k] || NEWS_KIND.info;
 
@@ -27,6 +28,8 @@ export interface NewsAction {
   finTab?: FinTab;
   /** aba do Mercado a abrir */
   marketTab?: MarketTab;
+  /** aba de Competições a abrir (id da competição) */
+  tab?: string;
   modal?: ModalSpec;
   primary?: boolean;
 }
@@ -78,6 +81,18 @@ export const newsActions = (W: World, it: NewsItem): NewsAction[] => {
       out.push({ label: 'Ir para a base', done: 'Base vista', go: 'youth', primary: !hasPlayer });
       if (/elenco|Subiram/i.test(it.t + it.b)) out.push({ label: 'Ver elenco', done: 'Elenco visto', go: 'squad' });
       break;
+    case 'cup': {
+      const cid = it.ref?.comp;
+      out.push({
+        label: 'Ver a competição',
+        done: 'Competição vista',
+        go: 'tables',
+        tab: cid && W.comps[cid] ? cid : undefined,
+        primary: true,
+      });
+      out.push({ label: 'Ver jogos', done: 'Jogos vistos', go: 'fixtures' });
+      break;
+    }
     case 'spon':
       out.push({ label: 'Ver patrocínios', done: 'Patrocínios vistos', go: 'finance', finTab: 'spon', primary: true });
       break;
@@ -107,4 +122,5 @@ export const runNewsAction = (it: NewsItem, a: NewsAction): void => {
   if (a.finTab) ui.set({ finTab: a.finTab });
   if (a.marketTab) ui.set({ marketTab: a.marketTab });
   if (a.go) ui.go(a.go);
+  if (a.tab) ui.set({ tab: a.tab, stage: null, stageDiv: null, rday: null });
 };

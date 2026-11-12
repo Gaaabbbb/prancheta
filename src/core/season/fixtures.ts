@@ -111,6 +111,35 @@ export const addLeagueStage = (
   return st;
 };
 
+/** Mata-mata em jogo único: `a` é o mandante (ou o "mandante" de campo neutro). Empate vai para os pênaltis. */
+export const addSingleStage = (
+  comp: Competition,
+  name: string,
+  ties: { a: number; b: number }[],
+  slot: number,
+  opts?: { neutral?: boolean; tag?: string },
+): KOStage => {
+  const st: KOStage = {
+    type: 'ko',
+    name,
+    ties: [],
+    start: slot,
+    end: slot,
+    done: false,
+    seedDecides: false,
+    tag: opts?.tag || '',
+    single: true,
+  };
+  const si = comp.stages.push(st) - 1;
+  ties.forEach((t, ti) => {
+    const f = addFx(comp, slot, t.a, t.b, si, ti, 0);
+    if (opts?.neutral) f.neu = true;
+    st.ties.push({ a: t.a, b: t.b, f: [f.id, f.id], w: null });
+  });
+  comp.si = si;
+  return st;
+};
+
 /** Mata-mata em ida e volta. Em cada confronto, `b` é o melhor cabeça e manda o jogo de volta. */
 export const addKOStage = (
   comp: Competition,

@@ -35,6 +35,8 @@ export const endSeason = (W: World): SeasonReport => {
       .sort((a, b) => b.st.g - a.st.g)[0];
     if (top) rep.scorers[div] = { n: top.n, c: top.c, g: top.st.g };
   }
+  // copas
+  for (const id of ['CDB', 'LIB', 'SULA']) if (W.comps[id]) (rep.cups ||= {})[id] = W.comps[id].res.champ;
   // posição final do usuário
   const user = W.user!;
   const me = W.clubs[user];

@@ -14,12 +14,14 @@ import { dirty } from '../world/squad';
 import { youthReport, youthTick } from '../youth/youth';
 import { advanceComp } from './advance';
 import { advanceForeignLeague, isForeignLeague, quickPlay } from './foreignLeagues';
+import { CUP_ADVANCE, resolveConflicts } from './cups';
 import { compList, dayFixtures, DAYS_START, isDays, restDays, seasonLastDay } from './calendar';
 
 /** Contexto de mata-mata de um jogo (placar da ida, pênaltis). */
 export const koContext = (comp: Competition, f: Fixture): KoContext | null => {
   const st = comp.stages[f.st];
   if (st.type !== 'ko') return null;
+  if (st.single) return { leg: 1, pens: true };
   if (f.leg === 1) return { leg: 1 };
   const tie = st.ties[f.g];
   const f1 = comp.fx[tie.f[0]];
@@ -200,7 +202,10 @@ const playFixtures = (W: World, list: { comp: Competition; f: Fixture }[], userM
 /** Competição terminou? Avança fases (as copas e ligas de fora têm regras próprias, registradas à parte). */
 export const compAdvancers: Record<string, (W: World, comp: Competition) => void> = {};
 const advanceAny = (W: World, comp: Competition) =>
-  (isForeignLeague(comp.id) ? advanceForeignLeague : compAdvancers[comp.id] || advanceComp)(W, comp);
+  (isForeignLeague(comp.id) ? advanceForeignLeague : CUP_ADVANCE[comp.id] || compAdvancers[comp.id] || advanceComp)(
+    W,
+    comp,
+  );
 
 /**
  * Calendário por dias: um dia inteiro. Joga os jogos do dia (de todas as competições), recupera a condição por um dia
@@ -228,7 +233,10 @@ export const advanceDay = (W: World, userMatch?: Match): void => {
   youthTick(W);
   if ((W.day - DAYS_START) % 30 === 0) youthReport(W);
   const comps = compList(W);
+  const stages = comps.reduce((n, c) => n + c.stages.length, 0);
   for (const comp of comps) if (!comp.done) advanceAny(W, comp);
+  // fase nova numa liga pode bater com jogo de copa: adia o da liga
+  if (comps.reduce((n, c) => n + c.stages.length, 0) !== stages) resolveConflicts(W);
   if (comps.every((c) => c.done)) W.seasonDone = true;
   // segurança: sem jogos pela frente ou fim do ano
   if (!W.seasonDone && (W.day >= seasonLastDay(W) || !comps.some((c) => c.fx.some((f) => !f.pl)))) W.seasonDone = true;

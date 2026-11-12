@@ -8,6 +8,7 @@ import { RULES } from '../rules';
 import { DAYS_START, leagueDays } from './calendar';
 import { addLeagueStage } from './fixtures';
 import { buildForeignLeagues } from './foreignLeagues';
+import { buildCopaDoBrasil, resolveConflicts } from './cups';
 
 const byRegion = (W: World) => (a: number, b: number) =>
   REGION_ORDER.indexOf(W.clubs[a].uf) - REGION_ORDER.indexOf(W.clubs[b].uf);
@@ -71,7 +72,11 @@ export const buildSeason = (W: World): void => {
     }
   }
   // calendário por dias: ligas dos clubes sul-americanos (só para definir as vagas nas copas da Conmebol)
-  if (days) buildForeignLeagues(W);
+  if (days) {
+    buildForeignLeagues(W);
+    buildCopaDoBrasil(W);
+    resolveConflicts(W);
+  }
   dirty(W);
   for (const p of W.players) p.sy = ovr(p);
   for (const c of W.clubs) {

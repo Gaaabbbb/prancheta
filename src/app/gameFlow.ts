@@ -58,7 +58,7 @@ export const currentFixture = (): FixtureRef | undefined => {
 };
 
 /** Notícias que fazem o Continuar parar (o resto só aparece na caixa de entrada). */
-const STOP_KINDS = new Set(['mkt', 'spon', 'med', 'apt', 'disc', 'board', 'youth', 'season', 'info']);
+const STOP_KINDS = new Set(['mkt', 'spon', 'med', 'apt', 'disc', 'board', 'youth', 'season', 'info', 'cup']);
 
 /**
  * Calendário por dias: corre os dias até a véspera do próximo jogo do usuário ou até chegar uma notícia que pede

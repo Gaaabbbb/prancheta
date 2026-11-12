@@ -134,6 +134,7 @@ export const closeFinances = (W: World): void => {
     sal: f.sal || 0,
     mul: f.mul || 0,
     tra: f.tra || 0,
+    pre: f.pre || 0,
     bal: c.bal,
   });
   W.finLog = [];

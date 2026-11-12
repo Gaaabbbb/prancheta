@@ -149,6 +149,8 @@ export interface KOStage {
   done: boolean;
   seedDecides: boolean;
   tag: string;
+  /** jogo único (os dois índices de `ties[].f` apontam para o mesmo jogo) */
+  single?: boolean;
 }
 
 export type Stage = LeagueStage | KOStage;
@@ -199,6 +201,7 @@ export interface FinDay {
   /** salários (pagos uma vez por mês) */ sal: number;
   /** multas e rescisões (pagas ou recebidas) */ mul: number;
   /** transferências (compras negativas, vendas positivas) */ tra?: number;
+  /** premiação das copas */ pre?: number;
   /** saldo no fim do dia */
   bal: number;
   /** público e adversário, quando houve jogo em casa */
@@ -216,6 +219,7 @@ export interface FinSeason {
   sal: number;
   mul: number;
   tra?: number;
+  pre?: number;
   bal: number;
 }
 
@@ -312,6 +316,8 @@ export interface SeasonReport {
   prom: Partial<Record<Div, number[]>>;
   rel: Partial<Record<Div, number[]>>;
   scorers: Partial<Record<Div, { n: string; c: number; g: number }>>;
+  /** campeões das copas (Copa do Brasil, Libertadores, Sul-Americana) */
+  cups?: Record<string, number | null>;
   user?: {
     club: number;
     div: Div;
