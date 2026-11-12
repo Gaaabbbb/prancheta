@@ -1,5 +1,31 @@
 import { shuffle } from '../rng';
-import type { Competition, Fixture, KOStage, LeagueStage } from '../types';
+import type { Competition, Fixture, KOStage, LeagueStage, World } from '../types';
+
+/**
+ * Dia de uma rodada (`slot`) da competição. No calendário por rodadas é o próprio número da rodada; no calendário
+ * por dias vem da lista de datas da competição (passando do fim, uma rodada por semana).
+ */
+export const slotDay = (comp: Competition, slot: number): number => {
+  const ds = comp.dates;
+  if (!ds || !ds.length) return slot;
+  if (slot <= ds.length) return ds[slot - 1];
+  return ds[ds.length - 1] + 7 * (slot - ds.length);
+};
+
+/**
+ * Primeira rodada livre para uma fase nova: a seguinte (por rodadas) ou a primeira data da competição com pelo menos
+ * um dia de folga depois de hoje (por dias).
+ */
+export const nextSlot = (W: World, comp: Competition): number => {
+  const ds = comp.dates;
+  if (W.cal !== 'days' || !ds || !ds.length) return W.day + 1;
+  const used = comp.fx.reduce((m, f) => Math.max(m, f.r ?? 0), 0);
+  for (let i = used; i < ds.length; i++) if (ds[i] >= W.day + 2) return i + 1;
+  // acabaram as datas: uma rodada por semana depois da última
+  let slot = Math.max(used, ds.length) + 1;
+  while (slotDay(comp, slot) < W.day + 2) slot++;
+  return slot;
+};
 
 /** Tabela de turno (e returno) pelo método do círculo, alternando mandos. */
 export const roundRobin = (teams: number[], double: boolean): [number, number][][] => {
@@ -46,7 +72,20 @@ export const addFx = (
   g: number,
   leg?: number,
 ): Fixture => {
-  const fx: Fixture = { id: comp.fx.length, d, h, a, hg: null, ag: null, pl: false, st, g, leg: leg || 0 };
+  const fx: Fixture = {
+    id: comp.fx.length,
+    d: slotDay(comp, d),
+    h,
+    a,
+    hg: null,
+    ag: null,
+    pl: false,
+    st,
+    g,
+    leg: leg || 0,
+  };
+  // no calendário por dias guarda a rodada (no por rodadas ela é o próprio `d`)
+  if (comp.dates) fx.r = d;
   comp.fx.push(fx);
   return fx;
 };

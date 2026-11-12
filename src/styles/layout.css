@@ -38,6 +38,25 @@
 #top .spacer {
   flex: 1;
 }
+#top .today {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+#top .today b {
+  font-family: var(--fd);
+  font-size: 22px;
+  color: var(--chalk);
+  margin: 1px 0;
+}
 #top .next {
   text-align: right;
   font-size: 13px;

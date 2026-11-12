@@ -85,12 +85,15 @@ export const youthYearly = (W: World, p: Player): number => {
 
 /** Evolução contínua de quem tem até 21 anos (base e profissional), a cada dia de jogo. */
 export const youthTick = (W: World): void => {
+  // 40 tiques por temporada (rodadas) ou 365 (dias): a evolução anual é a mesma
+  const n = W.cal === 'days' ? 365 : 40;
+  const noise = 0.03 * Math.sqrt(40 / n);
   for (const p of W.players) {
     if (p.c < 0 || p.a > 21) continue;
     const gap = p.pt - ovr(p);
-    p.pk = Math.min(1, (p.pk || 0) + 0.008);
+    p.pk = Math.min(1, (p.pk || 0) + 0.32 / n);
     if (gap <= 0) continue;
-    p.gx = (p.gx || 0) + youthYearly(W, p) / 40 + gauss() * 0.03;
+    p.gx = (p.gx || 0) + youthYearly(W, p) / n + gauss() * noise;
     let k = 0;
     while (p.gx >= 1 && k++ < 3) {
       const o = ovr(p);

@@ -10,11 +10,12 @@ import {
   ensureSponsors,
   ensureMarket,
   EXP_TXT,
+  isDays,
   news,
-  playDay,
   prepareMatch,
   rng,
   simulateUntilUserMatch,
+  stepDay,
   userFixture,
   type FixtureRef,
   type Match,
@@ -56,18 +57,64 @@ export const currentFixture = (): FixtureRef | undefined => {
   return userFixture(W, W.day + 1);
 };
 
-/** Botão "Continuar": abre o pré-jogo ou simula até o próximo jogo do usuário. */
+/** Notícias que fazem o Continuar parar (o resto só aparece na caixa de entrada). */
+const STOP_KINDS = new Set(['mkt', 'spon', 'med', 'apt', 'disc', 'board', 'youth', 'season', 'info']);
+
+/**
+ * Calendário por dias: corre os dias até a véspera do próximo jogo do usuário ou até chegar uma notícia que pede
+ * atenção. Devolve quantos dias passaram e a notícia que fez parar (se houver).
+ */
+const runDays = (W: World, max = 90): { n: number; stop: string | null } => {
+  let n = 0;
+  while (!W.seasonDone && !userFixture(W, W.day + 1) && n < max) {
+    // as notícias novas entram no começo da lista (que tem tamanho máximo)
+    const top = W.news[0];
+    stepDay(W);
+    n++;
+    const at = top ? W.news.indexOf(top) : W.news.length;
+    const fresh = W.news.slice(0, at < 0 ? W.news.length : at);
+    const hit = fresh.find((it) => STOP_KINDS.has(it.k));
+    if (hit) return { n, stop: hit.t };
+  }
+  return { n, stop: null };
+};
+
+/** Botão "Continuar": abre o pré-jogo ou simula até o próximo jogo do usuário (ou um evento). */
 export const continueGame = (): void => {
   const W = game().world;
   if (!W) return;
   ui().closeModal();
   if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
   if (currentFixture()) return ui().openModal({ kind: 'prematch' });
+  if (isDays(W)) {
+    const { n, stop } = runDays(W);
+    game().touch();
+    void game().save();
+    if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
+    const days = n === 1 ? '1 dia' : n + ' dias';
+    toast(
+      stop ? `${days}. Parou por: ${stop}` : currentFixture() ? `${days}. Hoje tem jogo.` : `${days} simulados.`,
+      3500,
+    );
+    return;
+  }
   const n = simulateUntilUserMatch(W, (d) => !!userFixture(W, d));
   game().touch();
   void game().save();
   if (W.seasonDone) ui().openModal({ kind: 'seasonEnd' });
   else toast(n === 1 ? 'Rodada simulada.' : n + ' rodadas simuladas.');
+};
+
+/** Botão "Avançar 1 dia" (calendário por dias). Se hoje tem jogo do usuário, abre o pré-jogo. */
+export const advanceOneDay = (): void => {
+  const W = game().world;
+  if (!W) return;
+  ui().closeModal();
+  if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
+  if (currentFixture()) return ui().openModal({ kind: 'prematch' });
+  game().mutate((W) => stepDay(W));
+  void game().save();
+  if (W.seasonDone) ui().openModal({ kind: 'seasonEnd' });
 };
 
 /** Lesionados e suspensos têm que ser trocados à mão antes do jogo. */
@@ -107,7 +154,7 @@ export const liveMatch = (): void => {
 
 /** Depois do jogo do usuário: joga o resto do dia, salva e mostra a rodada. */
 export const afterUserMatch = (uf: FixtureRef, m: Match): void => {
-  game().mutate((W) => playDay(W, m));
+  game().mutate((W) => stepDay(W, m));
   void game().save();
   ui().openModal({ kind: 'round', comp: uf.comp.id, fid: uf.f.id });
 };

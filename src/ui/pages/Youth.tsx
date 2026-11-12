@@ -120,8 +120,8 @@ export function Youth({ W }: PageProps) {
           <div className="panel">
             <h3>Como funciona</h3>
             <p className="note" style={{ margin: 0 }}>
-              Os garotos evoluem sozinhos a cada rodada, sem jogos da base. Quanto maior a estrutura do clube, mais eles
-              crescem. O potencial aparece como uma faixa que vai ficando mais precisa com o tempo.
+              Os garotos evoluem sozinhos ao longo da temporada, sem jogos da base. Quanto maior a estrutura do clube,
+              mais eles crescem. O potencial aparece como uma faixa que vai ficando mais precisa com o tempo.
             </p>
             <p className="note" style={{ margin: '8px 0 0' }}>
               Você pode subir alguém para o profissional a qualquer momento. No profissional, quem joga evolui mais

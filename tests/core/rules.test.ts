@@ -6,7 +6,8 @@ import {
   CURRENT_RULES,
   expandDb,
   LEGACY_RULES,
-  playDay,
+  stepDay,
+  userFixture,
   recoverFitness,
   rng,
   RULES,
@@ -39,15 +40,17 @@ describe('regras novas', () => {
     const xi = me.lineup!.slice() as number[];
     let sum = 0,
       n = 0;
+    // condição na véspera de cada jogo (calendário por dias: corre os dias até o próximo jogo)
     for (let d = 0; d < 10; d++) {
-      me.lineup = xi.map((id) => (W.pmap[id] && W.pmap[id].inj <= 0 && W.pmap[id].sus <= 0 ? id : null));
-      playDay(W);
+      while (!userFixture(W, W.day + 1)) stepDay(W);
       if (d >= 4)
         for (const id of xi)
           if (W.pmap[id].p !== 'GOL') {
             sum += W.pmap[id].f;
             n++;
           }
+      me.lineup = xi.map((id) => (W.pmap[id] && W.pmap[id].inj <= 0 && W.pmap[id].sus <= 0 ? id : null));
+      stepDay(W);
     }
     expect(sum / n).toBeLessThan(93);
     expect(sum / n).toBeGreaterThan(78);
@@ -62,7 +65,8 @@ describe('regras novas', () => {
     const p = W.pmap[W.clubs[0].bench![0]];
     p.sus = 1;
     W.clubs[0].bench = W.clubs[0].bench!.slice(1);
-    playDay(W);
+    while (!userFixture(W, W.day + 1)) stepDay(W);
+    stepDay(W);
     expect(p.sus).toBe(0);
     expect(W.news.some((n) => n.k === 'apt' && n.ref?.pid === p.id)).toBe(true);
   });

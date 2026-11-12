@@ -20,6 +20,7 @@ import {
   type SponsorDef,
   type SponsorOffer,
   type World,
+  unitTxt,
 } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
@@ -157,7 +158,7 @@ export function SponsorsTab({ W }: { W: World }) {
                   departamento comercial para procurar marcas.
                 </p>
                 <button className="btn pri" disabled={wait > 0} onClick={seek}>
-                  {wait > 0 ? `Nova busca em ${wait} rodada(s)` : 'Procurar patrocinador'}
+                  {wait > 0 ? `Nova busca em ${unitTxt(W, wait)}` : 'Procurar patrocinador'}
                 </button>
               </div>
             );
@@ -220,7 +221,7 @@ export function SponsorsTab({ W }: { W: World }) {
             <small>{sp.offers.length ? `${sp.offers.length} aguardando resposta` : 'nenhuma no momento'}</small>
           </span>
           <button className="btn sm" disabled={wait > 0} onClick={seek}>
-            {wait > 0 ? `Nova busca em ${wait} rodada(s)` : 'Procurar patrocinadores'}
+            {wait > 0 ? `Nova busca em ${unitTxt(W, wait)}` : 'Procurar patrocinadores'}
           </button>
         </h3>
         {sp.offers.length === 0 && (
@@ -270,7 +271,7 @@ export function SponsorsTab({ W }: { W: World }) {
                     </>
                   )}
                   <dt>Responder até</dt>
-                  <dd>{left <= 0 ? 'hoje' : `${left} rodada(s)`}</dd>
+                  <dd>{left <= 0 ? 'hoje' : unitTxt(W, left)}</dd>
                 </dl>
                 <div className="spbtns">
                   <button

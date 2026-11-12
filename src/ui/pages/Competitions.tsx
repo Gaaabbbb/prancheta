@@ -1,4 +1,4 @@
-import { DIVS, type Div } from '@/core';
+import { DIVS, roundOf, type Div } from '@/core';
 import { useUi } from '@/store/uiStore';
 import { DivTabs } from '../components/DivTabs';
 import { LeagueTable, Legend, TieBox } from '../components/Standings';
@@ -6,16 +6,18 @@ import type { PageProps } from './types';
 
 export function Competitions({ W }: PageProps) {
   const { tab, stage, stageDiv, rday, set, openModal } = useUi();
-  const div: Div = tab && (DIVS as readonly string[]).includes(tab) ? tab : W.clubs[W.user!].div;
+  const div: Div = tab && (DIVS as readonly string[]).includes(tab) ? (tab as Div) : W.clubs[W.user!].div;
   const comp = W.comps[div];
   const si = stage != null && stage < comp.stages.length && stageDiv === div ? stage : comp.si;
   const st = comp.stages[si];
   const name = (id: number) => W.clubs[id].n;
 
-  const days = [...new Set(comp.fx.filter((f) => f.st === si).map((f) => f.d))].sort((a, b) => a - b);
-  const rd = rday != null && days.includes(rday) ? rday : days.find((d) => d > W.day) || days[days.length - 1];
+  // rodadas da fase (no calendário por dias, uma rodada pode ter jogos em dias diferentes)
+  const days = [...new Set(comp.fx.filter((f) => f.st === si).map(roundOf))].sort((a, b) => a - b);
+  const nextRd = comp.fx.filter((f) => f.st === si && !f.pl).map(roundOf);
+  const rd = rday != null && days.includes(rday) ? rday : nextRd.length ? Math.min(...nextRd) : days[days.length - 1];
   const di = days.indexOf(rd);
-  const fx = comp.fx.filter((f) => f.st === si && f.d === rd);
+  const fx = comp.fx.filter((f) => f.st === si && roundOf(f) === rd).sort((a, b) => a.d - b.d);
   const scorers = W.players
     .filter((p) => p.c >= 0 && W.clubs[p.c].div === div && p.st.g > 0)
     .sort((a, b) => b.st.g - a.st.g || a.st.j - b.st.j)

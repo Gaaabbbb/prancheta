@@ -1,4 +1,4 @@
-import { evoOutlook, ovr, SEASON_DAYS, type Player, type World } from '@/core';
+import { evoOutlook, ovr, seasonLastDay, unitTxt, type Player, type World } from '@/core';
 
 const signed = (v: number) => (v > 0 ? '+' + v : String(v));
 const range = (lo: number, hi: number) => (lo === hi ? signed(lo) : `${signed(lo)} a ${signed(hi)}`);
@@ -12,14 +12,14 @@ export function EvoBar({ W, p }: { W: World; p: Player }) {
     const pct = Math.round(o.progress * 100);
     title =
       `${pct}% do caminho até o OVR ${now + 1}.` +
-      (o.days != null ? ` No ritmo atual, faltam cerca de ${o.days} rodada(s).` : '') +
+      (o.days != null ? ` No ritmo atual, faltam cerca de ${unitTxt(W, o.days)}.` : '') +
       ` Ritmo: ~${o.perYear.toFixed(1)} ponto(s) por temporada. Jogar mais acelera.`;
   } else if (o.kind === 'ceiling') {
     title = `Chegou ao potencial (${p.pt}). Não evolui mais.`;
   } else {
-    const left = Math.max(0, SEASON_DAYS - W.day);
+    const left = Math.max(0, seasonLastDay(W) - W.day);
     title =
-      `O OVR muda na virada da temporada (faltam ${left} rodada(s)): ${range(o.lo, o.hi)}.` +
+      `O OVR muda na virada da temporada (faltam ${unitTxt(W, left)}): ${range(o.lo, o.hi)}.` +
       (o.bonus
         ? ' Inclui +1 por ter jogado mais de 20 partidas.'
         : p.a + 1 <= 24

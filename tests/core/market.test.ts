@@ -53,7 +53,7 @@ describe('mercado', () => {
     expect(windowState(W).open).toBe(true); // pré-temporada
     const names = new Set<string>();
     let closed = 0;
-    for (let d = 0; d < 40; d++) {
+    for (let d = W.day; d < 360; d += 3) {
       W.day = d;
       const ws = windowState(W);
       const dt = marketDate(W);

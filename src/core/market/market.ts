@@ -9,7 +9,8 @@ import { hash } from '../rng';
 import { RULES } from '../rules';
 import type { Club, IncomingOffer, MarketState, Player, TransferRecord, World } from '../types';
 import { clubLevel, makePlayer } from '../world/factory';
-import { marketDate, windowId, windowState } from './windows';
+import { dayOfYear, DAYS_START, deadlineTxt, isDays, perTick } from '../season/calendar';
+import { marketDate, marketDateAfter, windowId, windowOn, windowState } from './windows';
 import { dirty, removeFromLineups, squad } from '../world/squad';
 
 /** Mínimo de jogadores no elenco profissional para um clube aceitar vender. */
@@ -567,7 +568,9 @@ const aiTransfers = (W: World) => {
   const mk = W.mk!;
   const ai = W.clubs.filter((c) => c.id !== W.user && c.bal > 5e5);
   const free = W.players.filter((p) => p.c < 0 && !p.y);
-  for (let k = rint(mk, 4, 8); k > 0; k--) {
+  // por rodada: 4 a 8 tentativas; por dia: ~0,7 (o mesmo ritmo ao longo da janela)
+  const tries = isDays(W) ? rint(mk, 0, 1) + (rnd(mk) < 0.2 ? 1 : 0) : rint(mk, 4, 8);
+  for (let k = tries; k > 0; k--) {
     if (!ai.length) break;
     const buyer = pickOne(mk, ai);
     const sq = squad(W, buyer.id);
@@ -633,7 +636,8 @@ const aiOffersToUser = (W: World) => {
   };
   const push = (o: Omit<IncomingOffer, 'id' | 'exp'>) => {
     const ws = windowState(W);
-    const off: IncomingOffer = { ...o, id: mk.nextId++, exp: W.day + Math.max(1, Math.min(3, ws.rounds)) };
+    const span = isDays(W) ? Math.max(3, Math.min(10, ws.rounds)) : Math.max(1, Math.min(3, ws.rounds));
+    const off: IncomingOffer = { ...o, id: mk.nextId++, exp: W.day + span };
     mk.offers.push(off);
     busy.add(o.pid);
     const p = W.pmap[o.pid];
@@ -642,7 +646,7 @@ const aiOffersToUser = (W: World) => {
       `Proposta por ${p.n}`,
       o.kind === 'loan'
         ? `O ${W.clubs[o.from].n} quer ${p.n} emprestado e pagaria ${Math.round(o.share * 100)}% do salário.`
-        : `O ${W.clubs[o.from].n} oferece ${brl(o.fee)} por ${p.n}. Responda no Mercado.`,
+        : `O ${W.clubs[o.from].n} oferece ${brl(o.fee)} por ${p.n}. Responda no Mercado até ${deadlineTxt(W, off.exp)}.`,
       'mkt',
       { pid: p.id },
     );
@@ -650,7 +654,7 @@ const aiOffersToUser = (W: World) => {
   // jogadores à venda
   for (const [k, price] of Object.entries(mk.sell)) {
     const p = W.pmap[+k];
-    if (!p || p.c !== me.id || busy.has(p.id) || rnd(mk) > 0.3) continue;
+    if (!p || p.c !== me.id || busy.has(p.id) || rnd(mk) > perTick(W, 0.3)) continue;
     const b = buyerFor(p, 0);
     if (!b) continue;
     const fee = roundMoney(price * (0.8 + rnd(mk) * 0.25));
@@ -661,7 +665,7 @@ const aiOffersToUser = (W: World) => {
   // disponíveis para empréstimo
   for (const pid of mk.loan) {
     const p = W.pmap[pid];
-    if (!p || p.c !== me.id || busy.has(pid) || rnd(mk) > 0.3) continue;
+    if (!p || p.c !== me.id || busy.has(pid) || rnd(mk) > perTick(W, 0.3)) continue;
     const b = buyerFor(p, 0);
     if (!b) continue;
     const sh = roundShare(0.3 + rnd(mk) * 0.6);
@@ -669,7 +673,7 @@ const aiOffersToUser = (W: World) => {
     if (mk.offers.length >= MAX_INCOMING) return;
   }
   // às vezes um clube maior tenta tirar um destaque
-  if (rnd(mk) < 0.05) {
+  if (rnd(mk) < perTick(W, 0.05)) {
     const top = mine
       .sort((a, b) => ovr(b) - ovr(a))
       .slice(0, 6)
@@ -691,8 +695,21 @@ export const marketTick = (W: World): void => {
   if (!ensureMarket(W)) return;
   const mk = W.mk!;
   const me = W.user!;
-  // contratos terminando: avisos no começo da temporada e na reta final
-  if (W.day === 1 || W.day === 30) {
+  // contratos terminando: avisos no começo da temporada e na reta final (rodadas 1 e 30, ou 5/jan e 1º/out)
+  const first = isDays(W) ? W.day === DAYS_START + 1 : W.day === 1;
+  const late = isDays(W) ? W.day === dayOfYear(new Date(W.year, 9, 1)) : W.day === 30;
+  // janela abrindo: aviso na caixa de entrada
+  const nowWin = windowOn(marketDate(W));
+  if (nowWin && W.day > (isDays(W) ? DAYS_START : 0) && windowOn(marketDateAfter(W, W.day - 1))?.id !== nowWin.id) {
+    const end = new Date(W.year, nowWin.to[0], nowWin.to[1]);
+    news(
+      W,
+      'Janela de transferências aberta',
+      `A ${nowWin.name.toLowerCase()} vai até ${end.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}. ${nowWin.note}.`,
+      'mkt',
+    );
+  }
+  if (first || late) {
     const ending = squad(W, me).filter((p) => !p.loan && p.ct <= W.year);
     if (ending.length)
       news(
@@ -701,7 +718,7 @@ export const marketTick = (W: World): void => {
         ending.map((p) => p.n).join(', ') + '. Renove no Mercado ou eles saem de graça no fim da temporada.',
         'mkt',
       );
-    if (W.day === 1)
+    if (first)
       for (const pid of mk.watch) {
         const p = W.pmap[pid];
         if (p && p.c >= 0 && p.c !== me && p.ct <= W.year)

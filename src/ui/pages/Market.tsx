@@ -30,6 +30,10 @@ import {
   type TransferRecord,
   type World,
   leagueName,
+  unitTxt,
+  isDays,
+  fmtDate,
+  dateOf,
 } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { toast, useUi, type MarketTab } from '@/store/uiStore';
@@ -120,8 +124,8 @@ export function Market({ W }: PageProps) {
         <h2>Mercado</h2>
         <span className={`winbadge ${ws.open ? 'open' : ''}`}>
           {ws.open
-            ? `${ws.name} aberta até ${dm(ws.closes!)} · ${ws.rounds} rodada${ws.rounds !== 1 ? 's' : ''}`
-            : `Janela fechada · ${ws.opens ? `${ws.name.toLowerCase()} abre em ${dm(ws.opens)} (daqui a ${ws.rounds} rodada${ws.rounds !== 1 ? 's' : ''})` : '1ª janela abre em 5 de janeiro'}`}
+            ? `${ws.name} aberta até ${dm(ws.closes!)} · ${unitTxt(W, ws.rounds)}`
+            : `Janela fechada · ${ws.opens ? `${ws.name.toLowerCase()} abre em ${dm(ws.opens)} (daqui a ${unitTxt(W, ws.rounds)})` : '1ª janela abre em 5 de janeiro'}`}
         </span>
         <span className="sp" />
         <div className="seg">
@@ -504,7 +508,7 @@ function Offers({ W }: { W: World }) {
                     </>
                   )}
                   <dt>Responder até</dt>
-                  <dd>{o.exp - W.day <= 0 ? 'hoje' : `${o.exp - W.day} rodada(s)`}</dd>
+                  <dd>{o.exp - W.day <= 0 ? 'hoje' : unitTxt(W, o.exp - W.day)}</dd>
                 </dl>
                 {o.kind === 'loan' && !o.haggled && (
                   <div className="feerow sm">
@@ -914,7 +918,7 @@ function Log({ W }: { W: World }) {
               onClick={() => W.pmap[r.pid] && openModal({ kind: 'player', id: r.pid })}
             >
               <td className="num muted">
-                {r.y} · rod. {r.d}
+                {r.y} · {r.y === W.year && isDays(W) ? fmtDate(dateOf(W, r.d)) : 'rod. ' + r.d}
               </td>
               <td className="nm">{r.n}</td>
               <td>

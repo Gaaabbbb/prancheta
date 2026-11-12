@@ -1,6 +1,6 @@
 import { promD, targetC } from '../constants/divisions';
 import type { Competition, KOStage, LeagueStage, World } from '../types';
-import { addKOStage, addLeagueStage } from './fixtures';
+import { addKOStage, addLeagueStage, nextSlot } from './fixtures';
 import { stageDone, table, tieResult } from './table';
 
 /** Quantos clubes caem da Série C (o formato muda até 2028). */
@@ -27,7 +27,7 @@ export const advanceComp = (W: World, comp: Competition): void => {
       st.done = true;
     } else if (st.type === 'league') st.done = true;
   });
-  const next = W.day + 1;
+  const next = nextSlot(W, comp);
   const rows = (gi: number) => table(W, comp, comp.si, gi);
   const N = comp.stages.length;
   if (div === 'A') {

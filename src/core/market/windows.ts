@@ -1,5 +1,4 @@
-import { SEASON_DAYS } from '../constants/divisions';
-import { dateOf } from '../season/calendar';
+import { dateOf, isDays, seasonLastDay } from '../season/calendar';
 import type { World } from '../types';
 
 /** Uma janela de transferências do calendário da CBF (mês 0 = janeiro). */
@@ -47,6 +46,8 @@ export const windowRange = (year: number, w: TransferWindow): [Date, Date] => [
  * Antes da 1ª rodada é a pré-temporada (meados de janeiro).
  */
 export const marketDateAfter = (W: World, d: number): Date => {
+  // por dias: `d` dias já passaram, então hoje é o dia d + 1
+  if (isDays(W)) return dateOf(W, d + 1);
   if (d <= 0) return new Date(W.year, 0, 15);
   return new Date(atDay(dateOf(W, d)) + DAY_MS);
 };
@@ -56,7 +57,7 @@ export const marketDate = (W: World): Date => marketDateAfter(W, W.day);
 export interface WindowState {
   open: boolean;
   name: string;
-  /** rodadas até fechar (aberta) ou abrir (fechada) */
+  /** rodadas (ou dias, no calendário por dias) até fechar (aberta) ou abrir (fechada) */
   rounds: number;
   /** data de abertura (fechada) */
   opens?: Date;
@@ -71,14 +72,15 @@ export const windowState = (W: World): WindowState => {
   const now = windowOn(marketDate(W));
   if (now) {
     let n = 0;
-    for (let d = W.day + 1; d <= SEASON_DAYS && windowOn(marketDateAfter(W, d))?.id === now.id; d++) n++;
+    for (let d = W.day + 1, last = seasonLastDay(W); d <= last && windowOn(marketDateAfter(W, d))?.id === now.id; d++)
+      n++;
     return { open: true, name: now.name, rounds: n, closes: windowRange(W.year, now)[1], win: now };
   }
-  for (let d = W.day + 1; d <= SEASON_DAYS; d++) {
+  for (let d = W.day + 1, last = seasonLastDay(W); d <= last; d++) {
     const w = windowOn(marketDateAfter(W, d));
     if (w) return { open: false, name: w.name, rounds: d - W.day, opens: windowRange(W.year, w)[0], win: w };
   }
-  return { open: false, name: '1ª janela', rounds: SEASON_DAYS - W.day, win: TRANSFER_WINDOWS[0] };
+  return { open: false, name: '1ª janela', rounds: seasonLastDay(W) - W.day, win: TRANSFER_WINDOWS[0] };
 };
 
 /** Identificador da janela atual (para zerar tentativas quando muda). */

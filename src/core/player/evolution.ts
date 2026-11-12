@@ -1,4 +1,4 @@
-import { SEASON_DAYS } from '../constants/divisions';
+import { seasonProgress } from '../season/calendar';
 import { clamp } from '../math';
 import type { Player, World } from '../types';
 import { youthYearly } from '../youth/youth';
@@ -25,8 +25,9 @@ export const evoOutlook = (W: World, p: Player): EvoOutlook => {
     const perYear = youthYearly(W, p);
     if (perYear <= 0) return { kind: 'ceiling', progress: 1 };
     const progress = clamp(p.gx || 0, 0, 1);
-    const perDay = perYear / SEASON_DAYS;
-    return { kind: 'young', progress, perYear, days: perDay > 0 ? Math.ceil((1 - progress) / perDay) : null };
+    // `days`: dias (calendário por dias) ou rodadas até o próximo ponto
+    const perTick = perYear / (W.cal === 'days' ? 365 : 40);
+    return { kind: 'young', progress, perYear, days: perTick > 0 ? Math.ceil((1 - progress) / perTick) : null };
   }
   const o = ovr(p);
   const age = p.a + 1;
@@ -37,7 +38,7 @@ export const evoOutlook = (W: World, p: Player): EvoOutlook => {
   const bonus = p.st.j > 20 && age <= 24;
   return {
     kind: 'season',
-    progress: clamp(W.day / SEASON_DAYS, 0, 1),
+    progress: seasonProgress(W),
     lo: cap(lo0 - pen) + (bonus ? 1 : 0),
     hi: cap(hi0 - pen) + (bonus ? 1 : 0),
     bonus,

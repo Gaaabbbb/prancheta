@@ -9,7 +9,7 @@ import type { PageProps } from './types';
 
 export function Clubs({ W }: PageProps) {
   const { tab, clubSort, set, openModal } = useUi();
-  const div: Div = tab && ([...DIVS, 'SUL'] as string[]).includes(tab) ? tab : W.clubs[W.user!].div;
+  const div: Div = tab && ([...DIVS, 'SUL'] as string[]).includes(tab) ? (tab as Div) : W.clubs[W.user!].div;
   const [country, setCountry] = useState<string>('ARG');
   const clubs = W.clubs.filter((c) => c.div === div && (div !== 'SUL' || c.country === country));
   const str = sortClubs(W, clubs, clubSort);

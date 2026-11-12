@@ -4,6 +4,8 @@ import { autoLineup } from '../lineup/lineup';
 import { ovr } from '../player/ratings';
 import type { Competition, World } from '../types';
 import { dirty } from '../world/squad';
+import { RULES } from '../rules';
+import { DAYS_START, leagueDays } from './calendar';
 import { addLeagueStage } from './fixtures';
 
 const byRegion = (W: World) => (a: number, b: number) =>
@@ -12,7 +14,10 @@ const byRegion = (W: World) => (a: number, b: number) =>
 /** Monta as competições da temporada (primeira fase de cada divisão) e zera o dia. */
 export const buildSeason = (W: World): void => {
   W.comps = {} as Record<Div, Competition>;
-  W.day = 0;
+  const days = RULES.calendar === 'days';
+  if (days) W.cal = 'days';
+  else delete W.cal;
+  W.day = days ? DAYS_START : 0;
   W.seasonDone = false;
   for (const div of DIVS) {
     const clubs = W.clubs.filter((c) => c.div === div).map((c) => c.id);
@@ -26,6 +31,7 @@ export const buildSeason = (W: World): void => {
       res: { champ: null, prom: [], rel: [] },
       n: clubs.length,
     };
+    if (days) comp.dates = leagueDays(W.year, div);
     W.comps[div] = comp;
     if (div === 'A' || div === 'B') addLeagueStage(comp, 'Pontos corridos', [clubs], true, 1);
     else if (div === 'C') {

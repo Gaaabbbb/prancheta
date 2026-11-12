@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { readNews, unreadNews, type NewsItem, type World } from '@/core';
+import { newsWhen, readNews, unreadNews, type NewsItem, type World } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { useUi } from '@/store/uiStore';
 import { newsKind } from '../inbox/newsActions';
@@ -64,9 +64,7 @@ export function Inbox({ W }: { W: World }) {
           const kind = newsKind(n.k);
           return (
             <button key={`${n.y}-${n.d}-${i}-${n.t}`} className={`it ${n.rd ? '' : 'new'}`} onClick={() => open(n)}>
-              <span className="when">
-                {n.y} d{n.d}
-              </span>
+              <span className="when">{newsWhen(W, n)}</span>
               <span className="nk" style={{ color: kind.color }}>
                 {kind.label}
               </span>

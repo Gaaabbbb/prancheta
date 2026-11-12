@@ -1,4 +1,4 @@
-import { userStanding, type Div } from '@/core';
+import { roundOf, userStanding } from '@/core';
 import { useWorld } from '@/store/gameStore';
 import { useUi } from '@/store/uiStore';
 import { Modal, ModalHeader } from '../components/Modal';
@@ -7,13 +7,14 @@ import { MiniTable } from '../components/Standings';
 const MAX_ROWS = 40;
 
 /** Resumo depois do jogo do usuário: resultados do dia e classificação. */
-export function RoundModal({ comp: cid, fid }: { comp: Div; fid: number }) {
+export function RoundModal({ comp: cid, fid }: { comp: string; fid: number }) {
   const W = useWorld();
   const { closeModal, openModal } = useUi();
   const comp = W.comps[cid];
   const f = comp.fx[fid];
   const st = comp.stages[f.st];
-  const fx = comp.fx.filter((x) => x.d === f.d);
+  // a rodada inteira (por dias, os jogos podem cair em dias diferentes) ou o mesmo dia de mata-mata
+  const fx = comp.fx.filter((x) => x.st === f.st && roundOf(x) === roundOf(f));
   const home = f.h === W.user,
     gf = (home ? f.hg : f.ag)!,
     ga = (home ? f.ag : f.hg)!;

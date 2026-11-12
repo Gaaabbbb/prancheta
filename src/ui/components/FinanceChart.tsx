@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dateOf, SEASON_DAYS, type FinDay, type World } from '@/core';
+import { dateOf, DAYS_START, isDays, seasonLastDay, type FinDay, type World } from '@/core';
 import { money } from '../format';
 import { MONTH_LONG, MONTH_SHORT, monthBuckets } from '../finance/months';
 
@@ -65,7 +65,10 @@ function Axis({ yt, y }: { yt: number[]; y: (v: number) => number }) {
 
 function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
   const [hover, setHover] = useState<number | null>(null);
-  const x = (d: number) => PAD.l + (d / SEASON_DAYS) * (W_ - PAD.l - PAD.r);
+  // eixo x: rodadas 0–40 ou dias do ano (do começo da temporada a 31/dez)
+  const D0 = isDays(W) ? DAYS_START : 0,
+    D1 = seasonLastDay(W);
+  const x = (d: number) => PAD.l + ((d - D0) / (D1 - D0)) * (W_ - PAD.l - PAD.r);
   const byDay = new Map(log.map((it) => [it.d, it]));
   const vals = [startBal, projection, ...log.map((it) => it.bal)];
   let lo = Math.min(...vals),
@@ -75,16 +78,16 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
   hi += m;
   const y = (v: number) => PAD.t + (1 - (v - lo) / (hi - lo)) * (H_ - PAD.t - PAD.b);
   const last = log[log.length - 1];
-  const pts: [number, number][] = [[0, startBal], ...log.map((it) => [it.d, it.bal] as [number, number])];
+  const pts: [number, number][] = [[D0, startBal], ...log.map((it) => [it.d, it.bal] as [number, number])];
   const path = pts.map(([d, v], i) => `${i ? 'L' : 'M'}${x(d).toFixed(1)},${y(v).toFixed(1)}`).join('');
-  const lastD = last ? last.d : 0;
+  const lastD = last ? last.d : D0;
   const lastBal = last ? last.bal : startBal;
   const hv = hover != null ? byDay.get(hover) : undefined;
   // marcas de mês no eixo x
   const monthTicks: { d: number; m: number }[] = [];
-  for (let d = 1; d <= SEASON_DAYS; d++) {
+  for (let d = D0 + 1; d <= D1; d++) {
     const mo = dateOf(W, d).getMonth();
-    if (d === 1 || mo !== dateOf(W, d - 1).getMonth()) monthTicks.push({ d, m: mo });
+    if (d === D0 + 1 || mo !== dateOf(W, d - 1).getMonth()) monthTicks.push({ d, m: mo });
   }
 
   return (
@@ -97,8 +100,8 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
         onMouseMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
           const px = ((e.clientX - r.left) / r.width) * W_;
-          const d = Math.round(((px - PAD.l) / (W_ - PAD.l - PAD.r)) * SEASON_DAYS);
-          setHover(d >= 1 && d <= SEASON_DAYS ? d : null);
+          const d = Math.round(D0 + ((px - PAD.l) / (W_ - PAD.l - PAD.r)) * (D1 - D0));
+          setHover(d > D0 && d <= D1 ? d : null);
         }}
       >
         <Axis yt={ticks(lo, hi)} y={y} />
@@ -107,13 +110,11 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
             {MONTH_SHORT[m]}
           </text>
         ))}
-        {lastD < SEASON_DAYS && (
-          <line x1={x(lastD)} y1={y(lastBal)} x2={x(SEASON_DAYS)} y2={y(projection)} className="proj" />
-        )}
+        {lastD < D1 && <line x1={x(lastD)} y1={y(lastBal)} x2={x(D1)} y2={y(projection)} className="proj" />}
         <path d={path} className="bal" />
         <circle cx={x(lastD)} cy={y(lastBal)} r={4} className="dot" />
-        {lastD < SEASON_DAYS && (
-          <text x={x(SEASON_DAYS) - 4} y={y(projection) - 8} textAnchor="end" className="lbl">
+        {lastD < D1 && (
+          <text x={x(D1) - 4} y={y(projection) - 8} textAnchor="end" className="lbl">
             projeção {money(projection)}
           </text>
         )}
@@ -122,7 +123,8 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
       {hover != null && (
         <div className="ftip" style={{ left: `${(x(hover) / W_) * 100}%` }}>
           <b>
-            Rodada {hover} · {dateOf(W, hover).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+            {isDays(W) ? '' : `Rodada ${hover} · `}
+            {dateOf(W, hover).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
           </b>
           {hv ? (
             <>
@@ -149,8 +151,8 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
 function MonthChart({ W, log }: { W: World; log: FinDay[] }) {
   const [hover, setHover] = useState<number | null>(null);
   const months = monthBuckets(W, log);
-  const first = dateOf(W, 1).getMonth(),
-    last = dateOf(W, SEASON_DAYS).getMonth();
+  const first = dateOf(W, isDays(W) ? DAYS_START + 1 : 1).getMonth(),
+    last = dateOf(W, seasonLastDay(W)).getMonth();
   const cats = Array.from({ length: last - first + 1 }, (_, i) => first + i);
   const byM = new Map(months.map((b) => [b.m, b]));
   const inc = (m: number) => {

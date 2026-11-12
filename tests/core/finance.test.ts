@@ -12,7 +12,8 @@ import {
   monthlyWages,
   playDay,
   rng,
-  SEASON_DAYS,
+  seasonLastDay,
+  ticks,
   seekSponsors,
   slotLocked,
   sponsorPotential,
@@ -41,7 +42,7 @@ describe('finanças mensais', () => {
       for (const div of ['A', 'B', 'C', 'D'] as const) {
         W.clubs[0].div = div;
         let n = 0;
-        for (let d = 1; d <= SEASON_DAYS; d++) n += paydayMonths(W, d);
+        for (let d = 1; d <= seasonLastDay(W); d++) n += paydayMonths(W, d);
         expect(n).toBe(10);
       }
     }
@@ -132,6 +133,6 @@ describe('patrocínios', () => {
     endSeason(W);
     expect(W.finHist!.length).toBe(1);
     expect(W.finHist![0].pat).toBe(pat);
-    for (const o of W.sp!.offers) expect(o.exp).toBe(8);
+    for (const o of W.sp!.offers) expect(o.exp).toBe(W.day + ticks(W, 8));
   }, 60000);
 });

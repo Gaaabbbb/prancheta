@@ -49,6 +49,8 @@ export interface Rules {
    * - 'div': fator da divisão (A 0,70 · B 0,68 · C 0,70 · D 0,85) + (reputação − reputação típica da divisão)/300
    */
   sponsorModel: 'rep' | 'div';
+  /** 'rounds': o jogo anda de rodada em rodada (original); 'days': anda dia a dia, com copas */
+  calendar: 'rounds' | 'days';
 }
 
 export const LEGACY_RULES: Readonly<Rules> = {
@@ -70,6 +72,7 @@ export const LEGACY_RULES: Readonly<Rules> = {
   market: false,
   gateModel: 'fill',
   sponsorModel: 'rep',
+  calendar: 'rounds',
 };
 
 export const CURRENT_RULES: Readonly<Rules> = {
@@ -91,6 +94,7 @@ export const CURRENT_RULES: Readonly<Rules> = {
   market: true,
   gateModel: 'demand',
   sponsorModel: 'div',
+  calendar: 'days',
 };
 
 /** Regras em vigor (mutável de propósito, para os testes trocarem). */

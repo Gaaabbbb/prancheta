@@ -1,6 +1,6 @@
-import { DIV_REP_TARGET, SEASON_DAYS, type Div } from '../constants/divisions';
+import { DIV_REP_TARGET, type Div } from '../constants/divisions';
 import { RULES } from '../rules';
-import { dateOf } from '../season/calendar';
+import { dateOf, seasonLastDay } from '../season/calendar';
 import type { Club, FinDay, World } from '../types';
 
 /** Categorias do extrato: bilheteria, patrocínio, bônus de patrocínio, salários, multas e rescisões. */
@@ -15,7 +15,7 @@ export const PAYDAYS = 10;
  * rodada anterior. Normalmente 0 ou 1; depois de uma pausa longa pode ser 2.
  */
 export const paydayMonths = (W: World, d: number = W.day): number => {
-  if (d < 2 || d > SEASON_DAYS) return 0;
+  if (d < 2 || d > seasonLastDay(W)) return 0;
   const a = dateOf(W, d - 1).getMonth(),
     b = dateOf(W, d).getMonth();
   let n = 0;
@@ -29,7 +29,7 @@ export const isPayday = (W: World, d: number = W.day): boolean => paydayMonths(W
 /** Quantos pagamentos mensais ainda faltam na temporada (depois do dia atual). */
 export const remainingPaydays = (W: World): number => {
   let n = 0;
-  for (let d = W.day + 1; d <= SEASON_DAYS; d++) n += paydayMonths(W, d);
+  for (let d = W.day + 1, last = seasonLastDay(W); d <= last; d++) n += paydayMonths(W, d);
   return n;
 };
 

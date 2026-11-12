@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import rawDb from '../../src/data/default-db.json';
-import { buildSeason, createWorld, expandDb, playDay, rng, type RawDb } from '../../src/core';
+import { buildSeason, createWorld, expandDb, playDay, rng, stepDay, type RawDb } from '../../src/core';
 import { gunzip, gzip } from '../../src/persistence/compression';
 import { deserialize, serialize } from '../../src/persistence/serialize';
 import { loadLegacyCore } from '../parity/legacyCore';
@@ -12,7 +12,7 @@ const newCareer = () => {
   W.user = 5;
   rng.seed(22);
   buildSeason(W);
-  for (let i = 0; i < 5; i++) playDay(W);
+  for (let i = 0; i < 30; i++) stepDay(W);
   return W;
 };
 

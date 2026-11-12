@@ -1,9 +1,8 @@
-import type { Div } from '@/core';
 import { useWorld } from '@/store/gameStore';
 import { Crest } from '../components/Crest';
 import { Modal, ModalHeader } from '../components/Modal';
 
-export function ReportModal({ comp: cid, fid }: { comp: Div; fid: number }) {
+export function ReportModal({ comp: cid, fid }: { comp: string; fid: number }) {
   const W = useWorld();
   const comp = W.comps[cid];
   const f = comp.fx[fid];

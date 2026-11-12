@@ -1,4 +1,5 @@
-import { SEASON_DAYS, type Div } from '../constants/divisions';
+import { type Div } from '../constants/divisions';
+import { deadlineTxt, perTick, seasonLastDay, ticks } from '../season/calendar';
 import { clamp } from '../math';
 import { news } from '../news';
 import { hash } from '../rng';
@@ -70,7 +71,7 @@ const pushOffer = (W: World, c: SponsorContract, extra: Partial<SponsorOffer> = 
   const o: SponsorOffer = {
     ...c,
     id: sp.nextId++,
-    exp: Math.min(SEASON_DAYS, W.day + rint(sp, 4, 7)),
+    exp: Math.min(seasonLastDay(W), W.day + ticks(W, rint(sp, 4, 7))),
     cover: 0,
     ...extra,
   };
@@ -104,7 +105,7 @@ const newOffer = (W: World, slot: SponsorSlot, replace: boolean, silent = false)
       news(
         W,
         `Proposta de patrocínio: ${def.n}`,
-        `A ${def.n} (${def.sec.toLowerCase()}) quer ser o ${SLOT_NAME[slot].toLowerCase()}. Responda até o dia ${o.exp} em Finanças, aba Patrocínio.`,
+        `A ${def.n} (${def.sec.toLowerCase()}) quer ser o ${SLOT_NAME[slot].toLowerCase()}. Responda até ${deadlineTxt(W, o.exp)} em Finanças, aba Patrocínio.`,
         'spon',
       );
   }
@@ -244,15 +245,17 @@ export const terminateContract = (W: World, slot: SponsorSlot): string | null =>
 export const seekWait = (W: World): number => {
   const sp = W.sp;
   if (!sp?.seek) return 0;
-  const now = W.year * 100 + W.day;
-  return Math.max(0, sp.seek + SEEK_COOLDOWN - now);
+  const now = W.year * 1000 + W.day;
+  // saves antigos guardavam ano*100+dia
+  const seek = sp.seek < W.year * 1000 - 1000 ? sp.seek * 10 : sp.seek;
+  return Math.max(0, seek + ticks(W, SEEK_COOLDOWN) - now);
 };
 
 /** Busca ativa: o departamento comercial procura marcas. Gera de 1 a 2 propostas. */
 export const seekSponsors = (W: World): number => {
   const sp = W.sp!;
   if (seekWait(W) > 0) return 0;
-  sp.seek = W.year * 100 + W.day;
+  sp.seek = W.year * 1000 + W.day;
   const empty = SLOTS.filter((s) => !sp[s]);
   const open = empty.length ? empty : SLOTS.filter((s) => !slotLocked(W, s));
   if (!open.length) return 0;
@@ -275,11 +278,11 @@ export const sponsorTick = (W: World): void => {
   for (const slot of SLOTS) {
     const c = sp[slot];
     if (!c) {
-      if (sp.offers.filter((o) => o.slot === slot).length < 2 && rnd(sp) < 0.25) newOffer(W, slot, false);
+      if (sp.offers.filter((o) => o.slot === slot).length < 2 && rnd(sp) < perTick(W, 0.25)) newOffer(W, slot, false);
       continue;
     }
     const sat = sponsorSatisfaction(W, c);
-    if (sat < 35 && rnd(sp) < (0.05 * (35 - sat)) / 35) {
+    if (sat < 35 && rnd(sp) < perTick(W, (0.05 * (35 - sat)) / 35)) {
       // a marca rompe e paga uma compensação menor que a multa cheia
       const comp = nice(terminationFee(W, c) * 0.5);
       if (comp) addMoney(W, me, 'mul', comp);
@@ -292,7 +295,8 @@ export const sponsorTick = (W: World): void => {
       );
       continue;
     }
-    if (!slotLocked(W, slot) && !sp.offers.some((o) => o.slot === slot) && rnd(sp) < 0.035) newOffer(W, slot, true);
+    if (!slotLocked(W, slot) && !sp.offers.some((o) => o.slot === slot) && rnd(sp) < perTick(W, 0.035))
+      newOffer(W, slot, true);
   }
 };
 
@@ -321,8 +325,14 @@ export const sponsorSeasonEnd = (W: World): void => {
       const sat = sponsorSatisfaction(W, c);
       if (sat >= 45) {
         const k = makeContract(W, def, slot, 1 + (sat - 55) / 200);
-        pushOffer(W, k, { renewal: true, exp: 8 });
-        news(W, `${def.n} quer renovar`, `O contrato terminou e a marca propôs renovar. Responda até o dia 8.`, 'spon');
+        const exp = W.day + ticks(W, 8);
+        pushOffer(W, k, { renewal: true, exp });
+        news(
+          W,
+          `${def.n} quer renovar`,
+          `O contrato terminou e a marca propôs renovar. Responda até ${deadlineTxt(W, exp)}.`,
+          'spon',
+        );
       } else news(W, `Fim do contrato com ${def.n}`, `A marca não quis renovar. O espaço ficou livre.`, 'spon');
     }
   }
@@ -330,7 +340,7 @@ export const sponsorSeasonEnd = (W: World): void => {
     if (!sp[slot]) {
       const o1 = newOffer(W, slot, false, true);
       const o2 = newOffer(W, slot, false, true);
-      for (const o of [o1, o2]) if (o) o.exp = 8;
+      for (const o of [o1, o2]) if (o) o.exp = W.day + ticks(W, 8);
     }
   if (sp.offers.some((o) => !o.renewal))
     news(

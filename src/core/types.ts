@@ -36,6 +36,7 @@ export interface Player {
   /** moral */ mo: number;
   /** condição física 0..100 */ f: number;
   /** jogos lesionado */ inj: number;
+  /** calendário por dias: dias contados para o próximo jogo de recuperação (4 dias = 1 jogo) */ injd?: number;
   /** jogos suspenso */ sus: number;
   /** amarelos acumulados */ yc: number;
   st: SeasonStats;
@@ -103,7 +104,8 @@ export interface SideStats {
 
 export interface Fixture {
   id: number;
-  /** dia (rodada) */ d: number;
+  /** dia: rodada (calendário por rodadas) ou dia do ano, 0 = 1º de janeiro (calendário por dias) */ d: number;
+  /** rodada dentro da competição (no calendário por rodadas é igual a `d`) */ r?: number;
   h: number;
   a: number;
   hg: number | null;
@@ -115,6 +117,7 @@ export interface Fixture {
   hp?: number;
   ap?: number;
   /** público */ att?: number;
+  /** campo neutro (final de jogo único) */ neu?: boolean;
   stats?: (SideStats & { g: number })[];
   goals?: { s: number; m: number; p: string; pen: boolean }[];
 }
@@ -151,7 +154,8 @@ export interface KOStage {
 export type Stage = LeagueStage | KOStage;
 
 export interface Competition {
-  id: Div;
+  /** 'A'–'D' (Séries), 'CDB', 'LIB', 'SULA' ou a sigla do país (liga sul-americana) */
+  id: string;
   name: string;
   stages: Stage[];
   fx: Fixture[];
@@ -160,12 +164,14 @@ export interface Competition {
   res: { champ: number | null; prom: number[]; rel: number[]; lib?: number[] };
   n: number;
   seedPts?: Record<number, number>;
+  /** calendário por dias: dia do ano de cada rodada (rodada 1 = dates[0]) */
+  dates?: number[];
 }
 
 /** Liga uma mensagem ao que ela fala (jogador ou partida). */
 export interface NewsRef {
   pid?: number;
-  comp?: Div;
+  comp?: string;
   fid?: number;
 }
 
@@ -333,9 +339,11 @@ export interface World {
   nextPid: number;
   news: NewsItem[];
   user: number | null;
-  comps: Record<Div, Competition>;
+  comps: Record<string, Competition>;
   hist: SeasonReport[];
   seasonDone: boolean;
+  /** 'days' = a temporada anda dia a dia (W.day é o dia do ano); sem valor = por rodadas */
+  cal?: 'days';
   coach?: string;
   board?: Board;
   fin?: Record<string, number>;

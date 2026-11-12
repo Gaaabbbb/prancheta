@@ -1,4 +1,4 @@
-import { DIV_NAME, SEASON_DAYS } from '@/core';
+import { dateOf, DIV_NAME, isDays, SEASON_DAYS } from '@/core';
 import { abandonCareer } from '@/app/gameFlow';
 import { useGame } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
@@ -84,7 +84,10 @@ export function Saves({ W }: PageProps) {
             <dd>{me.n}</dd>
             <dt>Temporada</dt>
             <dd>
-              {W.year}, dia {W.day} de {SEASON_DAYS}
+              {W.year},{' '}
+              {isDays(W)
+                ? dateOf(W, W.day + 1).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+                : `rodada ${W.day} de ${SEASON_DAYS}`}
             </dd>
           </dl>
           {W.hist.length > 0 && (

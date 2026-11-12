@@ -17,6 +17,7 @@ import {
   windowState,
   type ClubAnswer,
   type PlayerAnswer,
+  unitTxt,
 } from '@/core';
 import { useGame, useWorld } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
@@ -154,7 +155,7 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
         <p className="warnbox">
           A janela de transferências está fechada.{' '}
           {ws.opens
-            ? `A próxima (${ws.name.toLowerCase()}) abre em ${ws.opens.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}, daqui a ${ws.rounds} rodada(s).`
+            ? `A próxima (${ws.name.toLowerCase()}) abre em ${ws.opens.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}, daqui a ${unitTxt(W, ws.rounds)}.`
             : 'A próxima abre em 5 de janeiro, na pré-temporada.'}
         </p>
       ) : clubStep ? (

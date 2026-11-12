@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { create } from 'zustand';
-import type { Div, NewsItem } from '@/core';
+import type { NewsItem } from '@/core';
 
 export type PageId =
   | 'home'
@@ -46,11 +46,11 @@ export type FinTab = 'sum' | 'spon' | 'ledger';
 export type ModalSpec =
   | { kind: 'player'; id: number }
   | { kind: 'club'; id: number }
-  | { kind: 'report'; comp: Div; fid: number }
+  | { kind: 'report'; comp: string; fid: number }
   | { kind: 'editAttrs'; id: number }
   | { kind: 'movePlayer'; id: number }
   | { kind: 'prematch' }
-  | { kind: 'round'; comp: Div; fid: number }
+  | { kind: 'round'; comp: string; fid: number }
   | { kind: 'seasonEnd' }
   | { kind: 'importSave' }
   | { kind: 'news'; item: NewsItem }
@@ -62,9 +62,9 @@ interface UiState {
   page: PageId;
   sort: { k: SortKey; d: 1 | -1 };
   /** divisão aberta nas abas de Competições/Clubes */
-  tab: Div | null;
+  tab: string | null;
   stage: number | null;
-  stageDiv: Div | null;
+  stageDiv: string | null;
   rday: number | null;
   clubSort: 'str' | 'az';
   edClub: number | null;

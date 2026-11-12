@@ -105,6 +105,8 @@ export interface MatchOptions {
   al?: (number | null)[];
   ab?: number[];
   at?: Tactic;
+  /** campo neutro: ninguém tem o fator casa (finais de jogo único) */
+  neutral?: boolean;
 }
 
 interface NarrRefs {
@@ -242,6 +244,7 @@ export class Match {
   W: World;
   quiet: boolean;
   ko: KoContext | null;
+  neutral: boolean;
   sides: [Side, Side];
   userSide: number;
   min = 0;
@@ -273,6 +276,7 @@ export class Match {
     this.W = W;
     this.quiet = !!opts.quiet;
     this.ko = opts.ko || null;
+    this.neutral = !!opts.neutral;
     this.sides = [
       new Side(W, home, 0, opts.hl || home.lineup!, opts.hb || home.bench, opts.ht),
       new Side(W, away, 1, opts.al || away.lineup!, opts.ab || away.bench, opts.at),
@@ -366,7 +370,7 @@ export class Match {
       this.started = true;
       this.emit('kick', this.pos, null, 1);
     }
-    for (const s of this.sides) if (s.dirty) s.calc(s.idx === 0);
+    for (const s of this.sides) if (s.dirty) s.calc(s.idx === 0 && !this.neutral);
     this.min += TICK;
     // fim de tempo
     if (this.half === 1 && this.min >= 45 + this.add1) {

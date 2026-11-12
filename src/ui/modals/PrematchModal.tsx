@@ -12,6 +12,8 @@ import {
   lineupIssues,
   tidyLineup,
   restDays,
+  clubRestBefore,
+  isDays,
   WEEKDAY_SHORT,
   type KOStage,
 } from '@/core';
@@ -36,7 +38,7 @@ export function PrematchModal() {
   const oppC = f.h === W.user ? a : h;
   const missing = squad(W, W.user!).filter((p) => !available(p));
   const tired = me.lineup!.map((id) => W.pmap[id!]).filter((p) => p && p.f < 75);
-  const rest = restDays(W, f.d, me.div);
+  const rest = isDays(W) ? clubRestBefore(W, me.id, f.d) : restDays(W, f.d, me.div);
   const ko = koContext(comp, f);
   const f1 = ko && ko.leg === 2 ? comp.fx[(comp.stages[f.st] as KOStage).ties[f.g].f[0]] : null;
   const slots = FORMATIONS[me.tac.f];
@@ -141,7 +143,7 @@ export function PrematchModal() {
           )}
           {rest <= 4 && rest < 20 && (
             <p style={{ margin: '8px 0 0', color: 'var(--yellow)' }}>
-              Semana com dois jogos: só {rest} dias desde a última rodada. Quem jogou recuperou pouco.
+              Sequência apertada: só {rest} dias desde o último jogo. Quem jogou recuperou pouco.
             </p>
           )}
           {tired.length > 0 && (

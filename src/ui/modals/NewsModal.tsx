@@ -1,4 +1,4 @@
-import { available, type NewsItem } from '@/core';
+import { available, newsWhen, type NewsItem } from '@/core';
 import { useWorld } from '@/store/gameStore';
 import { Modal, ModalHeader } from '../components/Modal';
 import { newsActions, newsKind, runNewsAction } from '../inbox/newsActions';
@@ -21,7 +21,7 @@ export function NewsModal({ item }: { item: NewsItem }) {
             {kind.label}
           </span>
           <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>
-            Temporada {item.y}, dia {item.d}
+            Temporada {item.y}, {newsWhen(W, item)}
           </span>
           <h2 style={{ marginTop: 4 }}>{item.t}</h2>
         </div>

@@ -2,7 +2,11 @@ import { useState } from 'react';
 import {
   dateOf,
   isPayday,
+  dayOfYear,
+  isDays,
+  roundOf,
   SEASON_DAYS,
+  seasonLastDay,
   TRANSFER_WINDOWS,
   WEEKDAY_SHORT,
   windowOn,
@@ -98,17 +102,21 @@ export function Calendar({ W }: PageProps) {
   const byDay = new Map(shown.map((g) => [dayKey(g.date), g]));
   // dias de jogo da temporada (todas as rodadas), para marcar salários e rodadas sem jogo do usuário
   const seasonDays = new Map<string, number>();
-  for (let d = 1; d <= SEASON_DAYS; d++) seasonDays.set(dayKey(dateOf(W, d)), d);
+  const days = isDays(W);
+  if (days) {
+    // por dias: rodadas da liga do usuário (os jogos de uma rodada podem cair em dias diferentes)
+    for (const f of W.comps[W.clubs[W.user!].div].fx) seasonDays.set(dayKey(dateOf(W, f.d)), roundOf(f));
+  } else for (let d = 1; d <= SEASON_DAYS; d++) seasonDays.set(dayKey(dateOf(W, d)), d);
   // janeiro entra por causa da 1ª janela de transferências
   const firstMonth = 0,
-    lastMonth = dateOf(W, SEASON_DAYS).getMonth();
+    lastMonth = days ? 11 : dateOf(W, SEASON_DAYS).getMonth();
   const ws = windowState(W);
   const dm = (d: Date) => d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
   const winStatus = (i: number) => {
     const w = TRANSFER_WINDOWS[i];
     if (ws.open && ws.win?.id === w.id) return 'aberta agora';
     const [, end] = windowRange(W.year, w);
-    const past = W.seasonDone || (W.day > 0 && dateOf(W, Math.min(W.day, SEASON_DAYS)) > end);
+    const past = W.seasonDone || (W.day > 0 && dateOf(W, Math.min(W.day, seasonLastDay(W))) > end);
     return past ? 'encerrada' : 'ainda vai abrir';
   };
 
@@ -288,8 +296,9 @@ export function Calendar({ W }: PageProps) {
                 const k = `${month}-${day}`;
                 const g = byDay.get(k);
                 const sd = seasonDays.get(k);
-                const pay = sd != null && isPayday(W, sd);
-                const today = sd != null && sd === W.day + 1;
+                const doy = dayOfYear(new Date(W.year, month, day));
+                const pay = days ? isPayday(W, doy) : sd != null && isPayday(W, sd);
+                const today = days ? doy === W.day + 1 : sd != null && sd === W.day + 1;
                 const win = windowOn(new Date(W.year, month, day));
                 const winStart = win && win.from[0] === month && win.from[1] === day;
                 const winEnd = win && win.to[0] === month && win.to[1] === day;

@@ -10,6 +10,13 @@ export const news = (W: World, t: string, b: string, k?: string, ref?: NewsRef):
   if (W.news.length > MAX_NEWS) W.news.length = MAX_NEWS;
 };
 
+/** Quando a notícia chegou: "12 fev." na temporada atual por dias, ou "rodada 8" / "2026, rodada 8". */
+export const newsWhen = (W: World, it: NewsItem): string => {
+  if (it.y === W.year && W.cal === 'days')
+    return new Date(W.year, 0, 1 + it.d).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+  return (it.y === W.year ? '' : it.y + ', ') + 'rodada ' + it.d;
+};
+
 /** Marca a mensagem como lida. */
 export const readNews = (it: NewsItem): void => {
   it.rd = 1;

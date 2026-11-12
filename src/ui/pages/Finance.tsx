@@ -1,7 +1,11 @@
 import { Fragment, useState } from 'react';
 import {
+  dateOf,
   DIV_NAME,
+  isDays,
   isPayday,
+  seasonLastDay,
+  unitTxt,
   monthlyWages,
   PAYDAYS,
   POS_GROUP,
@@ -57,7 +61,11 @@ export function Finance({ W }: PageProps) {
       <div className="ph">
         <h2>Finanças</h2>
         <span className="muted">
-          Temporada {W.year}, rodada {W.day} de 40 · {DIV_NAME[me.div]}
+          Temporada {W.year},{' '}
+          {isDays(W)
+            ? dateOf(W, W.day + 1).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+            : `rodada ${W.day} de 40`}{' '}
+          · {DIV_NAME[me.div]}
         </span>
         <span className="sp" />
         <div className="seg">
@@ -142,7 +150,9 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
             {mode === 'cash'
               ? 'De onde veio e para onde foi o dinheiro'
               : mode === 'bal'
-                ? 'Caixa rodada a rodada'
+                ? isDays(W)
+                  ? 'Caixa dia a dia'
+                  : 'Caixa rodada a rodada'
                 : 'Entradas e saídas por mês'}
           </span>
           <span className="seg">
@@ -150,7 +160,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
               Resumo do caixa
             </button>
             <button className={mode === 'bal' ? 'on' : ''} onClick={() => setMode('bal')}>
-              Rodada a rodada
+              {isDays(W) ? 'Dia a dia' : 'Rodada a rodada'}
             </button>
             <button className={mode === 'month' ? 'on' : ''} onClick={() => setMode('month')}>
               Por mês
@@ -187,7 +197,8 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
         {mode === 'bal' && log.length > 0 && (
           <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
             Os degraus são os dias de pagamento: no primeiro jogo de cada mês saem os salários e entram as parcelas dos
-            patrocinadores. Linha tracejada: projeção até o fim da temporada. Passe o mouse para ver cada rodada.
+            patrocinadores. Linha tracejada: projeção até o fim da temporada. Passe o mouse para ver cada dia de
+            movimento.
           </p>
         )}
       </div>
@@ -300,7 +311,7 @@ function Ledger({ W }: { W: World }) {
     });
   const cur = months[months.length - 1];
   const nextPayIn = (() => {
-    for (let d = W.day + 1; d <= 40; d++) if (isPayday(W, d)) return d - W.day;
+    for (let d = W.day + 1, last = seasonLastDay(W); d <= last; d++) if (isPayday(W, d)) return d - W.day;
     return null;
   })();
   const tot = months.reduce(
@@ -322,11 +333,7 @@ function Ledger({ W }: { W: World }) {
         <span>
           Extrato mensal <small>clique num mês para ver os jogos em casa</small>
         </span>
-        {nextPayIn != null && (
-          <small>
-            próximo pagamento de salários em {nextPayIn} rodada{nextPayIn > 1 ? 's' : ''}
-          </small>
-        )}
+        {nextPayIn != null && <small>próximo pagamento de salários em {unitTxt(W, nextPayIn)}</small>}
       </h3>
       {months.length === 0 ? (
         <p className="muted">Nenhum movimento registrado ainda nesta temporada.</p>
@@ -351,7 +358,7 @@ function Ledger({ W }: { W: World }) {
                 <tr className={`click ${open.has(b.m) ? 'me' : ''}`} onClick={() => toggle(b.m)}>
                   <td>
                     <span className="caret">{open.has(b.m) ? '▾' : '▸'}</span> {MONTH_LONG[b.m]}
-                    {b === cur && W.day < 40 && <span className="muted"> · em andamento</span>}
+                    {b === cur && !W.seasonDone && <span className="muted"> · em andamento</span>}
                   </td>
                   <td className="r num">{b.games.length || ''}</td>
                   <td className="r num">{neg(b.bil)}</td>
