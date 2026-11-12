@@ -34,6 +34,7 @@ export * from './season/endSeason';
 export * from './season/foreignLeagues';
 export * from './season/cupDates';
 export * from './season/cups';
+export * from './season/conmebol';
 export * from './finance/ledger';
 export * from './finance/finance';
 export * from './finance/sponsorCatalog';

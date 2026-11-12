@@ -38,6 +38,9 @@ const MONTHS = [
 const WEEK = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 type Where = 'all' | 'home' | 'away';
+
+/** Sigla das copas nos cartões do calendário. */
+const CUP_SHORT: Record<string, string> = { CDB: 'CdB', LIB: 'Liberta', SULA: 'Sula' };
 type View = 'month' | 'list';
 
 interface Game {
@@ -133,7 +136,8 @@ export function Calendar({ W }: PageProps) {
     return (
       <>
         <div className="cg-top">
-          <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.home ? 'Casa' : 'Fora'}</span>
+          <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.f.neu ? 'Neutro' : g.home ? 'Casa' : 'Fora'}</span>
+          {CUP_SHORT[g.comp.id] && <span className={`comptag c-${g.comp.id}`}>{CUP_SHORT[g.comp.id]}</span>}
           {g.res && <span className={`cg-res f${g.res}`}>{g.res}</span>}
         </div>
         <div className="cg-opp">

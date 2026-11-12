@@ -48,7 +48,8 @@ export function Finance({ W }: PageProps) {
   const setUi = useUi((s) => s.set);
   const me = W.clubs[W.user!];
   const f = W.fin || {};
-  const rec = (f.bil || 0) + (f.pat || 0) + (f.bon || 0) + Math.max(0, f.mul || 0) + Math.max(0, f.tra || 0);
+  const rec =
+    (f.bil || 0) + (f.pat || 0) + (f.bon || 0) + (f.pre || 0) + Math.max(0, f.mul || 0) + Math.max(0, f.tra || 0);
   const des = (f.sal || 0) + Math.min(0, f.mul || 0) + Math.min(0, f.tra || 0);
   const start = seasonStartBalance(W);
   const proj = seasonProjection(W);
@@ -136,6 +137,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
     bon: f.bon || 0,
     inMul: Math.max(0, f.mul || 0),
     tra: f.tra || 0,
+    pre: f.pre || 0,
     sal: f.sal || 0,
     outMul: Math.min(0, f.mul || 0),
     now: me.bal,
@@ -172,7 +174,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
             <CashWaterfall flow={flow} />
             <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
               O clube começou a temporada com <b>{money(start)}</b>. Entraram{' '}
-              <b>{money(flow.bil + flow.pat + flow.bon + flow.inMul + Math.max(0, flow.tra))}</b> e saíram{' '}
+              <b>{money(flow.bil + flow.pat + flow.bon + flow.pre + flow.inMul + Math.max(0, flow.tra))}</b> e saíram{' '}
               <b>{money(-(flow.sal + flow.outMul + Math.min(0, flow.tra)))}</b>, então o caixa está em{' '}
               <b>{money(me.bal)}</b>. Se nada mudar, termina a temporada com cerca de <b>{money(projection)}</b>.
             </p>
@@ -196,7 +198,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
           ))}
         {mode === 'bal' && log.length > 0 && (
           <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
-            Os degraus são os dias de pagamento: no primeiro jogo de cada mês saem os salários e entram as parcelas dos
+            Os degraus são os dias de pagamento: no começo de cada mês saem os salários e entram as parcelas dos
             patrocinadores. Linha tracejada: projeção até o fim da temporada. Passe o mouse para ver cada dia de
             movimento.
           </p>
@@ -259,6 +261,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                 <th className="r">Bilheteria</th>
                 <th className="r">Patrocínio</th>
                 <th className="r">Salários</th>
+                <th className="r">Premiação</th>
                 <th className="r">Multas</th>
                 <th className="r">Transferências</th>
                 <th className="r">Lucro / prejuízo</th>
@@ -272,7 +275,8 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                   const pat = (h.pat || 0) + (h.bon || 0);
                   const mul = h.mul || 0;
                   const tra = h.tra || 0;
-                  const res = h.bil + pat + h.sal + mul + tra;
+                  const pre = h.pre || 0;
+                  const res = h.bil + pat + h.sal + mul + tra + pre;
                   return (
                     <tr key={h.year}>
                       <td className="num">{h.year}</td>
@@ -280,6 +284,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                       <td className="r num">{money(h.bil)}</td>
                       <td className="r num">{money(pat)}</td>
                       <td className="r num neg">{money(h.sal)}</td>
+                      <td className="r num">{neg(pre)}</td>
                       <td className="r num">{neg(mul)}</td>
                       <td className="r num">{neg(tra)}</td>
                       <td className="r num" style={{ color: res < 0 ? '#ff9a9d' : 'var(--ok)' }}>
@@ -322,9 +327,10 @@ function Ledger({ W }: { W: World }) {
       sal: t.sal + b.sal,
       mul: t.mul + b.mul,
       tra: t.tra + b.tra,
+      pre: t.pre + b.pre,
       net: t.net + b.net,
     }),
-    { bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, tra: 0, net: 0 },
+    { bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, tra: 0, pre: 0, net: 0 },
   );
 
   return (
@@ -346,6 +352,7 @@ function Ledger({ W }: { W: World }) {
               <th className="r">Bilheteria</th>
               <th className="r">Patrocínio</th>
               <th className="r">Salários</th>
+              <th className="r">Premiação</th>
               <th className="r">Multas</th>
               <th className="r">Transferências</th>
               <th className="r">Lucro do mês</th>
@@ -364,6 +371,7 @@ function Ledger({ W }: { W: World }) {
                   <td className="r num">{neg(b.bil)}</td>
                   <td className="r num">{neg(b.pat + b.bon)}</td>
                   <td className="r num neg">{neg(b.sal)}</td>
+                  <td className="r num">{neg(b.pre)}</td>
                   <td className={`r num ${b.mul < 0 ? 'neg' : ''}`}>{neg(b.mul)}</td>
                   <td className={`r num ${b.tra < 0 ? 'neg' : ''}`}>{neg(b.tra)}</td>
                   <td className="r num" style={{ color: b.net < 0 ? '#ff9a9d' : 'var(--ok)' }}>
@@ -375,7 +383,7 @@ function Ledger({ W }: { W: World }) {
                 </tr>
                 {open.has(b.m) && (
                   <tr className="sub">
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       {b.games.length === 0 && b.fines.length === 0 && (
                         <span className="muted">Sem jogos em casa neste mês.</span>
                       )}
@@ -410,6 +418,7 @@ function Ledger({ W }: { W: World }) {
               <td className="r num">{neg(tot.bil)}</td>
               <td className="r num">{neg(tot.pat + tot.bon)}</td>
               <td className="r num neg">{neg(tot.sal)}</td>
+              <td className="r num">{neg(tot.pre)}</td>
               <td className="r num">{neg(tot.mul)}</td>
               <td className="r num">{neg(tot.tra)}</td>
               <td className="r num" style={{ color: tot.net < 0 ? '#ff9a9d' : 'var(--ok)' }}>
@@ -422,7 +431,7 @@ function Ledger({ W }: { W: World }) {
       )}
       <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
         Salários e parcelas de patrocínio são pagos uma vez por mês, de fevereiro a novembro (10 vezes por temporada). A
-        bilheteria entra a cada jogo em casa.
+        bilheteria entra a cada jogo em casa, e a premiação das copas quando o clube chega a cada fase.
       </p>
     </div>
   );

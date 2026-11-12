@@ -26,6 +26,7 @@ export const saveMeta = (W: World): SaveMeta => ({
   club: W.clubs[W.user!].n,
   year: W.year,
   day: W.day,
+  ...(W.cal === 'days' ? { cal: 'days' as const } : {}),
   v: 1,
   coach: W.coach || '',
 });

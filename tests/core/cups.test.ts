@@ -11,7 +11,9 @@ import {
   mergeDb,
   rng,
   stepDay,
+  endSeason,
   type KOStage,
+  type LeagueStage,
   type RawDb,
   type World,
 } from '../../src/core';
@@ -82,4 +84,49 @@ describe('copas', () => {
     expect(noClash(W)).toBe(0);
     expect(W.fin!.pre || 0).toBeGreaterThan(0);
   }, 300000);
+
+  it('Libertadores (47) e Sul-Americana (44 + 12 da Libertadores) do começo ao fim', () => {
+    const lib = W.comps.LIB,
+      sula = W.comps.SULA;
+    expect(lib.done && sula.done).toBe(true);
+    const clubsOf = (c: typeof lib) => new Set(c.fx.flatMap((f) => [f.h, f.a]));
+    expect(clubsOf(lib).size).toBe(47);
+    expect(clubsOf(sula).size).toBe(56);
+    expect(lib.res.champ).not.toBeNull();
+    expect(sula.res.champ).not.toBeNull();
+    // grupos de 4, quase sem repetir país
+    for (const comp of [lib, sula]) {
+      const g = comp.stages.find((s) => s.type === 'league') as LeagueStage;
+      expect(g.groups.length).toBe(8);
+      let clash = 0;
+      for (const grp of g.groups) {
+        expect(grp.length).toBe(4);
+        const cs = grp.map((id) => W.clubs[id].country || 'BRA');
+        clash += cs.length - new Set(cs).size;
+      }
+      expect(clash).toBeLessThanOrEqual(2);
+      expect(comp.fx[comp.fx.length - 1].neu).toBe(true);
+    }
+    // os clubes reais de 2026: Flamengo (campeão de 2025) na Libertadores, River na Sul-Americana
+    expect(clubsOf(lib).has(W.clubs.find((c) => c.n === 'Flamengo')!.id)).toBe(true);
+    expect(clubsOf(sula).has(W.clubs.find((c) => c.n === 'River Plate')!.id)).toBe(true);
+    expect(noClash(W)).toBe(0);
+  });
+
+  it('a virada guarda as vagas do ano seguinte pelas tabelas e campeões', () => {
+    const libChamp = W.comps.LIB.res.champ!;
+    const cdbChamp = W.comps.CDB.res.champ!;
+    endSeason(W);
+    expect(W.qual!.year).toBe(W.year);
+    expect(W.qual!.lib.g).toContain(libChamp);
+    expect([...W.qual!.lib.g, ...W.qual!.lib.p2]).toContain(cdbChamp);
+    expect(W.qual!.lib.g.length).toBe(28);
+    expect(W.qual!.lib.p2.length).toBe(13);
+    expect(W.qual!.lib.p1.length).toBe(6);
+    const lib = W.comps.LIB;
+    expect((lib.stages[0] as KOStage).ties.length).toBe(3);
+    expect(W.comps.SULA).toBeDefined();
+    expect(W.comps.CDB).toBeDefined();
+    expect(W.comps.ARG.fx.length).toBeGreaterThan(0);
+  }, 120000);
 });

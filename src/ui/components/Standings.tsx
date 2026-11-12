@@ -56,7 +56,13 @@ export function LeagueTable({ W, comp, si, gi }: { W: World; comp: Competition; 
   const openModal = useUi((s) => s.openModal);
   const t = table(W, comp, si, gi);
   const st = comp.stages[si] as LeagueStage;
-  const title = st.groups.length > 1 ? (comp.id === 'D' || si === 0 ? 'Grupo ' : 'Quadrangular ') + (gi + 1) : st.name;
+  const cup = comp.id === 'LIB' || comp.id === 'SULA';
+  const title =
+    st.groups.length > 1
+      ? cup
+        ? 'Grupo ' + String.fromCharCode(65 + gi)
+        : (comp.id === 'D' || si === 0 ? 'Grupo ' : 'Quadrangular ') + (gi + 1)
+      : st.name;
   return (
     <div className="panel">
       <h3>{title}</h3>
@@ -111,9 +117,10 @@ export function LeagueTable({ W, comp, si, gi }: { W: World; comp: Competition; 
   );
 }
 
-export function TieBox({ W, comp, tie }: { W: World; comp: Competition; st: KOStage; tie: Tie }) {
+export function TieBox({ W, comp, st, tie }: { W: World; comp: Competition; st: KOStage; tie: Tie }) {
   const f1 = comp.fx[tie.f[0]],
     f2 = comp.fx[tie.f[1]];
+  if (st.single) return <SingleBox W={W} f={f1} tie={tie} />;
   const ga = (f1.pl ? f1.hg! : 0) + (f2.pl ? f2.ag! : 0),
     gb = (f1.pl ? f1.ag! : 0) + (f2.pl ? f2.hg! : 0);
   const sc = (f: typeof f1, side: 'h' | 'a') => (f.pl ? (side === 'h' ? f.hg : f.ag) : '–');
@@ -135,6 +142,32 @@ export function TieBox({ W, comp, tie }: { W: World; comp: Competition; st: KOSt
       {f2.hp !== undefined && (
         <div className="muted" style={{ fontSize: 11, textAlign: 'right' }}>
           ({f2.ap}x{f2.hp} pên.)
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Confronto em jogo único (copas): placar e pênaltis. */
+function SingleBox({ W, f, tie }: { W: World; f: Competition['fx'][number]; tie: Tie }) {
+  const mine = tie.a === W.user || tie.b === W.user;
+  const row = (c: number, g: number | null, pen?: number) => (
+    <div className={`row ${tie.w === c ? 'w' : ''}`}>
+      <span>
+        <Crest club={W.clubs[c]} size={16} /> {W.clubs[c].n}
+        {c === f.h && !f.neu && <span className="dim"> (casa)</span>}
+      </span>
+      <span className="num c">{f.pl ? g : '–'}</span>
+      <span className="agg">{f.pl && pen !== undefined ? `(${pen})` : ''}</span>
+    </div>
+  );
+  return (
+    <div className={`tie single ${mine ? 'me' : ''}`} style={mine ? { outline: '1px solid var(--yellow)' } : undefined}>
+      {row(f.h, f.hg, f.hp)}
+      {row(f.a, f.ag, f.ap)}
+      {f.neu && (
+        <div className="muted" style={{ fontSize: 11, textAlign: 'right' }}>
+          campo neutro
         </div>
       )}
     </div>

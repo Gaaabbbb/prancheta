@@ -186,7 +186,13 @@ export function NewGame() {
           <div className="panel">
             <h3>Jogo salvo</h3>
             <p className="muted" style={{ margin: '0 0 10px' }}>
-              {saved.meta.club}, temporada {saved.meta.year}, dia {saved.meta.day} de 40
+              {saved.meta.club}, temporada {saved.meta.year},{' '}
+              {saved.meta.cal === 'days'
+                ? new Date(saved.meta.year, 0, 2 + saved.meta.day).toLocaleDateString('pt-BR', {
+                    day: 'numeric',
+                    month: 'long',
+                  })
+                : `rodada ${saved.meta.day} de 40`}
             </p>
             <button className="btn pri" onClick={continueSave} disabled={loadingSave}>
               Continuar carreira

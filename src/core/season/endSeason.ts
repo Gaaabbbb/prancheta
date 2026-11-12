@@ -15,6 +15,7 @@ import { fillSquad } from '../world/fillSquad';
 import { dirty, rebuildPmap, release, squad, youth } from '../world/squad';
 import { promote, youthIntake, youthRecommend } from '../youth/youth';
 import { buildSeason } from './buildSeason';
+import { storeQualifiers } from './conmebol';
 import { table } from './table';
 import type { LeagueStage } from '../types';
 
@@ -24,6 +25,8 @@ import type { LeagueStage } from '../types';
  */
 export const endSeason = (W: World): SeasonReport => {
   const rep: SeasonReport = { year: W.year, champs: {}, prom: {}, rel: {}, scorers: {} };
+  // vagas da Libertadores e da Sul-Americana do ano que vem (antes de mexer nas divisões)
+  if (RULES.calendar === 'days') storeQualifiers(W);
   closeFinances(W);
   for (const div of DIVS) {
     const c = W.comps[div];

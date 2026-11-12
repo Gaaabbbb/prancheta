@@ -7,6 +7,8 @@ export interface SaveMeta {
   day: number;
   v: number;
   coach: string;
+  /** 'days' = calendário por dias (o `day` é o dia do ano) */
+  cal?: 'days';
 }
 
 export interface SaveRecord {

@@ -1,4 +1,4 @@
-import { serieCRelegations, type Competition, type LeagueStage, type World } from '@/core';
+import { isForeignLeague, serieCRelegations, type Competition, type LeagueStage, type World } from '@/core';
 
 /** Classe CSS da faixa colorida (acesso, rebaixamento etc.) para a posição. */
 export const zoneOf = (W: World, comp: Competition, si: number, pos: number, n: number): string => {
@@ -14,6 +14,14 @@ export const zoneOf = (W: World, comp: Competition, si: number, pos: number, n: 
       return pos <= q ? 'z-po' : pos > n - per ? 'z-dn' : '';
     }
     return pos <= 2 ? 'z-up' : '';
+  }
+  if (div === 'LIB') return pos <= 2 ? 'z-up' : pos === 3 ? 'z-sul' : '';
+  if (div === 'SULA') return pos === 1 ? 'z-up' : pos === 2 ? 'z-po' : '';
+  if (isForeignLeague(div)) {
+    // vagas na Libertadores (grupos + preliminares) e na Sul-Americana
+    const lib = div === 'ARG' ? 6 : 4,
+      sul = div === 'ARG' ? 6 : 4;
+    return pos <= lib ? 'z-lib' : pos <= lib + sul ? 'z-sul' : '';
   }
   return pos <= 4 ? 'z-po' : '';
 };

@@ -15,6 +15,7 @@ import { youthReport, youthTick } from '../youth/youth';
 import { advanceComp } from './advance';
 import { advanceForeignLeague, isForeignLeague, quickPlay } from './foreignLeagues';
 import { CUP_ADVANCE, resolveConflicts } from './cups';
+import { CONMEBOL_ADVANCE } from './conmebol';
 import { compList, dayFixtures, DAYS_START, isDays, restDays, seasonLastDay } from './calendar';
 
 /** Contexto de mata-mata de um jogo (placar da ida, pênaltis). */
@@ -202,10 +203,9 @@ const playFixtures = (W: World, list: { comp: Competition; f: Fixture }[], userM
 /** Competição terminou? Avança fases (as copas e ligas de fora têm regras próprias, registradas à parte). */
 export const compAdvancers: Record<string, (W: World, comp: Competition) => void> = {};
 const advanceAny = (W: World, comp: Competition) =>
-  (isForeignLeague(comp.id) ? advanceForeignLeague : CUP_ADVANCE[comp.id] || compAdvancers[comp.id] || advanceComp)(
-    W,
-    comp,
-  );
+  (isForeignLeague(comp.id)
+    ? advanceForeignLeague
+    : CUP_ADVANCE[comp.id] || CONMEBOL_ADVANCE[comp.id] || compAdvancers[comp.id] || advanceComp)(W, comp);
 
 /**
  * Calendário por dias: um dia inteiro. Joga os jogos do dia (de todas as competições), recupera a condição por um dia

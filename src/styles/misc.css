@@ -117,3 +117,30 @@
   color: #ffb3b5;
   font-size: 14px;
 }
+/* jogo único (copas): uma coluna de placar e os pênaltis */
+.tie.single .row {
+  grid-template-columns: 1fr 26px 34px;
+}
+/* etiqueta da competição (página Jogos e Calendário) */
+.comptag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #ffffff10;
+  color: var(--chalk);
+  white-space: nowrap;
+}
+.comptag.c-CDB {
+  background: #4cc38a22;
+  color: var(--ok);
+}
+.comptag.c-LIB {
+  background: #ffd23f22;
+  color: var(--yellow);
+}
+.comptag.c-SULA {
+  background: #6fa8ff22;
+  color: var(--blue);
+}

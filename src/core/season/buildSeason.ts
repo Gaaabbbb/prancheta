@@ -9,6 +9,7 @@ import { DAYS_START, leagueDays } from './calendar';
 import { addLeagueStage } from './fixtures';
 import { buildForeignLeagues } from './foreignLeagues';
 import { buildCopaDoBrasil, resolveConflicts } from './cups';
+import { buildLibertadores, buildSulamericana } from './conmebol';
 
 const byRegion = (W: World) => (a: number, b: number) =>
   REGION_ORDER.indexOf(W.clubs[a].uf) - REGION_ORDER.indexOf(W.clubs[b].uf);
@@ -75,6 +76,10 @@ export const buildSeason = (W: World): void => {
   if (days) {
     buildForeignLeagues(W);
     buildCopaDoBrasil(W);
+    if (W.clubs.some((c) => c.div === 'SUL')) {
+      buildLibertadores(W);
+      buildSulamericana(W);
+    }
     resolveConflicts(W);
   }
   dirty(W);

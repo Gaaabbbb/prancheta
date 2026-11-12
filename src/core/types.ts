@@ -335,6 +335,13 @@ export interface SquadIndex {
 
 export type YouthDecision = 'up' | 'out';
 
+/** Vagas para as copas da Conmebol de um ano (ids dos clubes). */
+export interface Qualifiers {
+  year: number;
+  lib: { g: number[]; p2: number[]; p1: number[] };
+  sula: { g: number[]; p1: Record<string, number[]> };
+}
+
 export interface World {
   v: number;
   year: number;
@@ -350,6 +357,8 @@ export interface World {
   seasonDone: boolean;
   /** 'days' = a temporada anda dia a dia (W.day é o dia do ano); sem valor = por rodadas */
   cal?: 'days';
+  /** vagas da Libertadores e da Sul-Americana do ano (definidas na virada) */
+  qual?: Qualifiers;
   coach?: string;
   board?: Board;
   fin?: Record<string, number>;

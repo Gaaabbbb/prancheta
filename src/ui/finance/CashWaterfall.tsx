@@ -14,6 +14,7 @@ export interface CashFlow {
   inMul: number;
   /** compras (negativo) e vendas (positivo) de jogadores */
   tra: number;
+  pre: number;
   sal: number;
   /** multas pagas (negativo) */
   outMul: number;
@@ -54,6 +55,7 @@ export function CashWaterfall({ flow }: { flow: CashFlow }) {
   };
   add('Bilheteria', flow.bil, 'Renda dos jogos em casa');
   add('Patrocínio', flow.pat + flow.bon, 'Parcelas mensais dos patrocinadores');
+  add('Premiação', flow.pre, 'Prêmios por fase alcançada na Copa do Brasil, Libertadores e Sul-Americana');
   add('Transferências', flow.tra, 'Vendas menos compras de jogadores');
   add('Compensações', flow.inMul, 'Multas pagas ao clube por patrocinadores que romperam');
   add('Salários', flow.sal, 'Salários do elenco profissional, pagos uma vez por mês');
