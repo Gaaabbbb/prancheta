@@ -85,3 +85,82 @@
 .ctl label {
   color: var(--muted);
 }
+
+/* tática: campo + banco embaixo, instruções e reservas ao lado */
+.tacgrid {
+  grid-template-columns: minmax(340px, 560px) 1fr;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .tacgrid {
+    grid-template-columns: 1fr;
+  }
+}
+.tok[draggable='true'] {
+  cursor: grab;
+}
+.tok[draggable='true']:active {
+  cursor: grabbing;
+}
+.tok.over .sh {
+  outline: 3px dashed var(--yellow);
+  outline-offset: 3px;
+}
+.benchbox {
+  margin: 12px auto 0;
+  max-width: calc((100vh - 170px) * 0.85);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: var(--r);
+  padding: 10px 12px 12px;
+}
+.benchbox .bh {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.benchbox .bh b {
+  font-family: var(--fd);
+  font-size: 17px;
+}
+.benchbox .warn {
+  color: var(--yellow);
+}
+.bench {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 10px 6px;
+}
+.tok.bt {
+  position: static;
+  transform: none;
+  width: auto;
+  padding: 4px 0;
+  border-radius: var(--r);
+}
+.tok.bt:hover {
+  background: #ffffff08;
+}
+.tok.bt .nm {
+  max-width: 100%;
+}
+.tok.bt .sh {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+}
+.t tr.drow.over td {
+  background: #ffd23f22;
+  box-shadow: inset 0 2px 0 var(--yellow);
+}
+.t tr.drow.out {
+  opacity: 0.55;
+}
+.t tr.drow[draggable='true'] {
+  cursor: grab;
+}
+.benchbox .sp {
+  flex: 1;
+}

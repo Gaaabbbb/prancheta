@@ -14,6 +14,7 @@ import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { StatusTags, StrengthStars } from '../components/Badges';
 import { MiniTable } from '../components/Standings';
+import { Inbox } from '../components/Inbox';
 import { rating } from '../format';
 import type { PageProps } from './types';
 
@@ -103,26 +104,7 @@ export function Home({ W }: PageProps) {
             </div>
           )}
         </div>
-        <div className="panel">
-          <h3>
-            Caixa de entrada <small>{W.news.length} mensagens</small>
-          </h3>
-          <div className="news">
-            {W.news.length ? (
-              W.news.slice(0, 12).map((n, i) => (
-                <div className="it" key={i}>
-                  <span className="when">
-                    {n.y} d{n.d}
-                  </span>
-                  <b>{n.t}</b>
-                  <span>{n.b}</span>
-                </div>
-              ))
-            ) : (
-              <p className="muted">Sem notícias.</p>
-            )}
-          </div>
-        </div>
+        <Inbox W={W} />
       </div>
       <div className="grid" style={{ alignContent: 'start' }}>
         <div className="panel">

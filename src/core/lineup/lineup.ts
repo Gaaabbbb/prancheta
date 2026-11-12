@@ -119,3 +119,44 @@ export const refreshBench = (W: World, club: Club): void => {
   const inXI = new Set(club.lineup);
   club.bench = pickBench(squad(W, club.id).filter((p) => available(p) && !inXI.has(p.id)));
 };
+
+/** Lugar de um jogador na escalação do usuário: titular (vaga), banco (posição) ou reservas. */
+export type Spot = { z: 'xi'; i: number } | { z: 'bench'; i: number } | { z: 'res'; pid: number };
+
+/** Quem ocupa o lugar (null = vaga vazia). */
+export const spotPlayer = (club: Club, s: Spot): number | null =>
+  s.z === 'xi' ? (club.lineup?.[s.i] ?? null) : s.z === 'bench' ? (club.bench?.[s.i] ?? null) : s.pid;
+
+/**
+ * Troca dois lugares (arrastar ou clicar em dois jogadores). Retorna o motivo quando não pode trocar.
+ * O banco é escolhido pelo usuário e fica como está até ele mudar (ou alguém ficar indisponível).
+ */
+export const swapSpots = (W: World, club: Club, a: Spot, b: Spot): string | null => {
+  const pa = spotPlayer(club, a),
+    pb = spotPlayer(club, b);
+  if (pa === pb) return null;
+  if (a.z === 'res' && b.z === 'res') return null;
+  // um titular não pode sair deixando a vaga vazia
+  if ((a.z === 'xi' && pb == null) || (b.z === 'xi' && pa == null))
+    return 'Para tirar um titular, troque-o por outro jogador.';
+  const check = (pid: number | null, to: Spot) => {
+    if (pid == null || to.z === 'res') return null;
+    const p = W.pmap[pid];
+    return available(p) ? null : p.n + ' não está disponível.';
+  };
+  const err = check(pa, b) || check(pb, a);
+  if (err) return err;
+  const lineup = club.lineup!;
+  const bench: (number | null)[] = (club.bench || []).slice();
+  const put = (s: Spot, pid: number | null) => {
+    if (s.z === 'xi') lineup[s.i] = pid;
+    else if (s.z === 'bench') {
+      if (s.i >= bench.length) bench.push(pid);
+      else bench[s.i] = pid;
+    }
+  };
+  put(a, pb);
+  put(b, pa);
+  club.bench = bench.filter((x): x is number => x != null).slice(0, BENCH_SIZE);
+  return null;
+};

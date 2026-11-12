@@ -73,6 +73,15 @@ export const youthIntake = (W: World, c: Club): Player[] => {
   return out;
 };
 
+/** Pontos de OVR que um jovem ganharia num ano no ritmo atual (sem o sorteio diário). */
+export const youthYearly = (W: World, p: Player): number => {
+  const gap = p.pt - ovr(p);
+  if (gap <= 0) return 0;
+  const play = p.y ? 1 : 1 + Math.min(p.st.j, 20) / 40;
+  const top = 1 - Math.max(0, ovr(p) - 74) / 40;
+  return gap * youthRate(p.a) * youthFac(W.clubs[p.c]) * (p.dv || 1) * play * top;
+};
+
 /** Evolução contínua de quem tem até 21 anos (base e profissional), a cada dia de jogo. */
 export const youthTick = (W: World): void => {
   for (const p of W.players) {
@@ -80,11 +89,7 @@ export const youthTick = (W: World): void => {
     const gap = p.pt - ovr(p);
     p.pk = Math.min(1, (p.pk || 0) + 0.008);
     if (gap <= 0) continue;
-    const c = W.clubs[p.c];
-    const play = p.y ? 1 : 1 + Math.min(p.st.j, 20) / 40;
-    const top = 1 - Math.max(0, ovr(p) - 74) / 40;
-    const yearly = gap * youthRate(p.a) * youthFac(c) * (p.dv || 1) * play * top;
-    p.gx = (p.gx || 0) + yearly / 40 + gauss() * 0.03;
+    p.gx = (p.gx || 0) + youthYearly(W, p) / 40 + gauss() * 0.03;
     let k = 0;
     while (p.gx >= 1 && k++ < 3) {
       const o = ovr(p);
@@ -107,6 +112,7 @@ export const promote = (W: World, p: Player, silent?: boolean): void => {
       'Subiu da base: ' + p.n,
       p.n + ' (' + p.p + ', ' + p.a + ' anos) agora treina com o elenco profissional.',
       'youth',
+      { pid: p.id },
     );
 };
 

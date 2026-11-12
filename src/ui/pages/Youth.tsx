@@ -3,6 +3,7 @@ import { youthActions } from '@/app/youthActions';
 import { useUi } from '@/store/uiStore';
 import { Evo, FacilityStars, Ovr, PosTag } from '../components/Badges';
 import { SortTh } from '../components/PlayerTable';
+import { EvoBar } from '../components/EvoBar';
 import { sortPlayers } from '../sortPlayers';
 import { potTxt } from '../format';
 import type { PageProps } from './types';
@@ -44,6 +45,7 @@ export function Youth({ W }: PageProps) {
                 <SortTh k="ovr" label="OVR" cls="c" />
                 <SortTh k="evo" label="Evolução" cls="c" />
                 <SortTh k="pt" label="Potencial" cls="c" />
+                <SortTh k="prog" label="Próximo OVR" />
                 <th>Nível</th>
                 <th />
               </tr>
@@ -54,7 +56,7 @@ export function Youth({ W }: PageProps) {
                   <td className="muted">A base está vazia. A peneira do fim da temporada traz novos garotos.</td>
                 </tr>
               )}
-              {sortPlayers(kids, sort.k, sort.d).map((p) => {
+              {sortPlayers(kids, sort.k, sort.d, W).map((p) => {
                 const o = ovr(p),
                   ref = posRef(W, W.user!, p.p);
                 return (
@@ -86,6 +88,9 @@ export function Youth({ W }: PageProps) {
                       <Evo p={p} />
                     </td>
                     <td className="c num">{potTxt(p)}</td>
+                    <td>
+                      <EvoBar W={W} p={p} />
+                    </td>
                     <td>
                       {ref > 0 && o >= ref - 2 ? (
                         <span className="tag" style={{ background: '#4cc38a33', color: 'var(--ok)' }}>

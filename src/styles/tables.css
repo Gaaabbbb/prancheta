@@ -180,3 +180,21 @@ table.t td.nm {
   background: #e5484d33;
   color: #ff9a9d;
 }
+
+/* barra de evolução do OVR (Elenco) */
+.evob {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 96px;
+}
+.evob .meter {
+  flex: 1;
+  height: 6px;
+}
+.evob .num {
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 38px;
+  text-align: right;
+}

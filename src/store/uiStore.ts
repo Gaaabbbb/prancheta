@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { create } from 'zustand';
-import type { Div } from '@/core';
+import type { Div, NewsItem } from '@/core';
 
 export type PageId =
   'home' | 'squad' | 'youth' | 'tactics' | 'fixtures' | 'tables' | 'clubs' | 'finance' | 'editor' | 'game';
 
 export type SortKey =
-  'pos' | 'n' | 'a' | 'ovr' | 'pt' | 'f' | 'mo' | 'evo' | 'j' | 'g' | 'as' | 'nt' | 'val' | 'sal' | 'ct';
+  'pos' | 'n' | 'a' | 'ovr' | 'pt' | 'prog' | 'f' | 'mo' | 'evo' | 'j' | 'g' | 'as' | 'nt' | 'val' | 'sal' | 'ct';
 
 /** Modais conhecidos. Para criar um novo, adicione aqui e em ui/modals/ModalHost.tsx. */
 export type ModalSpec =
@@ -19,6 +19,7 @@ export type ModalSpec =
   | { kind: 'round'; comp: Div; fid: number }
   | { kind: 'seasonEnd' }
   | { kind: 'importSave' }
+  | { kind: 'news'; item: NewsItem }
   | { kind: 'confirm'; title: string; body: ReactNode; ok: string; onOk: () => void }
   | { kind: 'info'; title: string; body: ReactNode; wide?: boolean };
 

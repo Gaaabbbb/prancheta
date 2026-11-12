@@ -8,6 +8,7 @@ export * from './constants/divisions';
 export * from './player/ratings';
 export * from './player/value';
 export * from './player/names';
+export * from './player/evolution';
 export * from './news';
 export * from './world/squad';
 export * from './world/factory';

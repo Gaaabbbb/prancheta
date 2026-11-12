@@ -91,6 +91,16 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   claude.ai foi removido; `src/persistence/storage.ts` tem a interface `SaveBackend` para ligar outra nuvem depois.
 - Saves do jogo antigo entram por **Jogo e saves → Importar save** (arquivo `.save` ou texto copiado).
 - Fontes e a biblioteca de planilhas vêm do próprio projeto: o jogo funciona offline depois do build.
+- Novidades de interface (não mudam as regras, os testes de paridade continuam valendo):
+  - Caixa de entrada com mensagens novas em negrito. Ao clicar, a mensagem abre com ações (ver relatório, ajustar
+    escalação, ir para a base…) e a ação tomada fica registrada.
+  - Coluna **Evolução** no Elenco e na Base (`src/core/player/evolution.ts`). Até 21 anos mostra quanto falta para o
+    próximo ponto de OVR; acima disso, quanto o OVR deve mudar na virada da temporada.
+  - Tática: arrastar jogadores entre campo, banco e reservas. O banco é escolhido pelo usuário (`swapSpots` em
+    `src/core/lineup/lineup.ts`) e não é mais refeito sozinho.
+  - Finanças com extrato diário (`W.finLog`), gráfico do saldo com projeção, simulador do preço do ingresso, folha por
+    setor e histórico por temporada (`W.finHist`).
+- Regra nova, opcional: ampliar o estádio em Finanças (`expandStadium`). Custa dinheiro e aumenta o público.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

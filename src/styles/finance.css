@@ -1,0 +1,175 @@
+/* finanças */
+.g4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 1100px) {
+  .g4 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .g4 {
+    grid-template-columns: 1fr;
+  }
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kl {
+  font-size: 12px;
+  color: var(--muted);
+}
+.kpi .kv2 {
+  font-family: var(--fd);
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--chalk);
+}
+.kpi .kv2.ok {
+  color: var(--ok);
+}
+.kpi .kv2.bad {
+  color: var(--red);
+}
+.kpi .ks {
+  font-size: 12px;
+  color: var(--dim);
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+  margin: -2px 0 6px;
+}
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+.fchart {
+  position: relative;
+}
+.fchart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.fchart .gl {
+  stroke: #ffffff10;
+  stroke-width: 1;
+}
+.fchart .zero {
+  stroke: #ffffff40;
+  stroke-width: 1;
+}
+.fchart .ax {
+  fill: var(--dim);
+  font-size: 11px;
+}
+.fchart .bal {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.fchart .proj {
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-dasharray: 5 5;
+  opacity: 0.6;
+}
+.fchart .dot {
+  fill: var(--blue);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.fchart .lbl {
+  fill: var(--muted);
+  font-size: 11px;
+}
+.fchart .inc {
+  fill: var(--ok);
+}
+.fchart .out {
+  fill: var(--red);
+}
+.fchart .cross {
+  stroke: #ffffff55;
+  stroke-width: 1;
+}
+.ftip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  background: var(--ink2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 8px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px #0008;
+  z-index: 2;
+}
+.ftip .sum {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line2);
+  font-weight: 700;
+}
+.stadium {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.stadium b {
+  display: block;
+  font-family: var(--fd);
+  font-size: 24px;
+}
+.expand {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.expand .btn {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  flex: 1;
+  min-width: 120px;
+}
+.expand .btn span {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.ledger {
+  max-height: 360px;
+  overflow: auto;
+}
+.t td.neg {
+  color: #ff9a9d;
+}
+.hbar {
+  display: grid;
+  grid-template-columns: 90px 1fr 80px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  margin: 6px 0;
+}
+.hbar .meter {
+  height: 8px;
+}
+.hbar b {
+  text-align: right;
+}

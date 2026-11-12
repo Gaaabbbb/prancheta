@@ -146,12 +146,51 @@ export interface Competition {
   seedPts?: Record<number, number>;
 }
 
+/** Liga uma mensagem ao que ela fala (jogador ou partida). */
+export interface NewsRef {
+  pid?: number;
+  comp?: Div;
+  fid?: number;
+}
+
 export interface NewsItem {
   y: number;
   d: number;
   t: string;
   b: string;
+  /** categoria: res, med, disc, youth, board, season, info */
   k: string;
+  ref?: NewsRef;
+  /** 1 = lida */
+  rd?: 1;
+  /** ação tomada a partir da mensagem */
+  ac?: string;
+}
+
+/** Movimento de um dia no caixa do usuário. */
+export interface FinDay {
+  y: number;
+  d: number;
+  bil: number;
+  pat: number;
+  sal: number;
+  inv: number;
+  /** saldo no fim do dia */
+  bal: number;
+  /** público e adversário, quando houve jogo em casa */
+  att?: number;
+  opp?: number;
+}
+
+/** Resumo financeiro de uma temporada encerrada. */
+export interface FinSeason {
+  year: number;
+  div: Div;
+  bil: number;
+  pat: number;
+  sal: number;
+  inv: number;
+  bal: number;
 }
 
 export interface Board {
@@ -199,6 +238,12 @@ export interface World {
   coach?: string;
   board?: Board;
   fin?: Record<string, number>;
+  /** extrato diário da temporada atual */
+  finLog?: FinDay[];
+  /** resumo das temporadas anteriores */
+  finHist?: FinSeason[];
+  /** saldo no início da temporada */
+  finStart?: number;
   ticket?: number;
   youthDecisions?: Record<number, YouthDecision>;
   /** cache do índice de elencos (não é salvo) */

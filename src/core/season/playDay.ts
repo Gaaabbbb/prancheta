@@ -76,12 +76,13 @@ export const userAfterMatch = (W: World, comp: Competition, f: Fixture, m: Match
     res + ' ' + gf + ' x ' + ga + ' contra o ' + opp.n + extra,
     comp.name + ', ' + comp.stages[f.st].name + '. Público: ' + (f.att || 0).toLocaleString('pt-BR') + '.',
     'res',
+    { comp: comp.id, fid: f.id },
   );
   const side = m.sides[home ? 0 : 1];
   for (const pid of side.played) {
     const p = W.pmap[pid];
-    if (p.inj > 0) news(W, 'Lesão: ' + p.n, p.n + ' vai desfalcar o time por ' + p.inj + ' jogo(s).', 'med');
-    if (p.sus > 0) news(W, 'Suspensão: ' + p.n, p.n + ' está suspenso para a próxima partida.', 'disc');
+    if (p.inj > 0) news(W, 'Lesão: ' + p.n, p.n + ' vai desfalcar o time por ' + p.inj + ' jogo(s).', 'med', { pid });
+    if (p.sus > 0) news(W, 'Suspensão: ' + p.n, p.n + ' está suspenso para a próxima partida.', 'disc', { pid });
   }
   boardAfterMatch(W, gf, ga);
 };
@@ -121,7 +122,7 @@ export const playDay = (W: World, userMatch?: Match): void => {
     if (p.inj > 0) {
       p.inj--;
       if (p.inj === 0 && p.c === W.user)
-        news(W, 'Departamento médico', p.n + ' está recuperado e liberado para jogar.', 'med');
+        news(W, 'Departamento médico', p.n + ' está recuperado e liberado para jogar.', 'med', { pid: p.id });
     }
   }
   dailyMoney(W);

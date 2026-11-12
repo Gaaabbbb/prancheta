@@ -1,6 +1,8 @@
 import { DIV_NAME, DIV_REP_TARGET, DIVS, type Div } from '../constants/divisions';
+import { closeFinances } from '../finance/finance';
 import { clamp } from '../math';
 import { news } from '../news';
+import { ageEvoRange, seasonPlayBonus } from '../player/evolution';
 import { ovr, shiftOvr } from '../player/ratings';
 import { calcValue, calcWage } from '../player/value';
 import { chance, gauss, ri } from '../rng';
@@ -19,6 +21,7 @@ import type { LeagueStage } from '../types';
  */
 export const endSeason = (W: World): SeasonReport => {
   const rep: SeasonReport = { year: W.year, champs: {}, prom: {}, rel: {}, scorers: {} };
+  closeFinances(W);
   for (const div of DIVS) {
     const c = W.comps[div];
     rep.champs[div] = c.res.champ;
@@ -123,14 +126,10 @@ export const endSeason = (W: World): SeasonReport => {
       p.pk = Math.min(1, (p.pk || 0) + 0.15);
     } else {
       const o = ovr(p);
-      let d: number;
-      if (p.a <= 24) d = ri(0, 3) - (o >= 78 ? 1 : 0);
-      else if (p.a <= 28) d = ri(-1, 2);
-      else if (p.a <= 31) d = ri(-2, 1);
-      else if (p.a <= 33) d = ri(-4, 0);
-      else d = ri(-6, -1);
+      const [lo, hi] = ageEvoRange(p.a);
+      let d = ri(lo, hi) - (p.a <= 24 && o >= 78 ? 1 : 0);
       if (d > 0) d = Math.min(d, Math.max(0, p.pt - o));
-      const playBonus = p.st.j > 20 && p.a <= 24 ? 1 : 0;
+      const playBonus = seasonPlayBonus(p);
       shiftOvr(p, d + playBonus);
       p.pk = 1;
       const retireP =
