@@ -150,3 +150,25 @@ td.nowrap {
   border-radius: var(--r);
   font-size: 13px;
 }
+
+.loanbox {
+  margin-bottom: 4px;
+}
+.loansplit {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.loansplit b {
+  font-size: 18px;
+  margin: 0 2px;
+}
+.loansplit small {
+  display: block;
+  color: var(--dim);
+}
+.loansplit .r {
+  text-align: right;
+}

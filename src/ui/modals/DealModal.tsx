@@ -49,7 +49,7 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
   const clubStep = (mode === 'buy' || mode === 'loan') && !agreed;
   const value = calcValue(p);
   const [fee, setFee] = useState(() => roundMoney(value));
-  const [share, setShare] = useState(0.75);
+  const [share, setShare] = useState(0.5);
   const [clubAns, setClubAns] = useState<ClubAnswer | null>(null);
   const demand = playerDemand(W, p, mode === 'renew' ? 'renew' : mode === 'free' ? 'free' : 'buy');
   const [wage, setWage] = useState(demand.wage);
@@ -69,10 +69,11 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
     return out;
   };
 
-  const sendClub = (v = fee) => {
-    const a = run(() => (mode === 'loan' ? loanRequest(W, pid, share) : offerToClub(W, pid, v)));
+  const sendClub = (v = fee, sh = share) => {
+    const a = run(() => (mode === 'loan' ? loanRequest(W, pid, sh) : offerToClub(W, pid, v)));
     setClubAns(a);
     if (a.r === 'counter' && mode === 'buy') setFee(a.fee);
+    if (a.r === 'counter' && mode === 'loan' && a.share != null) setShare(a.share);
     save();
   };
 
@@ -190,12 +191,39 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
               </p>
             </>
           ) : (
-            <div className="seg" style={{ marginBottom: 10 }}>
-              {[0.5, 0.75, 1].map((v) => (
-                <button key={v} className={share === v ? 'on' : ''} onClick={() => setShare(v)}>
-                  Pago {Math.round(v * 100)}% do salário
-                </button>
-              ))}
+            <div className="loanbox">
+              <div className="loansplit">
+                <span>
+                  Você paga <b className="num">{Math.round(share * 100)}%</b>
+                  <small className="num">{money(p.sal * share)}/mês</small>
+                </span>
+                <span className="r">
+                  {from!.s} paga <b className="num">{Math.round((1 - share) * 100)}%</b>
+                  <small className="num">{money(p.sal * (1 - share))}/mês</small>
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={5}
+                value={Math.round(share * 100)}
+                onChange={(e) => setShare(+e.target.value / 100)}
+                style={{ width: '100%' }}
+                aria-label="Parte do salário que você paga"
+              />
+              <div className="seg" style={{ margin: '6px 0 10px' }}>
+                {[
+                  [0.3, 'Eles pagam mais'],
+                  [0.5, 'Dividir 50/50'],
+                  [0.8, 'Você paga mais'],
+                  [1, 'Salário todo'],
+                ].map(([v, l]) => (
+                  <button key={v} className={share === v ? 'on' : ''} onClick={() => setShare(v as number)}>
+                    {l}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {ansBox(clubAns)}
@@ -205,8 +233,13 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
                 Aceitar {money(clubAns.fee)}
               </button>
             )}
+            {clubAns?.r === 'counter' && mode === 'loan' && clubAns.share != null && (
+              <button className="btn pri" onClick={() => sendClub(fee, clubAns.share)}>
+                Aceitar pagar {Math.round(clubAns.share * 100)}%
+              </button>
+            )}
             <button className={`btn ${clubAns?.r === 'counter' ? '' : 'pri'}`} onClick={() => sendClub()}>
-              {mode === 'loan' ? 'Pedir empréstimo' : 'Enviar proposta'}
+              {mode === 'loan' ? `Propor ${Math.round(share * 100)}%` : 'Enviar proposta'}
             </button>
           </div>
         </div>

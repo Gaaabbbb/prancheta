@@ -113,7 +113,7 @@ describe('mercado', () => {
     expect(mine.ct).toBe(W.year + r.years[1]);
   });
 
-  it('empréstimo: divide o salário e volta no fim da temporada', () => {
+  it('empréstimo: a parte do salário é negociada e o jogador volta no fim da temporada', () => {
     const W = career();
     const p = W.players.find((x) => {
       if (x.c < 0 || x.c === 0 || x.y || sellBlock(W, x)) return false;
@@ -124,11 +124,17 @@ describe('mercado', () => {
     })!;
     const owner = p.c;
     const before = monthlyWages(W, 0);
-    expect(loanRequest(W, p.id, 0.5).r).toBe('accept');
+    // proposta baixa: o clube responde com a parte que quer que o usuário pague
+    const c = loanRequest(W, p.id, 0);
+    expect(c.r).toBe('counter');
+    const sh = c.r === 'counter' ? c.share! : 0;
+    expect(sh).toBeGreaterThan(0);
+    expect(sh).toBeLessThanOrEqual(1);
+    expect(loanRequest(W, p.id, sh).r).toBe('accept');
     expect(offerContract(W, p.id, 0, 1).r).toBe('accept');
     expect(p.c).toBe(0);
-    expect(p.loan).toEqual({ from: owner, share: 0.5 });
-    expect(monthlyWages(W, 0)).toBeCloseTo(before + p.sal * 0.5, 0);
+    expect(p.loan).toEqual({ from: owner, share: sh });
+    expect(monthlyWages(W, 0)).toBeCloseTo(before + p.sal * sh, 0);
     while (!W.seasonDone) playDay(W);
     endSeason(W);
     expect(p.c).toBe(owner);

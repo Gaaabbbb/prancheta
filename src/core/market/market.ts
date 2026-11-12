@@ -169,7 +169,9 @@ export const askingPrice = (W: World, p: Player): number => {
 // ---------------------------------------------------------------- etapa 1: clube
 
 export type ClubAnswer =
-  { r: 'accept'; fee: number; msg: string } | { r: 'counter'; fee: number; msg: string } | { r: 'reject'; msg: string };
+  | { r: 'accept'; fee: number; share?: number; msg: string }
+  | { r: 'counter'; fee: number; share?: number; msg: string }
+  | { r: 'reject'; msg: string };
 
 /** Proposta de compra ao clube. Se aceitar, o acordo fica guardado e falta acertar com o jogador. */
 export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
@@ -204,16 +206,37 @@ export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
   return { r: 'reject', msg: `O ${club} achou a proposta muito baixa. Pede perto de ${brl(ask)}.` };
 };
 
+/** Arredonda a parte do salário para múltiplos de 5%. */
+export const roundShare = (v: number): number => Math.round(clamp(v, 0, 1) * 20) / 20;
+
+/**
+ * Menor parte do salário que o clube dono aceita que o outro pague num empréstimo.
+ * Reserva pouco usado: ~30%; quem joga às vezes: ~50%; jovem promessa: ~60%.
+ * Clube endividado quer mais; clube que pede bem maior que o dono paga mais.
+ */
+export const loanMinShare = (W: World, p: Player, to: number): number => {
+  const rank = squadRank(W, p);
+  let v = rank >= 18 ? 0.3 : p.a <= 22 && rank >= 6 ? 0.6 : 0.5;
+  const from = W.clubs[p.c],
+    dest = W.clubs[to];
+  if (from.bal < 0) v += 0.15;
+  const gap = dest.rep - from.rep;
+  if (gap > 15) v += 0.1;
+  else if (gap < -15) v -= 0.1;
+  v += 0.1 * (fixed01(W, p.id, 'emprestimo') - 0.5);
+  return roundShare(clamp(v, 0.1, 1));
+};
+
 /** Pedido de empréstimo até o fim da temporada; `share` é a parte do salário que o usuário paga. */
 export const loanRequest = (W: World, pid: number, share: number): ClubAnswer => {
   const mk = ensureMarket(W)!;
   const p = W.pmap[pid];
+  share = roundShare(share);
   if (!windowState(W).open) return { r: 'reject', msg: 'A janela de transferências está fechada.' };
   const block = sellBlock(W, p);
   if (block) return { r: 'reject', msg: block };
   if (triesLeft(W, pid, 'loan') <= 0)
     return { r: 'reject', msg: `O ${W.clubs[p.c].n} encerrou as conversas nesta janela.` };
-  const n = spendTry(W, pid, 'loan');
   const rank = squadRank(W, p);
   const club = W.clubs[p.c].n;
   if (rank < 12 && !(p.a <= 22 && rank >= 6))
@@ -222,17 +245,30 @@ export const loanRequest = (W: World, pid: number, share: number): ClubAnswer =>
     me = W.clubs[W.user!];
   if (me.rep < from.rep - 35)
     return { r: 'reject', msg: `${p.n} não quer ir para um clube tão menor, nem emprestado.` };
-  const want = rank >= 18 ? 0.5 : 0.75;
+  const n = spendTry(W, pid, 'loan');
+  const want = loanMinShare(W, p, me.id);
+  const pct = (v: number) => Math.round(v * 100) + '%';
   if (share >= want) {
     mk.agreed[pid] = { fee: 0, kind: 'loan', share };
     return {
       r: 'accept',
       fee: 0,
-      msg: `O ${club} aceitou emprestar ${p.n}. Você paga ${Math.round(share * 100)}% do salário.`,
+      share,
+      msg: `O ${club} aceitou emprestar ${p.n}. Você paga ${pct(share)} do salário e o ${club}, ${pct(1 - share)}.`,
     };
   }
   if (n >= MAX_TRIES) return { r: 'reject', msg: `O ${club} encerrou as conversas nesta janela.` };
-  return { r: 'counter', fee: 0, msg: `O ${club} só empresta se você pagar ${Math.round(want * 100)}% do salário.` };
+  // contraproposta: na primeira o clube pede acima do mínimo; depois desce até ele
+  const counter = roundShare(n === 1 ? Math.min(1, want + 0.1) : want);
+  return {
+    r: 'counter',
+    fee: 0,
+    share: counter,
+    msg:
+      share < want - 0.35
+        ? `Proposta baixa. O ${club} quer que você pague pelo menos ${pct(counter)} do salário.`
+        : `O ${club} topa se você pagar ${pct(counter)} do salário (eles pagam ${pct(1 - counter)}).`,
+  };
 };
 
 // ---------------------------------------------------------------- etapa 2: jogador
@@ -482,6 +518,28 @@ export const rejectIncoming = (W: World, id: number): void => {
   W.mk!.offers = W.mk!.offers.filter((x) => x.id !== id);
 };
 
+/**
+ * Pede que o outro clube pague uma parte maior do salário num empréstimo. `o.max` guarda o máximo que ele aceita
+ * pagar (propostas antigas, sem máximo, não sobem).
+ */
+export const counterIncomingShare = (W: World, id: number, share: number): 'up' | 'gone' | 'same' => {
+  const mk = W.mk!;
+  const o = mk.offers.find((x) => x.id === id)!;
+  if (o.haggled) return 'same';
+  o.haggled = true;
+  const max = Math.max(o.share, o.max || 0);
+  if (share <= max) {
+    o.share = roundShare(share);
+    return 'up';
+  }
+  if (rnd(mk) < 0.45) {
+    mk.offers = mk.offers.filter((x) => x.id !== id);
+    return 'gone';
+  }
+  o.share = roundShare(max);
+  return 'up';
+};
+
 /** Pede mais dinheiro numa proposta recebida. */
 export const counterIncoming = (W: World, id: number, fee: number): 'up' | 'gone' | 'same' => {
   const mk = W.mk!;
@@ -606,7 +664,8 @@ const aiOffersToUser = (W: World) => {
     if (!p || p.c !== me.id || busy.has(pid) || rnd(mk) > 0.3) continue;
     const b = buyerFor(p, 0);
     if (!b) continue;
-    push({ pid, from: b.id, kind: 'loan', fee: 0, share: [0.5, 0.75, 1][rint(mk, 0, 2)], max: 0 });
+    const sh = roundShare(0.3 + rnd(mk) * 0.6);
+    push({ pid, from: b.id, kind: 'loan', fee: 0, share: sh, max: roundShare(sh + 0.1 + rnd(mk) * 0.25) });
     if (mk.offers.length >= MAX_INCOMING) return;
   }
   // às vezes um clube maior tenta tirar um destaque

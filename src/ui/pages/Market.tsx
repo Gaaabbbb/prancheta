@@ -4,6 +4,7 @@ import {
   aiListed,
   calcValue,
   counterIncoming,
+  counterIncomingShare,
   DIV_NAME,
   DIVS,
   ensureMarket,
@@ -429,6 +430,7 @@ function Offers({ W }: { W: World }) {
   const openModal = useUi((s) => s.openModal);
   const mk = W.mk!;
   const [ask, setAsk] = useState<Record<number, number>>({});
+  const [askSh, setAskSh] = useState<Record<number, number>>({});
   const save = () => void useGame.getState().save();
   const agreed = Object.entries(mk.agreed).map(([pid, a]) => ({ p: W.pmap[+pid], a }));
   return (
@@ -449,6 +451,7 @@ function Offers({ W }: { W: World }) {
             const p = W.pmap[o.pid];
             const club = W.clubs[o.from];
             const counter = ask[o.id] ?? roundMoney(Math.max(o.fee * 1.2, mk.sell[o.pid] || 0));
+            const counterSh = askSh[o.id] ?? Math.min(1, Math.round((o.share + 0.2) * 20) / 20);
             return (
               <div key={o.id} className="offer">
                 <div className="sphead">
@@ -475,13 +478,35 @@ function Offers({ W }: { W: World }) {
                     </>
                   ) : (
                     <>
-                      <dt>Paga do salário</dt>
-                      <dd className="num">{Math.round(o.share * 100)}%</dd>
+                      <dt>Eles pagam do salário</dt>
+                      <dd className="num">
+                        <b>{Math.round(o.share * 100)}%</b> ({money(p.sal * o.share)}/mês)
+                      </dd>
+                      <dt>Você continua pagando</dt>
+                      <dd className="num">{money(p.sal * (1 - o.share))}/mês</dd>
                     </>
                   )}
                   <dt>Responder até</dt>
                   <dd>{o.exp - W.day <= 0 ? 'hoje' : `${o.exp - W.day} rodada(s)`}</dd>
                 </dl>
+                {o.kind === 'loan' && !o.haggled && (
+                  <div className="feerow sm">
+                    <span className="muted">Pedir que paguem</span>
+                    <button
+                      className="btn sm"
+                      onClick={() => setAskSh({ ...askSh, [o.id]: Math.max(0, counterSh - 0.05) })}
+                    >
+                      −
+                    </button>
+                    <b className="num">{Math.round(counterSh * 100)}%</b>
+                    <button
+                      className="btn sm"
+                      onClick={() => setAskSh({ ...askSh, [o.id]: Math.min(1, counterSh + 0.05) })}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
                 {o.kind === 'buy' && !o.haggled && (
                   <div className="feerow sm">
                     <span className="muted">Pedir</span>
@@ -519,6 +544,26 @@ function Offers({ W }: { W: World }) {
                   >
                     Aceitar
                   </button>
+                  {o.kind === 'loan' && !o.haggled && (
+                    <button
+                      className="btn sm"
+                      onClick={() => {
+                        let r: string = '';
+                        mutate((W) => {
+                          r = counterIncomingShare(W, o.id, counterSh);
+                        });
+                        const now = W.mk!.offers.find((x) => x.id === o.id);
+                        toast(
+                          r === 'gone' || !now
+                            ? `O ${club.n} desistiu do empréstimo.`
+                            : `O ${club.n} agora paga ${Math.round(now.share * 100)}% do salário.`,
+                        );
+                        save();
+                      }}
+                    >
+                      Pedir mais
+                    </button>
+                  )}
                   {o.kind === 'buy' && !o.haggled && (
                     <button
                       className="btn sm"

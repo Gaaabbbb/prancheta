@@ -289,7 +289,15 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
 function Ledger({ W }: { W: World }) {
   const log = (W.finLog || []).filter((it) => it.y === W.year);
   const months = monthBuckets(W, log);
-  const [open, setOpen] = useState<number | null>(null);
+  // várias linhas podem ficar abertas ao mesmo tempo
+  const [open, setOpen] = useState<Set<number>>(() => new Set());
+  const toggle = (m: number) =>
+    setOpen((o) => {
+      const n = new Set(o);
+      if (n.has(m)) n.delete(m);
+      else n.add(m);
+      return n;
+    });
   const cur = months[months.length - 1];
   const nextPayIn = (() => {
     for (let d = W.day + 1; d <= 40; d++) if (isPayday(W, d)) return d - W.day;
@@ -340,9 +348,9 @@ function Ledger({ W }: { W: World }) {
           <tbody>
             {months.map((b) => (
               <Fragment key={b.m}>
-                <tr className={`click ${open === b.m ? 'me' : ''}`} onClick={() => setOpen(open === b.m ? null : b.m)}>
+                <tr className={`click ${open.has(b.m) ? 'me' : ''}`} onClick={() => toggle(b.m)}>
                   <td>
-                    <span className="caret">{open === b.m ? '▾' : '▸'}</span> {MONTH_LONG[b.m]}
+                    <span className="caret">{open.has(b.m) ? '▾' : '▸'}</span> {MONTH_LONG[b.m]}
                     {b === cur && W.day < 40 && <span className="muted"> · em andamento</span>}
                   </td>
                   <td className="r num">{b.games.length || ''}</td>
@@ -358,7 +366,7 @@ function Ledger({ W }: { W: World }) {
                     <b>{money(b.bal)}</b>
                   </td>
                 </tr>
-                {open === b.m && (
+                {open.has(b.m) && (
                   <tr className="sub">
                     <td colSpan={9}>
                       {b.games.length === 0 && b.fines.length === 0 && (
