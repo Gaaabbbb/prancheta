@@ -4,6 +4,8 @@ import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
+  // caminhos relativos: o build funciona em qualquer pasta de um site (ou aberto pelo celular na rede)
+  base: './',
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },

@@ -165,9 +165,9 @@ export function Tactics({ W }: PageProps) {
       <div className="ph">
         <h2>Tática</h2>
         <span className="muted">
-          Arraste jogadores entre o campo, o banco e a lista de reservas. Também dá para clicar em um e depois em outro
-          para trocá-los. Em cada jogador: C = condição, M = moral, N = nota média. O desempenho previsto é o OVR
-          ajustado por esses três (a condição pesa mais).
+          Arraste jogadores entre o campo, o banco e a lista de reservas, ou toque em um e depois em outro para
+          trocá-los (no celular, use o toque). Em cada jogador: C = condição, M = moral, N = nota média. O desempenho
+          previsto é o OVR ajustado por esses três (a condição pesa mais).
         </span>
         <span className="sp" />
         <span className="muted" style={{ fontSize: 12 }}>

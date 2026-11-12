@@ -12,15 +12,29 @@ npm install      # só na primeira vez
 npm run dev      # abre em http://localhost:5173
 ```
 
-| Comando             | O que faz                                                                       |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `npm run dev`       | servidor de desenvolvimento com recarga automática                              |
-| `npm run build`     | gera a versão final em `dist/` (dá para hospedar em qualquer servidor estático) |
-| `npm run preview`   | serve a pasta `dist/` para conferir o build                                     |
-| `npm test`          | roda os testes (inclui a paridade com o jogo original)                          |
-| `npm run lint`      | ESLint                                                                          |
-| `npm run typecheck` | verificação de tipos do TypeScript                                              |
-| `npm run format`    | formata o código com Prettier                                                   |
+| Comando             | O que faz                                                                        |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `npm run dev`       | servidor de desenvolvimento com recarga automática                               |
+| `npm run build`     | gera a versão final em `dist/` (dá para hospedar em qualquer servidor estático)  |
+| `npm run preview`   | serve a pasta `dist/` para conferir o build                                      |
+| `npm test`          | roda os testes (inclui a paridade com o jogo original)                           |
+| `npm run lint`      | ESLint                                                                           |
+| `npm run typecheck` | verificação de tipos do TypeScript                                               |
+| `npm run format`    | formata o código com Prettier                                                    |
+| `npm run dev:rede`  | servidor de desenvolvimento aberto para a rede (celular no mesmo Wi-Fi)          |
+| `npm run celular`   | gera o build e serve na rede em `http://IP-DO-MAC:4173` (mais rápido no celular) |
+
+### No celular (iPhone e Android)
+
+Até 820 px de largura o jogo usa um layout próprio: topo em duas linhas, barra de menu embaixo (Início, Tática,
+Jogos, Mercado e "Mais"), tabelas que rolam para o lado, janelas em tela cheia e a Tática com troca por toque (toque
+num jogador e depois no lugar ou no outro jogador). As regras ficam em `src/styles/mobile.css`.
+
+Para jogar no iPhone sem publicar: com o Mac e o iPhone no mesmo Wi-Fi, rode `npm run celular` e abra no Safari o
+endereço que o terminal mostra em "Network" (algo como `http://192.168.0.10:4173`). Em Compartilhar > "Adicionar à
+Tela de Início" o jogo ganha ícone e abre em tela cheia. O save fica guardado no próprio iPhone; para levar a carreira
+do Mac, use Jogo e saves > exportar e importar. Para jogar fora de casa, publique a pasta `dist/` em qualquer
+hospedagem de site estático.
 
 ## Arquitetura
 

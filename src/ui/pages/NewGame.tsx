@@ -271,7 +271,15 @@ export function NewGame() {
         {!PW && <p className="muted">Carregando clubes…</p>}
         <div className="clubgrid">
           {clubs.map((c, i) => (
-            <button key={c.id} className={`clubcard ${club === c.id ? 'on' : ''}`} onClick={() => setClub(c.id)}>
+            <button
+              key={c.id}
+              className={`clubcard ${club === c.id ? 'on' : ''}`}
+              onClick={() => {
+                setClub(c.id);
+                // no celular a lista fica embaixo: volta para os detalhes e o botão "Assumir"
+                if (window.innerWidth <= 820) setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+              }}
+            >
               <Crest club={c} size={30} />
               <div style={{ minWidth: 0, flex: 1 }}>
                 <b>

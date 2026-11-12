@@ -17,4 +17,7 @@ export const NAV: (readonly [PageId, string] | '-')[] = [
   ['game', 'Jogo e saves'],
 ];
 
+/** Páginas da barra de baixo no celular (as outras ficam em "Mais"). */
+export const NAV_MOBILE: PageId[] = ['home', 'tactics', 'fixtures', 'market'];
+
 export const APP_VERSION = '1.0';
