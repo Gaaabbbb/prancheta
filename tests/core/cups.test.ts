@@ -11,7 +11,10 @@ import {
   mergeDb,
   rng,
   stepDay,
+  addForeignClubs,
   endSeason,
+  playDay,
+  RULES,
   type KOStage,
   type LeagueStage,
   type RawDb,
@@ -129,4 +132,32 @@ describe('copas', () => {
     expect(W.comps.CDB).toBeDefined();
     expect(W.comps.ARG.fx.length).toBeGreaterThan(0);
   }, 120000);
+
+  it('save antigo: termina a temporada por rodadas e a próxima já vem por dias, com as copas', () => {
+    const W = createWorld(31, expandDb(rawDb as unknown as RawDb));
+    W.user = 3;
+    W.coach = 'T';
+    rng.seed(31);
+    RULES.calendar = 'rounds';
+    try {
+      buildSeason(W);
+      ensureSponsors(W);
+      ensureMarket(W);
+      expect(W.cal).toBeUndefined();
+      for (let i = 0; i < 10; i++) playDay(W);
+    } finally {
+      RULES.calendar = 'days';
+    }
+    // o save é carregado na versão nova: chegam os clubes sul-americanos
+    expect(addForeignClubs(W, expandDb(sulaDb as unknown as RawDb))).toBe(158);
+    while (!W.seasonDone) playDay(W);
+    endSeason(W);
+    expect(W.cal).toBe('days');
+    expect(W.qual!.lib.g.length).toBe(28);
+    for (const id of ['CDB', 'LIB', 'SULA', 'ARG', 'URU']) expect(W.comps[id]).toBeDefined();
+    let n = 0;
+    while (!W.seasonDone && n++ < 400) stepDay(W);
+    expect(W.comps.LIB.done && W.comps.CDB.done && W.comps.SULA.done).toBe(true);
+    expect(noClash(W)).toBe(0);
+  }, 300000);
 });

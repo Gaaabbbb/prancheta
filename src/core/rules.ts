@@ -46,7 +46,7 @@ export interface Rules {
   /**
    * patrocínio anual = folha anual * fator:
    * - 'rep': 0,8 + reputação/250 (original)
-   * - 'div': fator da divisão (A 0,70 · B 0,68 · C 0,70 · D 0,85) + (reputação − reputação típica da divisão)/300
+   * - 'div': fator da divisão (A 0,54 · B 0,68 · C 0,58 · D 0,85 · sul-americanos 0,68) + (reputação − típica)/300
    */
   sponsorModel: 'rep' | 'div';
   /** 'rounds': o jogo anda de rodada em rodada (original); 'days': anda dia a dia, com copas */

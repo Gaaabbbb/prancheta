@@ -53,6 +53,9 @@ ui/  (telas React)  ──►  app/ (fluxo do jogo)  ──►  store/ (estado) 
 | `lineup/`            | escalação automática e validação da escalação                           |
 | `match/`             | motor de partida (`engine.ts`), narração, efeitos pós-jogo              |
 | `season/`            | tabelas, mata-mata, calendário, dia de jogos, virada de temporada       |
+| `season/cups.ts`     | Copa do Brasil, adiamento de jogos que batem com copa, premiação        |
+| `season/conmebol.ts` | Libertadores, Sul-Americana e vagas do ano seguinte                     |
+| `market/`            | mercado, contratos e janelas de transferência                           |
 | `finance/`, `board/` | bilheteria, patrocínio, salários; metas e confiança da diretoria        |
 | `db/`                | leitura e validação do banco de dados                                   |
 
@@ -132,19 +135,41 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
 - **Mercado e contratos (v0.2)**, em `src/core/market/market.ts` e na página Mercado (desligado com
   `applyLegacyRules()`, então a paridade não muda):
   - Janelas de transferência pelas datas da CBF (`src/core/market/windows.ts`): 1ª de 5/jan a 3/mar, complementar de
-    4 a 27/mar (só mercado nacional, igual às outras porque todos os clubes do jogo são brasileiros) e 2ª de 20/jul a
-    11/set. O Calendário marca os dias de janela aberta. Fora delas, só jogadores livres e renovações.
+    4 a 27/mar (só mercado nacional; no jogo funciona igual às outras) e 2ª de 20/jul a 11/set. O Calendário marca os dias de janela aberta. Fora delas, só jogadores livres e renovações.
   - Destaques (`keyRole`): os 3 melhores de cada elenco, o artilheiro e o dono da melhor nota custam bem mais, o clube
     quase não cede, às vezes não negocia naquela janela, e o jogador pede salário maior para sair. Titulares do 4º ao
     7º melhor também saem mais caros. A IA não tira destaques de outros clubes.
   - Compra em duas etapas: valor com o clube (aceita, contraproposta ou recusa, até 3 tentativas por janela) e
     salário/duração com o jogador, que pode recusar clube muito menor.
-  - Empréstimos até o fim da temporada, com divisão do salário; jogadores livres; renovação; dispensa com multa de
-    metade do salário que falta; lista de observação com avisos.
+  - Empréstimos até o fim da temporada, com a parte do salário negociada (0 a 100%: o clube dono tem um mínimo e faz
+    contraproposta; nas propostas recebidas dá para pedir que paguem mais); jogadores livres; renovação; dispensa
+    com multa de metade do salário que falta; lista de observação com avisos.
   - Contratos vencem: quem não renova sai de graça no fim da temporada. A IA renova a maioria, compra e vende entre si
     e manda propostas pelos jogadores do usuário (principalmente os colocados à venda). Negociações entre outros clubes
     ficam só em Mercado > Movimentações, sem notícias na caixa de entrada.
   - Transferências entram em Finanças (extrato, cascata do caixa e histórico).
+- **Dias, copas e América do Sul (v0.4)**:
+  - **Calendário por dias** (`RULES.calendar = 'days'`, `W.cal`): `W.day` e `Fixture.d` passam a ser o dia do ano.
+    `advanceDay` (`src/core/season/playDay.ts`) joga os jogos do dia de todas as competições, recupera a condição dia a
+    dia, conta lesões em dias (4 dias = 1 jogo), paga salários e patrocínio no 1º dia de cada mês (fevereiro a
+    novembro) e roda patrocínio e mercado com chances diárias equivalentes às de antes. As ligas usam as datas do
+    `WEEK_PLAN`, sem rodada no meio da semana em semana de copa; jogo de liga que bate com copa é adiado
+    (`resolveConflicts`). **Continuar** corre os dias até o próximo jogo ou até chegar uma notícia que pede atenção; há
+    também **+1 dia**. Com as regras antigas (paridade) e nos saves que estavam no meio da temporada, segue por rodadas.
+  - **Clubes sul-americanos**: 158 clubes e 4.575 jogadores de 9 países (`src/data/sula-db.json`, gerado da planilha
+    com `node scripts/sulaDb.mjs "planilha.xlsx"`). Divisão `SUL` e `Club.country`; não podem ser comandados, não têm
+    base, compram, vendem e podem ser contratados. Cada país tem uma liga simulada nos bastidores (só placar, por
+    Poisson) que define as vagas nas copas. Saves antigos recebem os clubes ao carregar. A planilha do jogo aceita
+    `Divisão = SUL` com a coluna País.
+  - **Copa do Brasil** (126 clubes, datas de 2026): fases 1–4 em jogo único, Série A entra na 5ª fase, ida e volta até
+    a semi, final única em campo neutro.
+  - **Libertadores** (47) e **Sul-Americana** (44 + 12 vindos da Libertadores): preliminares, grupos de 4 sem repetir
+    país, playoffs, mata-mata e final única. Na carreira nova de 2026 entram os classificados reais; depois, pela
+    Série A, Copa do Brasil, ligas simuladas e campeões (`W.qual`, definido na virada).
+  - **Premiação** por fase (~1/4 dos valores reais), na categoria `pre` do extrato. Com o dinheiro das copas, o
+    patrocínio foi recalibrado: sem mexer em nada, o clube típico de cada divisão termina a temporada com ~15% da folha
+    anual de lucro (bem mais com uma boa campanha em copa).
+  - Extrato mensal: várias linhas podem ficar abertas ao mesmo tempo.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).
