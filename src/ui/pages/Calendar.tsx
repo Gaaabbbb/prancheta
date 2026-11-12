@@ -1,0 +1,349 @@
+import { useState } from 'react';
+import { dateOf, isPayday, SEASON_DAYS, type Competition, type Fixture, type World } from '@/core';
+import { useUi } from '@/store/uiStore';
+import { Crest } from '../components/Crest';
+import { int } from '../format';
+import type { PageProps } from './types';
+
+const MONTHS = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+];
+const WEEK = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+type Where = 'all' | 'home' | 'away';
+type View = 'month' | 'list';
+
+interface Game {
+  f: Fixture;
+  comp: Competition;
+  date: Date;
+  home: boolean;
+  /** V, E ou D (jogos disputados) */
+  res: 'V' | 'E' | 'D' | null;
+  gf: number;
+  ga: number;
+}
+
+/** Todos os jogos do usuário na temporada, em ordem. */
+const userGames = (W: World): Game[] => {
+  const out: Game[] = [];
+  for (const comp of Object.values(W.comps))
+    for (const f of comp.fx) {
+      if (f.h !== W.user && f.a !== W.user) continue;
+      const home = f.h === W.user;
+      const gf = (home ? f.hg : f.ag) ?? 0,
+        ga = (home ? f.ag : f.hg) ?? 0;
+      let res: Game['res'] = null;
+      if (f.pl)
+        res =
+          gf > ga ? 'V' : gf < ga ? 'D' : f.hp !== undefined ? ((home ? f.hp > f.ap! : f.ap! > f.hp) ? 'V' : 'D') : 'E';
+      out.push({ f, comp, date: dateOf(W, f.d), home, res, gf, ga });
+    }
+  return out.sort((a, b) => a.f.d - b.f.d);
+};
+
+const dayKey = (d: Date) => `${d.getMonth()}-${d.getDate()}`;
+
+const record = (gs: Game[]) => {
+  const r = { V: 0, E: 0, D: 0, gp: 0, gc: 0 };
+  for (const g of gs)
+    if (g.res) {
+      r[g.res]++;
+      r.gp += g.gf;
+      r.gc += g.ga;
+    }
+  return r;
+};
+
+export function Calendar({ W }: PageProps) {
+  const openModal = useUi((s) => s.openModal);
+  const games = userGames(W);
+  const next = games.find((g) => !g.f.pl);
+  const [month, setMonth] = useState(() => (next || games[games.length - 1])?.date.getMonth() ?? 0);
+  const [where, setWhere] = useState<Where>('all');
+  const [view, setView] = useState<View>('month');
+
+  const shown = games.filter((g) => where === 'all' || (where === 'home') === g.home);
+  const byDay = new Map(shown.map((g) => [dayKey(g.date), g]));
+  // dias de jogo da temporada (todas as rodadas), para marcar salários e rodadas sem jogo do usuário
+  const seasonDays = new Map<string, number>();
+  for (let d = 1; d <= SEASON_DAYS; d++) seasonDays.set(dayKey(dateOf(W, d)), d);
+  const firstMonth = dateOf(W, 1).getMonth(),
+    lastMonth = dateOf(W, SEASON_DAYS).getMonth();
+
+  const open = (g: Game) => {
+    if (g.f.pl) openModal({ kind: 'report', comp: g.comp.id, fid: g.f.id });
+    else openModal({ kind: 'club', id: g.home ? g.f.a : g.f.h });
+  };
+
+  const homeRec = record(games.filter((g) => g.home)),
+    awayRec = record(games.filter((g) => !g.home));
+
+  const chip = (g: Game, compact = false) => {
+    const opp = W.clubs[g.home ? g.f.a : g.f.h];
+    return (
+      <>
+        <div className="cg-top">
+          <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.home ? 'Casa' : 'Fora'}</span>
+          {g.res && <span className={`cg-res f${g.res}`}>{g.res}</span>}
+        </div>
+        <div className="cg-opp">
+          <Crest club={opp} size={compact ? 18 : 22} />
+          <span>{compact ? opp.s : opp.n}</span>
+        </div>
+        <div className="cg-sc num">
+          {g.f.pl ? (
+            <>
+              {g.f.hg} x {g.f.ag}
+              {g.f.hp !== undefined && (
+                <small>
+                  {' '}
+                  ({g.f.hp}x{g.f.ap} pên.)
+                </small>
+              )}
+            </>
+          ) : g === next ? (
+            <span className="cg-next">próximo</span>
+          ) : (
+            <span className="dim">{g.comp.stages[g.f.st]?.name}</span>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  // grade do mês: semanas começando na segunda
+  const first = new Date(W.year, month, 1);
+  const offset = (first.getDay() + 6) % 7;
+  const daysIn = new Date(W.year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [...Array(offset).fill(null), ...Array.from({ length: daysIn }, (_, i) => i + 1)];
+  while (cells.length % 7) cells.push(null);
+  const monthGames = shown.filter((g) => g.date.getMonth() === month);
+
+  return (
+    <>
+      <div className="ph">
+        <h2>Calendário</h2>
+        <span className="muted">Temporada {W.year}</span>
+        <span className="sp" />
+        <div className="seg">
+          {(
+            [
+              ['all', 'Todos'],
+              ['home', 'Em casa'],
+              ['away', 'Fora'],
+            ] as [Where, string][]
+          ).map(([k, l]) => (
+            <button key={k} className={where === k ? 'on' : ''} onClick={() => setWhere(k)}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="seg">
+          <button className={view === 'month' ? 'on' : ''} onClick={() => setView('month')}>
+            Mês
+          </button>
+          <button className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>
+            Lista
+          </button>
+        </div>
+      </div>
+
+      <div className="grid g4 calsum">
+        <div className="panel">
+          <span className="kl">Em casa</span>
+          <b className="num">
+            {homeRec.V}V {homeRec.E}E {homeRec.D}D
+          </b>
+          <span className="ks">
+            gols {homeRec.gp}-{homeRec.gc}
+          </span>
+        </div>
+        <div className="panel">
+          <span className="kl">Fora</span>
+          <b className="num">
+            {awayRec.V}V {awayRec.E}E {awayRec.D}D
+          </b>
+          <span className="ks">
+            gols {awayRec.gp}-{awayRec.gc}
+          </span>
+        </div>
+        <div className="panel">
+          <span className="kl">Jogos</span>
+          <b className="num">
+            {games.filter((g) => g.f.pl).length} de {games.length}
+          </b>
+          <span className="ks">disputados até agora</span>
+        </div>
+        <div className="panel click" onClick={() => next && open(next)}>
+          <span className="kl">Próximo jogo</span>
+          {next ? (
+            <>
+              <b>
+                {next.home ? 'x' : '@'} {W.clubs[next.home ? next.f.a : next.f.h].n}
+              </b>
+              <span className="ks">
+                {next.date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })} ·{' '}
+                {next.home ? 'em casa' : 'fora'}
+              </span>
+            </>
+          ) : (
+            <b className="dim">temporada encerrada</b>
+          )}
+        </div>
+      </div>
+
+      {view === 'month' ? (
+        <div className="grid g21" style={{ marginTop: 16 }}>
+          <div className="panel">
+            <div className="calnav">
+              <button
+                className="btn ghost sm"
+                disabled={month <= firstMonth}
+                onClick={() => setMonth((m) => m - 1)}
+                aria-label="Mês anterior"
+              >
+                ‹
+              </button>
+              <h3>
+                {MONTHS[month]} {W.year}
+              </h3>
+              <button
+                className="btn ghost sm"
+                disabled={month >= lastMonth}
+                onClick={() => setMonth((m) => m + 1)}
+                aria-label="Próximo mês"
+              >
+                ›
+              </button>
+            </div>
+            <div className="cal">
+              {WEEK.map((w) => (
+                <div key={w} className="cal-wd">
+                  {w}
+                </div>
+              ))}
+              {cells.map((day, i) => {
+                if (day == null) return <div key={i} className="cal-c off" />;
+                const k = `${month}-${day}`;
+                const g = byDay.get(k);
+                const sd = seasonDays.get(k);
+                const pay = sd != null && isPayday(W, sd);
+                const today = sd != null && sd === W.day + 1;
+                return (
+                  <div
+                    key={i}
+                    className={`cal-c ${g ? 'game ' + (g.home ? 'h' : 'a') : ''} ${g?.res ? 'r' + g.res : ''} ${today ? 'today' : ''}`}
+                    onClick={g ? () => open(g) : undefined}
+                    title={g ? `${g.comp.name}, ${g.comp.stages[g.f.st]?.name}` : undefined}
+                  >
+                    <span className="cal-n">{day}</span>
+                    {g && chip(g, true)}
+                    {!g && sd != null && <span className="cal-rd">rodada {sd}</span>}
+                    {pay && <span className="cal-pay">salários</span>}
+                  </div>
+                );
+              })}
+            </div>
+            <div className="legend" style={{ marginTop: 10 }}>
+              <span>
+                <i style={{ background: 'var(--yellow)' }} /> Em casa
+              </span>
+              <span>
+                <i style={{ background: 'var(--blue)' }} /> Fora
+              </span>
+              <span>
+                <i style={{ background: 'var(--muted)' }} /> Dia de pagamento de salários e patrocínio
+              </span>
+            </div>
+          </div>
+          <div className="panel">
+            <h3>
+              <span>Jogos em {MONTHS[month].toLowerCase()}</span>
+              <small>{monthGames.length}</small>
+            </h3>
+            {monthGames.length === 0 && <p className="muted">Nenhum jogo neste mês.</p>}
+            {monthGames.map((g) => (
+              <div key={g.f.id} className={`cal-li ${g.home ? 'h' : 'a'}`} onClick={() => open(g)}>
+                <span className="cal-dt num">{g.date.getDate()}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>{chip(g)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="panel" style={{ marginTop: 16 }}>
+          <table className="t">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Rodada</th>
+                <th>Local</th>
+                <th>Adversário</th>
+                <th>Fase</th>
+                <th>Resultado</th>
+                <th className="r">Público</th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((g, i) => {
+                const opp = W.clubs[g.home ? g.f.a : g.f.h];
+                const newMonth = i === 0 || shown[i - 1].date.getMonth() !== g.date.getMonth();
+                return (
+                  <tr
+                    key={g.f.id}
+                    className={`click ${g === next ? 'me' : ''} ${newMonth ? 'mstart' : ''}`}
+                    onClick={() => open(g)}
+                  >
+                    <td className="num">{g.date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</td>
+                    <td className="num muted">{g.f.d}</td>
+                    <td>
+                      <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.home ? 'Casa' : 'Fora'}</span>
+                    </td>
+                    <td className="nm">
+                      <Crest club={opp} size={18} /> {opp.n}
+                    </td>
+                    <td className="muted">
+                      {g.comp.stages[g.f.st]?.name}
+                      {g.f.leg ? ` (${g.f.leg}º jogo)` : ''}
+                    </td>
+                    <td>
+                      {g.res ? (
+                        <>
+                          <span className={`cg-res f${g.res}`}>{g.res}</span>{' '}
+                          <b className="num">
+                            {g.f.hg} x {g.f.ag}
+                          </b>
+                        </>
+                      ) : g === next ? (
+                        <span className="cg-next">próximo</span>
+                      ) : (
+                        <span className="dim">–</span>
+                      )}
+                    </td>
+                    <td className="r num muted">{g.f.att ? int(g.f.att) : ''}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="note" style={{ marginTop: 12 }}>
+        Clique num jogo disputado para ver o relatório, ou num jogo futuro para ver o adversário. Jogos de mata-mata
+        aparecem quando a fase anterior termina.
+      </p>
+    </>
+  );
+}

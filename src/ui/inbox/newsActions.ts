@@ -1,6 +1,6 @@
 import { actOnNews, type NewsItem, type World } from '@/core';
 import { useGame } from '@/store/gameStore';
-import { useUi, type ModalSpec, type PageId } from '@/store/uiStore';
+import { useUi, type FinTab, type ModalSpec, type PageId } from '@/store/uiStore';
 
 /** Nome e cor de cada categoria de mensagem. */
 export const NEWS_KIND: Record<string, { label: string; color: string }> = {
@@ -10,6 +10,7 @@ export const NEWS_KIND: Record<string, { label: string; color: string }> = {
   youth: { label: 'Base', color: 'var(--ok)' },
   board: { label: 'Diretoria', color: 'var(--orange)' },
   season: { label: 'Temporada', color: 'var(--chalk)' },
+  spon: { label: 'Patrocínio', color: 'var(--yellow2)' },
   info: { label: 'Clube', color: 'var(--muted)' },
 };
 export const newsKind = (k: string) => NEWS_KIND[k] || NEWS_KIND.info;
@@ -20,6 +21,8 @@ export interface NewsAction {
   /** como a ação aparece depois na caixa de entrada */
   done: string;
   go?: PageId;
+  /** aba de Finanças a abrir */
+  finTab?: FinTab;
   modal?: ModalSpec;
   primary?: boolean;
 }
@@ -54,8 +57,11 @@ export const newsActions = (W: World, it: NewsItem): NewsAction[] => {
       out.push({ label: 'Ir para a base', done: 'Base vista', go: 'youth', primary: !hasPlayer });
       if (/elenco|Subiram/i.test(it.t + it.b)) out.push({ label: 'Ver elenco', done: 'Elenco visto', go: 'squad' });
       break;
+    case 'spon':
+      out.push({ label: 'Ver patrocínios', done: 'Patrocínios vistos', go: 'finance', finTab: 'spon', primary: true });
+      break;
     case 'board':
-      out.push({ label: 'Ver finanças', done: 'Finanças vistas', go: 'finance', primary: true });
+      out.push({ label: 'Ver finanças', done: 'Finanças vistas', go: 'finance', finTab: 'sum', primary: true });
       out.push({ label: 'Ver elenco', done: 'Elenco visto', go: 'squad' });
       break;
     case 'season':
@@ -77,5 +83,6 @@ export const runNewsAction = (it: NewsItem, a: NewsAction): void => {
   const ui = useUi.getState();
   if (a.modal) ui.openModal(a.modal);
   else ui.closeModal();
+  if (a.finTab) ui.set({ finTab: a.finTab });
   if (a.go) ui.go(a.go);
 };

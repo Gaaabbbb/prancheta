@@ -17,8 +17,8 @@ export function Squad({ W }: PageProps) {
         </span>
         <span className="sp" />
         <span className="muted" style={{ fontSize: 12 }}>
-          Destacados: titulares. Evolução: até 21 anos, quanto falta para o próximo ponto de OVR; acima disso, quanto o
-          OVR deve mudar na virada da temporada.
+          Destacados: titulares. Evolução: até 21 anos, quanto falta para o próximo ponto de OVR; acima disso, quanto da
+          temporada já passou até a virada, quando o OVR muda. Passe o mouse na barra para ver os detalhes.
         </span>
       </div>
       <div className="panel">

@@ -1,6 +1,7 @@
 import { boardAfterMatch } from '../board/board';
 import { DIVS } from '../constants/divisions';
 import { dailyMoney, matchMoney } from '../finance/finance';
+import { sponsorTick, sponsorWin } from '../finance/sponsors';
 import { autoLineup, validateLineup } from '../lineup/lineup';
 import { applyMatch } from '../match/applyMatch';
 import { Match, type KoContext, type MatchOptions } from '../match/engine';
@@ -85,6 +86,7 @@ export const userAfterMatch = (W: World, comp: Competition, f: Fixture, m: Match
     if (p.sus > 0) news(W, 'Suspensão: ' + p.n, p.n + ' está suspenso para a próxima partida.', 'disc', { pid });
   }
   boardAfterMatch(W, gf, ga);
+  if (gf > ga) sponsorWin(W);
 };
 
 /**
@@ -126,6 +128,7 @@ export const playDay = (W: World, userMatch?: Match): void => {
     }
   }
   dailyMoney(W);
+  sponsorTick(W);
   youthTick(W);
   if (W.day % 10 === 0) youthReport(W);
   for (const div of DIVS) {

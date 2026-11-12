@@ -23,6 +23,8 @@ const sorters: Record<SortKey, (p: Player, W?: World) => number | string> = {
   j: (p) => p.st.j,
   g: (p) => p.st.g,
   as: (p) => p.st.as,
+  ca: (p) => p.st.ca || 0,
+  cv: (p) => p.st.cv || 0,
   nt: (p) => (p.st.j ? p.st.nt / p.st.j : 0),
   val: (p) => p.val,
   sal: (p) => p.sal,

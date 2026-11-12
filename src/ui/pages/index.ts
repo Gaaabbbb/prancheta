@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react';
 import type { PageId } from '@/store/uiStore';
+import { Calendar } from './Calendar';
 import { Clubs } from './Clubs';
 import { Competitions } from './Competitions';
 import { Editor } from './Editor';
@@ -18,6 +19,7 @@ export const PAGES: Record<PageId, ComponentType<PageProps>> = {
   squad: Squad,
   youth: Youth,
   tactics: Tactics,
+  calendar: Calendar,
   fixtures: Fixtures,
   tables: Competitions,
   clubs: Clubs,

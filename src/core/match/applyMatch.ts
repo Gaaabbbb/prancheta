@@ -17,6 +17,8 @@ export const applyMatch = (W: World, m: Match) => {
       pl.st.nt += rt;
       pl.car.j++;
       pl.mo = clamp(pl.mo + outcome * 4 + (rt - 6.5) * 2, 10, 100);
+      if (s.yel[pid] >= 1) pl.st.ca = (pl.st.ca || 0) + 1;
+      if (s.out[pid] === 'red') pl.st.cv = (pl.st.cv || 0) + 1;
       if (s.yel[pid] === 1) {
         pl.yc++;
         if (pl.yc >= 3) {

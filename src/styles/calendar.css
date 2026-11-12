@@ -1,0 +1,186 @@
+/* calendário */
+.calsum .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calsum .panel b {
+  font-family: var(--fd);
+  font-size: 24px;
+  line-height: 1.2;
+}
+.calsum .ks {
+  font-size: 12px;
+  color: var(--dim);
+}
+.panel.click {
+  cursor: pointer;
+}
+.panel.click:hover {
+  border-color: var(--line);
+}
+.calnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.calnav h3 {
+  margin: 0;
+}
+.cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.cal-wd {
+  font-size: 11px;
+  color: var(--dim);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding-bottom: 2px;
+}
+.cal-c {
+  position: relative;
+  min-height: 86px;
+  border-radius: var(--r);
+  background: #ffffff05;
+  padding: 4px 6px;
+  font-size: 12px;
+  overflow: hidden;
+}
+.cal-c.off {
+  background: transparent;
+}
+.cal-n {
+  font-size: 11px;
+  color: var(--dim);
+}
+.cal-c.game {
+  cursor: pointer;
+  background: var(--panel2);
+  border-left: 3px solid var(--yellow);
+}
+.cal-c.game.a {
+  border-left-color: var(--blue);
+}
+.cal-c.game:hover {
+  background: #22365a;
+}
+.cal-c.today {
+  outline: 2px solid var(--yellow);
+  outline-offset: -2px;
+}
+.cal-rd {
+  display: block;
+  margin-top: 18px;
+  font-size: 10px;
+  color: var(--dim);
+}
+.cal-pay {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  background: var(--muted);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+.cg-top {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0 3px;
+}
+.cg-where {
+  font-family: var(--fd);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: #ffd23f22;
+  color: var(--yellow);
+}
+.cg-where.a {
+  background: #6fa8ff22;
+  color: var(--blue);
+}
+.cg-res {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 3px;
+}
+.cg-opp {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cg-sc {
+  margin-top: 2px;
+  font-weight: 700;
+}
+.cg-sc small {
+  font-weight: 400;
+  color: var(--muted);
+}
+.cg-next {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--yellow);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.cal-li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 8px 8px 10px;
+  margin: 0 -8px;
+  border-left: 3px solid var(--yellow);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.cal-li.a {
+  border-left-color: var(--blue);
+}
+.cal-li + .cal-li {
+  margin-top: 4px;
+}
+.cal-li:hover {
+  background: #ffffff08;
+}
+.cal-dt {
+  font-family: var(--fd);
+  font-size: 22px;
+  font-weight: 800;
+  width: 28px;
+  text-align: center;
+}
+table.t tr.mstart td {
+  border-top: 2px solid var(--line);
+}
+@media (max-width: 700px) {
+  .cal-c {
+    min-height: 64px;
+    padding: 3px;
+  }
+  .cg-opp span,
+  .cal-rd {
+    display: none;
+  }
+}

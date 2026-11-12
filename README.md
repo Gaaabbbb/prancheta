@@ -91,16 +91,21 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   claude.ai foi removido; `src/persistence/storage.ts` tem a interface `SaveBackend` para ligar outra nuvem depois.
 - Saves do jogo antigo entram por **Jogo e saves → Importar save** (arquivo `.save` ou texto copiado).
 - Fontes e a biblioteca de planilhas vêm do próprio projeto: o jogo funciona offline depois do build.
-- Novidades de interface (não mudam as regras, os testes de paridade continuam valendo):
+- Novidades de interface (não mudam as regras esportivas):
   - Caixa de entrada com mensagens novas em negrito. Ao clicar, a mensagem abre com ações (ver relatório, ajustar
-    escalação, ir para a base…) e a ação tomada fica registrada.
-  - Coluna **Evolução** no Elenco e na Base (`src/core/player/evolution.ts`). Até 21 anos mostra quanto falta para o
-    próximo ponto de OVR; acima disso, quanto o OVR deve mudar na virada da temporada.
-  - Tática: arrastar jogadores entre campo, banco e reservas. O banco é escolhido pelo usuário (`swapSpots` em
-    `src/core/lineup/lineup.ts`) e não é mais refeito sozinho.
-  - Finanças com extrato diário (`W.finLog`), gráfico do saldo com projeção, simulador do preço do ingresso, folha por
-    setor e histórico por temporada (`W.finHist`).
-- Regra nova, opcional: ampliar o estádio em Finanças (`expandStadium`). Custa dinheiro e aumenta o público.
+    escalação, ver patrocínios…) e a ação tomada fica registrada.
+  - **Calendário** (`src/ui/pages/Calendar.tsx`): grade mensal e lista com os jogos, casa/fora, resultados e dias de
+    pagamento.
+  - Elenco: coluna **Evolução** (`src/core/player/evolution.ts`) e cartões amarelos/vermelhos da temporada (CA/CV).
+  - Tática: arrastar jogadores entre campo, banco e reservas; o banco é escolhido pelo usuário (`swapSpots`).
+- Regras novas de dinheiro (o saldo não influencia nada esportivo, então os testes de paridade deixam o saldo de fora):
+  - Salários e patrocínios são pagos **uma vez por mês**, de fevereiro a novembro (`src/core/finance/ledger.ts`).
+    O total da temporada continua igual ao do original (10 meses de salário).
+  - **Patrocínio master e secundário** (`src/core/finance/sponsors.ts`), com 33 marcas fictícias em
+    `sponsorCatalog.ts`. Propostas chegam ao longo da temporada; dá para aceitar, pedir mais, recusar, rescindir
+    (pagando multa) ou buscar marcas. Marcas insatisfeitas podem romper, e outras tentam tirar o patrocinador atual.
+    Os patrocínios usam um sorteio próprio, separado do sorteio dos jogos.
+  - Finanças em abas: resumo com gráficos, patrocínio e extrato mensal.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

@@ -3,10 +3,30 @@ import { create } from 'zustand';
 import type { Div, NewsItem } from '@/core';
 
 export type PageId =
-  'home' | 'squad' | 'youth' | 'tactics' | 'fixtures' | 'tables' | 'clubs' | 'finance' | 'editor' | 'game';
+  'home' | 'squad' | 'youth' | 'tactics' | 'calendar' | 'fixtures' | 'tables' | 'clubs' | 'finance' | 'editor' | 'game';
 
 export type SortKey =
-  'pos' | 'n' | 'a' | 'ovr' | 'pt' | 'prog' | 'f' | 'mo' | 'evo' | 'j' | 'g' | 'as' | 'nt' | 'val' | 'sal' | 'ct';
+  | 'pos'
+  | 'n'
+  | 'a'
+  | 'ovr'
+  | 'pt'
+  | 'prog'
+  | 'f'
+  | 'mo'
+  | 'evo'
+  | 'j'
+  | 'g'
+  | 'as'
+  | 'ca'
+  | 'cv'
+  | 'nt'
+  | 'val'
+  | 'sal'
+  | 'ct';
+
+/** Abas da página Finanças. */
+export type FinTab = 'sum' | 'spon' | 'ledger';
 
 /** Modais conhecidos. Para criar um novo, adicione aqui e em ui/modals/ModalHost.tsx. */
 export type ModalSpec =
@@ -36,6 +56,7 @@ interface UiState {
   edPool: 'pro' | 'base';
   /** velocidade preferida da partida ao vivo */
   liveSpeed: number;
+  finTab: FinTab;
   modal: ModalSpec | null;
   toast: { msg: string; ms: number; id: number } | null;
 
@@ -58,6 +79,7 @@ export const useUi = create<UiState>((setState, getState) => ({
   edClub: null,
   edPool: 'pro',
   liveSpeed: 1,
+  finTab: 'sum',
   modal: null,
   toast: null,
 

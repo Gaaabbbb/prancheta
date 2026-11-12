@@ -1,5 +1,6 @@
 import { DIV_NAME, DIV_REP_TARGET, DIVS, type Div } from '../constants/divisions';
 import { closeFinances } from '../finance/finance';
+import { sponsorSeasonEnd } from '../finance/sponsors';
 import { clamp } from '../math';
 import { news } from '../news';
 import { ageEvoRange, seasonPlayBonus } from '../player/evolution';
@@ -209,5 +210,6 @@ export const endSeason = (W: World): SeasonReport => {
   W.year++;
   W.fin = {};
   buildSeason(W);
+  sponsorSeasonEnd(W);
   return rep;
 };

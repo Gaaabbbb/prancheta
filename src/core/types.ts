@@ -21,6 +21,8 @@ export interface SeasonStats {
   /** gols */ g: number;
   /** assistências */ as: number;
   /** soma das notas */ nt: number;
+  /** cartões amarelos */ ca?: number;
+  /** cartões vermelhos */ cv?: number;
 }
 
 export interface Player {
@@ -171,10 +173,11 @@ export interface NewsItem {
 export interface FinDay {
   y: number;
   d: number;
-  bil: number;
-  pat: number;
-  sal: number;
-  inv: number;
+  /** bilheteria */ bil: number;
+  /** patrocínio (parcelas mensais) */ pat: number;
+  /** bônus de patrocínio por vitória */ bon: number;
+  /** salários (pagos uma vez por mês) */ sal: number;
+  /** multas e rescisões (pagas ou recebidas) */ mul: number;
   /** saldo no fim do dia */
   bal: number;
   /** público e adversário, quando houve jogo em casa */
@@ -188,9 +191,40 @@ export interface FinSeason {
   div: Div;
   bil: number;
   pat: number;
+  bon: number;
   sal: number;
-  inv: number;
+  mul: number;
   bal: number;
+}
+
+export type SponsorSlot = 'master' | 'sec';
+
+/** Contrato de patrocínio do usuário. */
+export interface SponsorContract {
+  /** id do patrocinador (SPONSORS) */ sid: number;
+  slot: SponsorSlot;
+  /** valor anual, pago em 10 parcelas mensais */ val: number;
+  /** bônus por vitória (0 = sem bônus) */ win: number;
+  /** primeira e última temporada do contrato */ from: number;
+  to: number;
+}
+
+/** Proposta de patrocínio aguardando resposta. */
+export interface SponsorOffer extends SponsorContract {
+  id: number;
+  /** último dia para responder */ exp: number;
+  /** parte da multa do contrato atual que o novo patrocinador paga (0..1) */ cover: number;
+  /** já pediu mais dinheiro */ haggled?: boolean;
+  /** renovação com o patrocinador atual */ renewal?: boolean;
+}
+
+export interface SponsorState {
+  master: SponsorContract | null;
+  sec: SponsorContract | null;
+  offers: SponsorOffer[];
+  /** estado do sorteio próprio dos patrocínios (separado do jogo) */ rs: number;
+  nextId: number;
+  /** dia (ano*100+dia) da última busca ativa por patrocinador */ seek?: number;
 }
 
 export interface Board {
@@ -242,8 +276,8 @@ export interface World {
   finLog?: FinDay[];
   /** resumo das temporadas anteriores */
   finHist?: FinSeason[];
-  /** saldo no início da temporada */
-  finStart?: number;
+  /** patrocinadores do usuário */
+  sp?: SponsorState;
   ticket?: number;
   youthDecisions?: Record<number, YouthDecision>;
   /** cache do índice de elencos (não é salvo) */

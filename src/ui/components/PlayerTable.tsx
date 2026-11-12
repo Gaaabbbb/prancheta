@@ -7,11 +7,11 @@ import { sortPlayers } from '../sortPlayers';
 import { FitBar, MoraleBar, Ovr, PosTag, StatusTags } from './Badges';
 
 /** Cabeçalho de coluna ordenável. */
-export function SortTh({ k, label, cls }: { k: SortKey; label: string; cls?: string }) {
+export function SortTh({ k, label, cls, title }: { k: SortKey; label: string; cls?: string; title?: string }) {
   const sort = useUi((s) => s.sort);
   const setSort = useUi((s) => s.setSort);
   return (
-    <th className={`s ${cls || ''}`} onClick={() => setSort(k)}>
+    <th className={`s ${cls || ''}`} onClick={() => setSort(k)} title={title}>
       {label}
       {sort.k === k ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}
     </th>
@@ -39,6 +39,8 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
           <SortTh k="j" label="J" cls="r" />
           <SortTh k="g" label="G" cls="r" />
           <SortTh k="as" label="A" cls="r" />
+          <SortTh k="ca" label="CA" cls="r" title="Cartões amarelos na temporada" />
+          <SortTh k="cv" label="CV" cls="r" title="Cartões vermelhos na temporada" />
           <SortTh k="nt" label="Nota" cls="r" />
           <SortTh k="val" label="Valor" cls="r" />
           <SortTh k="sal" label="Salário" cls="r" />
@@ -76,6 +78,8 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
             <td className="r num">{p.st.j}</td>
             <td className="r num">{p.st.g}</td>
             <td className="r num">{p.st.as}</td>
+            <td className="r num">{p.st.ca || 0}</td>
+            <td className="r num">{p.st.cv || 0}</td>
             <td className="r num">{rating(p)}</td>
             <td className="r num">{money(p.val)}</td>
             <td className="r num">{money(p.sal)}</td>

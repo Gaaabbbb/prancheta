@@ -5,6 +5,7 @@
 import {
   buildSeason,
   endSeason,
+  ensureSponsors,
   EXP_TXT,
   news,
   playDay,
@@ -33,6 +34,7 @@ export const startCareer = (W: World, clubId: number, coach: string): void => {
   W.coach = coach.trim() || 'Técnico';
   rng.seed(Date.now() >>> 0);
   buildSeason(W);
+  ensureSponsors(W);
   news(
     W,
     'Bem-vindo ao ' + W.clubs[clubId].n,

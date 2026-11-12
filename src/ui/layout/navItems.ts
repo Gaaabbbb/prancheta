@@ -6,6 +6,7 @@ export const NAV: (readonly [PageId, string] | '-')[] = [
   ['squad', 'Elenco'],
   ['youth', 'Base'],
   ['tactics', 'Tática'],
+  ['calendar', 'Calendário'],
   ['fixtures', 'Jogos'],
   ['tables', 'Competições'],
   ['clubs', 'Clubes'],
