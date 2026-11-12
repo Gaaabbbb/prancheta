@@ -132,15 +132,3 @@
   color: var(--chalk);
   white-space: nowrap;
 }
-.comptag.c-CDB {
-  background: #4cc38a22;
-  color: var(--ok);
-}
-.comptag.c-LIB {
-  background: #ffd23f22;
-  color: var(--yellow);
-}
-.comptag.c-SULA {
-  background: #6fa8ff22;
-  color: var(--blue);
-}

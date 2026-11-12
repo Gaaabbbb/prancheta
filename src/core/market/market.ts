@@ -154,6 +154,46 @@ export const untouchable = (W: World, p: Player): boolean =>
 export const aiListed = (W: World, p: Player): boolean =>
   p.c >= 0 && p.c !== W.user && !p.y && !p.loan && squadRank(W, p) >= 18;
 
+/** O clube da IA aceita emprestar? (reserva pouco usado ou jovem que não é titular, com reposição no elenco) */
+const loanableRank = (p: Player, rank: number) => rank >= 12 || (p.a <= 22 && rank >= 6);
+
+/**
+ * Listas do mercado, calculando a posição no elenco de uma vez: à venda (os clubes da IA querem se desfazer, mais os
+ * colocados à venda pelo usuário) e disponíveis para empréstimo (idem).
+ */
+export const marketLists = (W: World): { sale: Player[]; loan: Player[] } => {
+  const user = W.user;
+  const mk = W.mk;
+  const byClub = new Map<number, Player[]>();
+  for (const p of W.players)
+    if (p.c >= 0 && !p.y) {
+      let l = byClub.get(p.c);
+      if (!l) byClub.set(p.c, (l = []));
+      l.push(p);
+    }
+  const sale: Player[] = [],
+    loan: Player[] = [];
+  for (const [cid, list] of byClub) {
+    if (cid === user) {
+      for (const p of list) {
+        if (mk?.sell[p.id] != null) sale.push(p);
+        if (mk?.loan.includes(p.id)) loan.push(p);
+      }
+      continue;
+    }
+    if (list.length <= MIN_SQUAD) continue;
+    list.sort((a, b) => ovr(b) - ovr(a));
+    const perGroup = [0, 0, 0, 0];
+    for (const p of list) perGroup[POS_GROUP[p.p]]++;
+    list.forEach((p, rank) => {
+      if (p.loan || perGroup[POS_GROUP[p.p]] <= 2) return;
+      if (rank >= 18) sale.push(p);
+      if (loanableRank(p, rank)) loan.push(p);
+    });
+  }
+  return { sale, loan };
+};
+
 /** Preço que o clube pede pelo jogador. */
 export const askingPrice = (W: World, p: Player): number => {
   const rank = squadRank(W, p);
@@ -240,8 +280,7 @@ export const loanRequest = (W: World, pid: number, share: number): ClubAnswer =>
     return { r: 'reject', msg: `O ${W.clubs[p.c].n} encerrou as conversas nesta janela.` };
   const rank = squadRank(W, p);
   const club = W.clubs[p.c].n;
-  if (rank < 12 && !(p.a <= 22 && rank >= 6))
-    return { r: 'reject', msg: `${p.n} é importante para o ${club}, que não empresta.` };
+  if (!loanableRank(p, rank)) return { r: 'reject', msg: `${p.n} é importante para o ${club}, que não empresta.` };
   const from = W.clubs[p.c],
     me = W.clubs[W.user!];
   if (me.rep < from.rep - 35)

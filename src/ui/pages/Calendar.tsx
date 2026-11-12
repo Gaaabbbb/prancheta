@@ -3,6 +3,7 @@ import {
   dateOf,
   isPayday,
   dayOfYear,
+  DIVS,
   isDays,
   roundOf,
   SEASON_DAYS,
@@ -17,7 +18,9 @@ import {
   type World,
 } from '@/core';
 import { useUi } from '@/store/uiStore';
+import { compColor, compLegend } from '../compStyle';
 import { Crest } from '../components/Crest';
+import { HomeIcon, PlaneIcon, VenueIcon } from '../components/Icons';
 import { int } from '../format';
 import type { PageProps } from './types';
 
@@ -39,8 +42,9 @@ const WEEK = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 type Where = 'all' | 'home' | 'away';
 
-/** Sigla das copas nos cartões do calendário. */
-const CUP_SHORT: Record<string, string> = { CDB: 'CdB', LIB: 'Liberta', SULA: 'Sula' };
+/** Sigla da competição nos cartões pequenos do calendário. */
+const SHORT: Record<string, string> = { CDB: 'CdB', LIB: 'Liberta', SULA: 'Sula' };
+const shortOf = (comp: Competition) => SHORT[comp.id] || comp.name;
 type View = 'month' | 'list';
 
 interface Game {
@@ -136,8 +140,12 @@ export function Calendar({ W }: PageProps) {
     return (
       <>
         <div className="cg-top">
-          <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.f.neu ? 'Neutro' : g.home ? 'Casa' : 'Fora'}</span>
-          {CUP_SHORT[g.comp.id] && <span className={`comptag c-${g.comp.id}`}>{CUP_SHORT[g.comp.id]}</span>}
+          <span className="cg-ven">
+            <VenueIcon home={g.home} neutral={g.f.neu} size={compact ? 11 : 13} />
+          </span>
+          <span className="cg-comp" style={{ color: compColor(g.comp.id) }}>
+            {compact ? shortOf(g.comp) : g.comp.name}
+          </span>
           {g.res && <span className={`cg-res f${g.res}`}>{g.res}</span>}
         </div>
         <div className="cg-opp">
@@ -306,10 +314,12 @@ export function Calendar({ W }: PageProps) {
                 const win = windowOn(new Date(W.year, month, day));
                 const winStart = win && win.from[0] === month && win.from[1] === day;
                 const winEnd = win && win.to[0] === month && win.to[1] === day;
+                const cc = g ? compColor(g.comp.id) : null;
                 return (
                   <div
                     key={i}
-                    className={`cal-c ${g ? 'game ' + (g.home ? 'h' : 'a') : ''} ${g?.res ? 'r' + g.res : ''} ${today ? 'today' : ''} ${win ? 'win' : ''}`}
+                    className={`cal-c ${g ? 'game' : ''} ${g?.res ? 'r' + g.res : ''} ${today ? 'today' : ''} ${win ? 'win' : ''}`}
+                    style={cc ? { background: cc + '2e', borderLeftColor: cc } : undefined}
                     onClick={g ? () => open(g) : undefined}
                     title={g ? `${g.comp.name}, ${g.comp.stages[g.f.st]?.name}` : undefined}
                   >
@@ -328,19 +338,29 @@ export function Calendar({ W }: PageProps) {
               })}
             </div>
             <div className="legend" style={{ marginTop: 10 }}>
+              {compLegend([W.clubs[W.user!].div, ...['CDB', 'LIB', 'SULA'].filter((id) => W.comps[id])]).map((l) => (
+                <span key={l.id}>
+                  <i style={{ background: l.color }} /> {l.label}
+                </span>
+              ))}
               <span>
-                <i style={{ background: 'var(--yellow)' }} /> Em casa
+                <HomeIcon /> Em casa
               </span>
               <span>
-                <i style={{ background: 'var(--blue)' }} /> Fora
+                <PlaneIcon /> Fora
               </span>
               <span>
-                <i style={{ background: 'var(--muted)' }} /> Dia de pagamento de salários e patrocínio
+                <i style={{ background: 'var(--muted)' }} /> Salários e patrocínio
               </span>
               <span>
-                <i style={{ background: 'var(--ok)' }} /> Janela de transferências aberta
+                <i style={{ background: 'var(--win)' }} /> Janela de transferências
               </span>
             </div>
+            {games.every((g) => (DIVS as readonly string[]).includes(g.comp.id)) && !isDays(W) && (
+              <p className="note" style={{ margin: '8px 0 0' }}>
+                Copa do Brasil, Libertadores e Sul-Americana entram no calendário a partir da próxima temporada.
+              </p>
+            )}
           </div>
           <div className="panel">
             <h3>
@@ -349,7 +369,12 @@ export function Calendar({ W }: PageProps) {
             </h3>
             {monthGames.length === 0 && <p className="muted">Nenhum jogo neste mês.</p>}
             {monthGames.map((g) => (
-              <div key={g.f.id} className={`cal-li ${g.home ? 'h' : 'a'}`} onClick={() => open(g)}>
+              <div
+                key={g.comp.id + g.f.id}
+                className="cal-li"
+                style={{ borderLeftColor: compColor(g.comp.id) }}
+                onClick={() => open(g)}
+              >
                 <span className="cal-dt num">{g.date.getDate()}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>{chip(g)}</div>
               </div>
@@ -365,6 +390,7 @@ export function Calendar({ W }: PageProps) {
                 <th>Dia</th>
                 <th title="Dias desde o jogo anterior">Descanso</th>
                 <th>Local</th>
+                <th>Competição</th>
                 <th>Adversário</th>
                 <th>Fase</th>
                 <th>Resultado</th>
@@ -378,7 +404,7 @@ export function Calendar({ W }: PageProps) {
                 const newMonth = i === 0 || shown[i - 1].date.getMonth() !== g.date.getMonth();
                 return (
                   <tr
-                    key={g.f.id}
+                    key={g.comp.id + g.f.id}
                     className={`click ${g === next ? 'me' : ''} ${newMonth ? 'mstart' : ''}`}
                     onClick={() => open(g)}
                   >
@@ -387,8 +413,16 @@ export function Calendar({ W }: PageProps) {
                     <td className={`num ${restBefore(g) != null && restBefore(g)! <= 4 ? 'restwarn' : 'muted'}`}>
                       {restBefore(g) != null ? restBefore(g) + ' dias' : ''}
                     </td>
+                    <td className="cg-ven">
+                      <VenueIcon home={g.home} neutral={g.f.neu} /> {g.f.neu ? 'Neutro' : g.home ? 'Casa' : 'Fora'}
+                    </td>
                     <td>
-                      <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.home ? 'Casa' : 'Fora'}</span>
+                      <span
+                        className="comptag"
+                        style={{ background: compColor(g.comp.id) + '2e', color: compColor(g.comp.id) }}
+                      >
+                        {g.comp.name}
+                      </span>
                     </td>
                     <td className="nm">
                       <Crest club={opp} size={18} /> {opp.n}

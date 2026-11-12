@@ -13,7 +13,6 @@ import {
   lineupIssues,
   tidyLineup,
   avgRating,
-  perfRating,
   type Player,
   type Spot,
   type Pos,
@@ -38,8 +37,6 @@ export function Tactics({ W }: PageProps) {
   /** lugar sob o cursor durante o arraste */
   const [over, setOver] = useState<string | null>(null);
   const drag = useRef<Spot | null>(null);
-  /** o que aparece no círculo: OVR na função ou desempenho previsto */
-  const [shirtMode, setShirtMode] = useState<'ovr' | 'perf'>('ovr');
   const me = W.clubs[W.user!];
   tidyLineup(W, me);
   const issues = lineupIssues(W, me);
@@ -129,21 +126,17 @@ export function Tactics({ W }: PageProps) {
     const r = avgRating(p);
     return r == null ? '–' : r.toFixed(1);
   };
-  /** dica completa do jogador: OVR, desempenho e os três fatores */
+  /** dica do jogador: OVR na função, condição, moral e nota */
   const tip = (p: Player, role: Pos) =>
-    `${p.n} (${role}) · OVR ${ovrRole(p, role)} · desempenho previsto ${perfRating(p, role)}\n` +
+    `${p.n} (${role}) · OVR ${ovrRole(p, role)}\n` +
     `Condição ${Math.round(p.f)}% · Moral ${Math.round(p.mo)} · Nota ${ratingTxt(p)}`;
 
   const token = (p: Player, role: Pos) => {
-    const o = ovrRole(p, role),
-      perf = perfRating(p, role);
+    const o = ovrRole(p, role);
     return (
       <>
         <div className="sh" style={shirt}>
-          {shirtMode === 'ovr' ? o : perf}
-          {shirtMode === 'perf' && perf !== o && (
-            <span className={`pd ${perf < o ? 'dn' : 'up'}`}>{perf < o ? '▼' : '▲'}</span>
-          )}
+          {o}
         </div>
         <span className="nm">{p.n}</span>
         <span className="rl">
@@ -166,21 +159,9 @@ export function Tactics({ W }: PageProps) {
         <h2>Tática</h2>
         <span className="muted">
           Arraste jogadores entre o campo, o banco e a lista de reservas, ou toque em um e depois em outro para
-          trocá-los (no celular, use o toque). Em cada jogador: C = condição, M = moral, N = nota média. O desempenho
-          previsto é o OVR ajustado por esses três (a condição pesa mais).
+          trocá-los (no celular, use o toque). No círculo, o OVR na função. Embaixo: C = condição, M = moral, N = nota
+          média. Jogador cansado rende menos em campo.
         </span>
-        <span className="sp" />
-        <span className="muted" style={{ fontSize: 12 }}>
-          No círculo
-        </span>
-        <div className="seg">
-          <button className={shirtMode === 'ovr' ? 'on' : ''} onClick={() => setShirtMode('ovr')}>
-            OVR
-          </button>
-          <button className={shirtMode === 'perf' ? 'on' : ''} onClick={() => setShirtMode('perf')}>
-            Desempenho
-          </button>
-        </div>
       </div>
       {issues.length > 0 && (
         <p className="warnbox" style={{ margin: '0 0 14px' }}>
@@ -293,9 +274,6 @@ export function Tactics({ W }: PageProps) {
                   <th>Pos</th>
                   <th>Nome</th>
                   <th className="c">OVR</th>
-                  <th className="c" title="Desempenho previsto: OVR ajustado por condição, moral e nota">
-                    Desemp.
-                  </th>
                   <th>Cond.</th>
                   <th>Moral</th>
                   <th className="r">Nota</th>
@@ -324,9 +302,6 @@ export function Tactics({ W }: PageProps) {
                       </td>
                       <td className="c">
                         <Ovr v={ovr(p)} />
-                      </td>
-                      <td className="c num">
-                        <b>{perfRating(p)}</b>
                       </td>
                       <td style={{ width: 56 }} title={`${Math.round(p.f)}%`}>
                         <FitBar f={p.f} />

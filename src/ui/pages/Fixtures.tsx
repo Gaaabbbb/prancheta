@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { compList, fmtDate, dateOf, roundOf, WEEKDAY_SHORT, type Competition, type Fixture } from '@/core';
 import { useUi } from '@/store/uiStore';
+import { compColor } from '../compStyle';
 import { Crest } from '../components/Crest';
+import { VenueIcon } from '../components/Icons';
 import { int } from '../format';
 import type { PageProps } from './types';
 
@@ -103,11 +105,18 @@ export function Fixtures({ W }: PageProps) {
                   </td>
                   {comps.length > 1 && (
                     <td>
-                      <span className={`comptag c-${comp.id}`}>{comp.name}</span>
+                      <span
+                        className="comptag"
+                        style={{ background: compColor(comp.id) + '2e', color: compColor(comp.id) }}
+                      >
+                        {comp.name}
+                      </span>
                     </td>
                   )}
                   <td>{comp.stages[f.st].name}</td>
-                  <td>{f.neu ? 'Neutro' : home ? 'Casa' : 'Fora'}</td>
+                  <td className="cg-ven">
+                    <VenueIcon home={home} neutral={f.neu} /> {f.neu ? 'Neutro' : home ? 'Casa' : 'Fora'}
+                  </td>
                   <td>
                     <Crest club={opp} size={20} /> {opp.n}
                   </td>

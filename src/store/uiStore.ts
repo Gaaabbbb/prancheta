@@ -37,7 +37,7 @@ export type SortKey =
   | 'ct';
 
 /** Abas da página Mercado. */
-export type MarketTab = 'search' | 'free' | 'watch' | 'offers' | 'mine' | 'log';
+export type MarketTab = 'search' | 'sale' | 'loan' | 'free' | 'watch' | 'offers' | 'mine' | 'log';
 
 /** Abas da página Finanças. */
 export type FinTab = 'sum' | 'spon' | 'ledger';

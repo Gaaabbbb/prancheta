@@ -62,11 +62,8 @@
   background: var(--panel2);
   border-left: 3px solid var(--yellow);
 }
-.cal-c.game.a {
-  border-left-color: var(--blue);
-}
 .cal-c.game:hover {
-  background: #22365a;
+  filter: brightness(1.25);
 }
 .cal-c.today {
   outline: 2px solid var(--yellow);
@@ -155,9 +152,6 @@
   border-radius: 3px;
   cursor: pointer;
 }
-.cal-li.a {
-  border-left-color: var(--blue);
-}
 .cal-li + .cal-li {
   margin-top: 4px;
 }
@@ -191,10 +185,10 @@ table.t tr.mstart td {
 
 /* janelas de transferência */
 .cal-c.win {
-  box-shadow: inset 0 -3px 0 var(--ok);
+  box-shadow: inset 0 -3px 0 var(--win);
 }
 .cal-c.win:not(.game) {
-  background: #4cc38a10;
+  background: #a78bfa12;
 }
 .cal-win {
   margin-left: 4px;
@@ -202,7 +196,7 @@ table.t tr.mstart td {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--ok);
+  color: var(--win);
   white-space: nowrap;
 }
 .calwins {
@@ -224,15 +218,42 @@ table.t tr.mstart td {
   font-size: 13px;
 }
 .calwin.on {
-  border-left-color: var(--ok);
+  border-left-color: var(--win);
 }
 .calwin.on b {
-  color: var(--ok);
+  color: var(--win);
 }
 .calwin.past {
   opacity: 0.55;
 }
 .tag.win {
-  background: #4cc38a22;
-  color: var(--ok);
+  background: #a78bfa22;
+  color: var(--win);
+}
+
+/* local do jogo (casa / avião) e nome da competição nos cartões */
+.cg-ven {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--chalk);
+}
+.cg-comp {
+  font-family: var(--fd);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.ico {
+  display: inline-block;
+  vertical-align: -1px;
+  flex: none;
+}
+.legend .ico {
+  margin-right: 2px;
 }

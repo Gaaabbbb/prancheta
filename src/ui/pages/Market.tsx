@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   acceptIncoming,
-  aiListed,
+  askingPrice,
   calcValue,
   counterIncoming,
   counterIncomingShare,
@@ -10,8 +10,8 @@ import {
   FOREIGN,
   DIVS,
   ensureMarket,
-  keyRole,
-  KEY_ROLE_NAME,
+  loanMinShare,
+  marketLists,
   ovr,
   POS,
   playerDemand,
@@ -38,12 +38,15 @@ import {
 import { useGame } from '@/store/gameStore';
 import { toast, useUi, type MarketTab } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
-import { Ovr, PosTag, StatusTags } from '../components/Badges';
+import { SortTable, type Col } from '../components/SortTable';
+import { Ovr, PosTag } from '../components/Badges';
 import { money, potTxt } from '../format';
 import type { PageProps } from './types';
 
 const TABS: [MarketTab, string][] = [
   ['search', 'Buscar jogadores'],
+  ['sale', 'À venda'],
+  ['loan', 'Para empréstimo'],
   ['free', 'Livres'],
   ['watch', 'Observados'],
   ['offers', 'Propostas'],
@@ -54,24 +57,6 @@ const GROUPS = ['Todos', 'Goleiros', 'Defesa', 'Meio', 'Ataque'];
 
 /** "3 de março" */
 const dm = (d: Date) => d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
-
-/** Etiqueta de destaque (estrela do clube ou titular importante). */
-function KeyTag({ W, p }: { W: World; p: Player }) {
-  const role = keyRole(W, p);
-  if (!role) return null;
-  return (
-    <span
-      className={`tag ktag ${role === 'star' ? 'top' : ''}`}
-      title={
-        role === 'star'
-          ? 'Um dos destaques do clube: pede bem mais, cede pouco e às vezes é inegociável'
-          : 'Titular importante: mais caro e mais difícil de negociar'
-      }
-    >
-      {KEY_ROLE_NAME[role].toLowerCase()}
-    </span>
-  );
-}
 
 /** Estrela para observar o jogador. */
 function Star({ W, p }: { W: World; p: Player }) {
@@ -138,13 +123,15 @@ export function Market({ W }: PageProps) {
           ))}
         </div>
       </div>
-      {!ws.open && (tab === 'search' || tab === 'offers') && (
+      {!ws.open && (tab === 'search' || tab === 'offers' || tab === 'sale' || tab === 'loan') && (
         <p className="note" style={{ marginTop: 0 }}>
           Com a janela fechada dá para observar, contratar jogadores livres e renovar contratos. Compras, vendas e
           empréstimos só com a janela aberta.
         </p>
       )}
       {tab === 'search' && <Search W={W} />}
+      {tab === 'sale' && <Sale W={W} />}
+      {tab === 'loan' && <Loan W={W} />}
       {tab === 'free' && <Free W={W} />}
       {tab === 'watch' && <Watch W={W} />}
       {tab === 'offers' && <Offers W={W} />}
@@ -154,156 +141,284 @@ export function Market({ W }: PageProps) {
   );
 }
 
-type SortK = 'ovr' | 'a' | 'val' | 'pt';
+/** Colunas de jogador usadas nas tabelas do Mercado (todas ordenáveis). */
+const playerCols = (W: World) => {
+  const clubName = (p: Player) => (p.c >= 0 ? W.clubs[p.c].n : 'sem clube');
+  const c: Record<string, Col<Player>> = {
+    star: { k: 'star', label: '', cell: (p) => <Star W={W} p={p} /> },
+    pos: { k: 'pos', label: 'Pos', get: (p) => POS.indexOf(p.p), first: 1, cell: (p) => <PosTag p={p.p} /> },
+    n: { k: 'n', label: 'Nome', cls: 'nm', get: (p) => p.n, cell: (p) => p.n },
+    a: { k: 'a', label: 'Idade', cls: 'r num', get: (p) => p.a, first: 1, cell: (p) => p.a },
+    ovr: { k: 'ovr', label: 'OVR', cls: 'c', get: (p) => ovr(p), cell: (p) => <Ovr v={ovr(p)} /> },
+    pt: { k: 'pt', label: 'Pot', cls: 'c dim num', get: (p) => p.pt, cell: (p) => potTxt(p) },
+    club: { k: 'club', label: 'Clube', get: clubName, cell: (p) => <ClubCell W={W} cid={p.c} /> },
+    val: { k: 'val', label: 'Valor', cls: 'r num', get: (p) => calcValue(p), cell: (p) => money(calcValue(p)) },
+    sal: { k: 'sal', label: 'Salário', cls: 'r num', get: (p) => p.sal, cell: (p) => money(p.sal) },
+    ct: {
+      k: 'ct',
+      label: 'Contrato',
+      cls: 'r num',
+      get: (p) => p.ct,
+      first: 1,
+      cell: (p) => p.ct,
+      tdCls: (p) => (p.c >= 0 && p.ct <= W.year ? 'ctend' : ''),
+    },
+  };
+  return c;
+};
 
-function Search({ W }: { W: World }) {
-  const openModal = useUi((s) => s.openModal);
+/** Filtros das listas de jogadores: setor, divisão/país, OVR, idade, valor e nome. */
+function usePlayerFilters(W: World, ovrDefault: number) {
   const me = W.clubs[W.user!];
   const [g, setG] = useState(0);
   const [div, setDiv] = useState<Div | 'all'>('all');
   const [country, setCountry] = useState<string>('all');
-  const [maxAge, setMaxAge] = useState(40);
-  const [minOvr, setMinOvr] = useState(Math.max(40, Math.round(ovrOf(W) - 6)));
+  const [maxAge, setMaxAge] = useState(45);
+  const [minOvr, setMinOvr] = useState(ovrDefault);
   const [maxVal, setMaxVal] = useState<number>(0);
-  const [onlyListed, setOnlyListed] = useState(false);
   const [q, setQ] = useState('');
-  const [sort, setSort] = useState<{ k: SortK; d: 1 | -1 }>({ k: 'ovr', d: -1 });
   const budget = Math.max(0, me.bal);
-  const list = W.players
-    .filter((p) => {
-      if (p.c < 0 || p.c === W.user || p.y) return false;
-      if (g && POS_GROUP[p.p] !== g - 1) return false;
-      if (div !== 'all' && W.clubs[p.c].div !== div) return false;
-      if (div === 'SUL' && country !== 'all' && W.clubs[p.c].country !== country) return false;
-      if (p.a > maxAge || ovr(p) < minOvr) return false;
-      if (q && !p.n.toLowerCase().includes(q.toLowerCase())) return false;
-      if (maxVal && calcValue(p) > maxVal) return false;
-      return true;
-    })
-    .filter((p) => !onlyListed || aiListed(W, p));
-  const key = (p: Player) => (sort.k === 'ovr' ? ovr(p) : sort.k === 'a' ? p.a : sort.k === 'pt' ? p.pt : calcValue(p));
-  list.sort((a, b) => (key(a) - key(b)) * sort.d);
-  const rows = list.slice(0, 80);
-  const th = (k: SortK, label: string, cls = 'r') => (
-    <th className={`s ${cls}`} onClick={() => setSort({ k, d: sort.k === k ? (sort.d === 1 ? -1 : 1) : -1 })}>
-      {label}
-      {sort.k === k ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}
-    </th>
+  const test = (p: Player) => {
+    if (g && POS_GROUP[p.p] !== g - 1) return false;
+    if (div !== 'all' && (p.c < 0 || W.clubs[p.c].div !== div)) return false;
+    if (div === 'SUL' && country !== 'all' && W.clubs[p.c].country !== country) return false;
+    if (p.a > maxAge || ovr(p) < minOvr) return false;
+    if (q && !p.n.toLowerCase().includes(q.toLowerCase())) return false;
+    if (maxVal && calcValue(p) > maxVal) return false;
+    return true;
+  };
+  const ui = (
+    <div className="mfilters">
+      <div className="seg">
+        {GROUPS.map((l, i) => (
+          <button key={l} className={g === i ? 'on' : ''} onClick={() => setG(i)}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <select value={div} onChange={(e) => setDiv(e.target.value as Div | 'all')} aria-label="Divisão">
+        <option value="all">Todas as divisões</option>
+        {DIVS.map((d) => (
+          <option key={d} value={d}>
+            {DIV_NAME[d]}
+          </option>
+        ))}
+        <option value="SUL">Sul-América (fora do Brasil)</option>
+      </select>
+      {div === 'SUL' && (
+        <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label="País">
+          <option value="all">Todos os países</option>
+          {FOREIGN.map((k) => (
+            <option key={k} value={k}>
+              {COUNTRIES[k]}
+            </option>
+          ))}
+        </select>
+      )}
+      <label>
+        OVR mín.{' '}
+        <input type="number" min={30} max={99} value={minOvr} onChange={(e) => setMinOvr(+e.target.value || 0)} />
+      </label>
+      <label>
+        Idade máx.{' '}
+        <input type="number" min={16} max={45} value={maxAge} onChange={(e) => setMaxAge(+e.target.value || 45)} />
+      </label>
+      <select value={maxVal} onChange={(e) => setMaxVal(+e.target.value)} aria-label="Valor máximo">
+        <option value={0}>Qualquer valor</option>
+        <option value={budget}>Cabe no caixa ({money(budget)})</option>
+        {[1e6, 5e6, 2e7, 5e7].map((v) => (
+          <option key={v} value={v}>
+            Até {money(v)}
+          </option>
+        ))}
+      </select>
+      <input placeholder="Buscar nome" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 140 }} />
+    </div>
   );
+  return { ui, test };
+}
+
+/** Botão de ação numa linha (não abre a ficha do jogador). */
+const ActBtn = ({ label, pri, onClick }: { label: string; pri?: boolean; onClick: () => void }) => (
+  <button
+    className={`btn sm ${pri ? 'pri' : ''}`}
+    onClick={(e) => {
+      e.stopPropagation();
+      onClick();
+    }}
+  >
+    {label}
+  </button>
+);
+
+function Search({ W }: { W: World }) {
+  const openModal = useUi((s) => s.openModal);
+  const f = usePlayerFilters(W, Math.max(40, Math.round(ovrOf(W) - 6)));
+  const list = W.players.filter((p) => p.c >= 0 && p.c !== W.user && !p.y && f.test(p));
+  const c = playerCols(W);
   return (
     <div className="panel">
-      <div className="mfilters">
-        <div className="seg">
-          {GROUPS.map((l, i) => (
-            <button key={l} className={g === i ? 'on' : ''} onClick={() => setG(i)}>
-              {l}
-            </button>
-          ))}
-        </div>
-        <select value={div} onChange={(e) => setDiv(e.target.value as Div | 'all')} aria-label="Divisão">
-          <option value="all">Todas as divisões</option>
-          {DIVS.map((d) => (
-            <option key={d} value={d}>
-              {DIV_NAME[d]}
-            </option>
-          ))}
-          <option value="SUL">Sul-América (fora do Brasil)</option>
-        </select>
-        {div === 'SUL' && (
-          <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label="País">
-            <option value="all">Todos os países</option>
-            {FOREIGN.map((k) => (
-              <option key={k} value={k}>
-                {COUNTRIES[k]}
-              </option>
-            ))}
-          </select>
-        )}
-        <label>
-          OVR mín.{' '}
-          <input type="number" min={30} max={99} value={minOvr} onChange={(e) => setMinOvr(+e.target.value || 0)} />
-        </label>
-        <label>
-          Idade máx.{' '}
-          <input type="number" min={16} max={45} value={maxAge} onChange={(e) => setMaxAge(+e.target.value || 45)} />
-        </label>
-        <select value={maxVal} onChange={(e) => setMaxVal(+e.target.value)} aria-label="Valor máximo">
-          <option value={0}>Qualquer valor</option>
-          <option value={budget}>Cabe no caixa ({money(budget)})</option>
-          {[1e6, 5e6, 2e7, 5e7].map((v) => (
-            <option key={v} value={v}>
-              Até {money(v)}
-            </option>
-          ))}
-        </select>
-        <label className="chk">
-          <input type="checkbox" checked={onlyListed} onChange={(e) => setOnlyListed(e.target.checked)} /> Só quem o
-          clube quer vender
-        </label>
-        <input placeholder="Buscar nome" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 140 }} />
-      </div>
+      {f.ui}
       <p className="muted" style={{ fontSize: 12, margin: '0 0 6px' }}>
-        {list.length} jogadores{list.length > rows.length ? `, mostrando os ${rows.length} primeiros` : ''}. Clique no
-        nome para ver a ficha.
+        {list.length} jogadores. Clique no nome para ver a ficha e no cabeçalho de qualquer coluna para ordenar.
       </p>
-      <table className="t">
-        <thead>
-          <tr>
-            <th />
-            <th>Pos</th>
-            <th>Nome</th>
-            {th('a', 'Idade')}
-            {th('ovr', 'OVR', 'c')}
-            {th('pt', 'Pot', 'c')}
-            <th>Clube</th>
-            {th('val', 'Valor')}
-            <th className="r">Salário</th>
-            <th className="r">Contrato</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((p) => (
-            <tr key={p.id} className="click" onClick={() => openModal({ kind: 'player', id: p.id })}>
-              <td>
-                <Star W={W} p={p} />
-              </td>
-              <td>
-                <PosTag p={p.p} />
-              </td>
-              <td className="nm">
-                {p.n}
-                {aiListed(W, p) && <span className="tag mk">à venda</span>}
-                <KeyTag W={W} p={p} />
-                {p.ct <= W.year && <span className="tag sus">último ano</span>}
-                <StatusTags p={p} />
-              </td>
-              <td className="r num">{p.a}</td>
-              <td className="c">
-                <Ovr v={ovr(p)} />
-              </td>
-              <td className="c dim num">{potTxt(p)}</td>
-              <td>
-                <ClubCell W={W} cid={p.c} />
-              </td>
-              <td className="r num">{money(calcValue(p))}</td>
-              <td className="r num">{money(p.sal)}</td>
-              <td className="r num">{p.ct}</td>
-              <td className="r">
-                <button
-                  className="btn sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openModal({ kind: 'deal', pid: p.id, mode: 'buy' });
-                  }}
-                >
-                  Negociar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <SortTable
+        rows={list}
+        rowKey={(p) => p.id}
+        onRow={(p) => openModal({ kind: 'player', id: p.id })}
+        initial={{ k: 'ovr', d: -1 }}
+        limit={80}
+        cols={[
+          c.star,
+          c.pos,
+          c.n,
+          c.a,
+          c.ovr,
+          c.pt,
+          c.club,
+          c.val,
+          c.sal,
+          c.ct,
+          {
+            k: 'act',
+            label: '',
+            cls: 'r',
+            cell: (p) => (
+              <ActBtn label="Negociar" onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'buy' })} />
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+/** Jogadores que os clubes querem vender (e os seus, colocados à venda em "Meu elenco"). */
+function Sale({ W }: { W: World }) {
+  const openModal = useUi((s) => s.openModal);
+  const f = usePlayerFilters(W, Math.max(40, Math.round(ovrOf(W) - 10)));
+  const mk = W.mk!;
+  const list = marketLists(W).sale.filter(f.test);
+  // preço pedido: o seu (lista de venda) ou o que o clube pede
+  const price = new Map<number, number>();
+  const priceOf = (p: Player) => {
+    let v = price.get(p.id);
+    if (v == null) price.set(p.id, (v = p.c === W.user ? (mk.sell[p.id] ?? 0) : askingPrice(W, p)));
+    return v;
+  };
+  const c = playerCols(W);
+  return (
+    <div className="panel">
+      <h3>
+        <span>
+          À venda <small>reservas que os clubes querem negociar, e os seus jogadores colocados à venda</small>
+        </span>
+      </h3>
+      {f.ui}
+      {list.length === 0 && <p className="muted">Nenhum jogador à venda com esses filtros.</p>}
+      <SortTable
+        rows={list}
+        rowKey={(p) => p.id}
+        onRow={(p) => openModal({ kind: 'player', id: p.id })}
+        initial={{ k: 'ovr', d: -1 }}
+        limit={100}
+        rowCls={(p) => (p.c === W.user ? 'me' : '')}
+        cols={[
+          c.star,
+          c.pos,
+          c.n,
+          c.a,
+          c.ovr,
+          c.pt,
+          c.club,
+          {
+            k: 'price',
+            label: 'Preço pedido',
+            cls: 'r num',
+            title: 'Quanto o clube pede (ou o preço que você pôs). Clique para ordenar',
+            get: priceOf,
+            cell: (p) => <b>{money(priceOf(p))}</b>,
+          },
+          c.val,
+          c.sal,
+          c.ct,
+          {
+            k: 'act',
+            label: '',
+            cls: 'r',
+            cell: (p) =>
+              p.c === W.user ? (
+                <span className="muted">seu jogador</span>
+              ) : (
+                <ActBtn label="Negociar" onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'buy' })} />
+              ),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+/** Jogadores que os clubes emprestam (e os seus, colocados para empréstimo em "Meu elenco"). */
+function Loan({ W }: { W: World }) {
+  const openModal = useUi((s) => s.openModal);
+  const f = usePlayerFilters(W, Math.max(40, Math.round(ovrOf(W) - 10)));
+  const list = marketLists(W).loan.filter(f.test);
+  const share = new Map<number, number>();
+  const shareOf = (p: Player) => {
+    let v = share.get(p.id);
+    if (v == null) share.set(p.id, (v = p.c === W.user ? -1 : loanMinShare(W, p, W.user!)));
+    return v;
+  };
+  const c = playerCols(W);
+  return (
+    <div className="panel">
+      <h3>
+        <span>
+          Para empréstimo <small>até o fim da temporada, com a parte do salário negociada</small>
+        </span>
+      </h3>
+      {f.ui}
+      {list.length === 0 && <p className="muted">Nenhum jogador disponível para empréstimo com esses filtros.</p>}
+      <SortTable
+        rows={list}
+        rowKey={(p) => p.id}
+        onRow={(p) => openModal({ kind: 'player', id: p.id })}
+        initial={{ k: 'ovr', d: -1 }}
+        limit={100}
+        rowCls={(p) => (p.c === W.user ? 'me' : '')}
+        cols={[
+          c.star,
+          c.pos,
+          c.n,
+          c.a,
+          c.ovr,
+          c.pt,
+          c.club,
+          c.sal,
+          {
+            k: 'share',
+            label: 'Você paga',
+            cls: 'r num',
+            title: 'Parte mínima do salário que o clube aceita que você pague. Clique para ordenar',
+            get: shareOf,
+            first: 1,
+            cell: (p) => (shareOf(p) < 0 ? '—' : `${Math.round(shareOf(p) * 100)}% (${money(p.sal * shareOf(p))})`),
+          },
+          c.ct,
+          {
+            k: 'act',
+            label: '',
+            cls: 'r',
+            cell: (p) =>
+              p.c === W.user ? (
+                <span className="muted">seu jogador</span>
+              ) : (
+                <ActBtn label="Pedir emprestado" onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'loan' })} />
+              ),
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -320,9 +435,8 @@ function ovrOf(W: World) {
 function Free({ W }: { W: World }) {
   const openModal = useUi((s) => s.openModal);
   const [g, setG] = useState(0);
-  const list = W.players
-    .filter((p) => p.c < 0 && !p.y && (!g || POS_GROUP[p.p] === g - 1))
-    .sort((a, b) => ovr(b) - ovr(a));
+  const list = W.players.filter((p) => p.c < 0 && !p.y && (!g || POS_GROUP[p.p] === g - 1));
+  const c = playerCols(W);
   return (
     <div className="panel">
       <h3>
@@ -338,50 +452,36 @@ function Free({ W }: { W: World }) {
         </div>
       </h3>
       {list.length === 0 && <p className="muted">Nenhum jogador livre agora.</p>}
-      <table className="t">
-        <thead>
-          <tr>
-            <th />
-            <th>Pos</th>
-            <th>Nome</th>
-            <th className="r">Idade</th>
-            <th className="c">OVR</th>
-            <th className="c">Pot</th>
-            <th className="r">Pede por mês</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {list.map((p) => (
-            <tr key={p.id} className="click" onClick={() => openModal({ kind: 'player', id: p.id })}>
-              <td>
-                <Star W={W} p={p} />
-              </td>
-              <td>
-                <PosTag p={p.p} />
-              </td>
-              <td className="nm">{p.n}</td>
-              <td className="r num">{p.a}</td>
-              <td className="c">
-                <Ovr v={ovr(p)} />
-              </td>
-              <td className="c dim num">{potTxt(p)}</td>
-              <td className="r num">{money(playerDemand(W, p, 'free').wage)}</td>
-              <td className="r">
-                <button
-                  className="btn sm pri"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openModal({ kind: 'deal', pid: p.id, mode: 'free' });
-                  }}
-                >
-                  Contratar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <SortTable
+        rows={list}
+        rowKey={(p) => p.id}
+        onRow={(p) => openModal({ kind: 'player', id: p.id })}
+        initial={{ k: 'ovr', d: -1 }}
+        cols={[
+          c.star,
+          c.pos,
+          c.n,
+          c.a,
+          c.ovr,
+          c.pt,
+          {
+            k: 'wage',
+            label: 'Pede por mês',
+            cls: 'r num',
+            get: (p) => playerDemand(W, p, 'free').wage,
+            cell: (p) => money(playerDemand(W, p, 'free').wage),
+          },
+          c.val,
+          {
+            k: 'act',
+            label: '',
+            cls: 'r',
+            cell: (p) => (
+              <ActBtn label="Contratar" pri onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'free' })} />
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -389,6 +489,7 @@ function Free({ W }: { W: World }) {
 function Watch({ W }: { W: World }) {
   const openModal = useUi((s) => s.openModal);
   const list = (W.mk?.watch || []).map((id) => W.pmap[id]).filter(Boolean);
+  const c = playerCols(W);
   return (
     <div className="panel">
       <h3>
@@ -399,49 +500,37 @@ function Watch({ W }: { W: World }) {
       {list.length === 0 && (
         <p className="muted">Nenhum jogador observado. Clique na estrela ☆ ao lado de um jogador para observar.</p>
       )}
-      <table className="t">
-        <tbody>
-          {list.map((p) => {
-            const free = p.c < 0;
-            return (
-              <tr key={p.id} className="click" onClick={() => openModal({ kind: 'player', id: p.id })}>
-                <td>
-                  <Star W={W} p={p} />
-                </td>
-                <td>
-                  <PosTag p={p.p} />
-                </td>
-                <td className="nm">
-                  {p.n}
-                  {!free && aiListed(W, p) && <span className="tag mk">à venda</span>}
-                  {!free && p.ct <= W.year && <span className="tag sus">último ano</span>}
-                </td>
-                <td className="r num">{p.a} anos</td>
-                <td className="c">
-                  <Ovr v={ovr(p)} />
-                </td>
-                <td>
-                  <ClubCell W={W} cid={p.c} />
-                </td>
-                <td className="r num">{money(calcValue(p))}</td>
-                <td className="r">
-                  {p.c !== W.user && (
-                    <button
-                      className="btn sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openModal({ kind: 'deal', pid: p.id, mode: free ? 'free' : 'buy' });
-                      }}
-                    >
-                      {free ? 'Contratar' : 'Negociar'}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {list.length > 0 && (
+        <SortTable
+          rows={list}
+          rowKey={(p) => p.id}
+          onRow={(p) => openModal({ kind: 'player', id: p.id })}
+          cols={[
+            c.star,
+            c.pos,
+            c.n,
+            c.a,
+            c.ovr,
+            c.pt,
+            c.club,
+            c.val,
+            c.sal,
+            c.ct,
+            {
+              k: 'act',
+              label: '',
+              cls: 'r',
+              cell: (p) =>
+                p.c === W.user ? null : (
+                  <ActBtn
+                    label={p.c < 0 ? 'Contratar' : 'Negociar'}
+                    onClick={() => openModal({ kind: 'deal', pid: p.id, mode: p.c < 0 ? 'free' : 'buy' })}
+                  />
+                ),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }
@@ -762,7 +851,6 @@ function Mine({ W }: { W: World }) {
                   </td>
                   <td className="nm click" onClick={() => openModal({ kind: 'player', id: p.id })}>
                     {p.n}
-                    <StatusTags p={p} />
                   </td>
                   <td className="r num">{p.a}</td>
                   <td className="c">
@@ -909,31 +997,47 @@ function Log({ W }: { W: World }) {
         </div>
       </h3>
       {list.length === 0 && <p className="muted">Nenhuma movimentação ainda.</p>}
-      <table className="t">
-        <tbody>
-          {list.slice(0, 150).map((r, i) => (
-            <tr
-              key={i}
-              className={W.pmap[r.pid] ? 'click' : ''}
-              onClick={() => W.pmap[r.pid] && openModal({ kind: 'player', id: r.pid })}
-            >
-              <td className="num muted">
-                {r.y} · {r.y === W.year && isDays(W) ? fmtDate(dateOf(W, r.d)) : 'rod. ' + r.d}
-              </td>
-              <td className="nm">{r.n}</td>
-              <td>
-                <ClubCell W={W} cid={r.from} />
-              </td>
-              <td className="muted">→</td>
-              <td>
-                <ClubCell W={W} cid={r.to} />
-              </td>
-              <td className="muted">{KIND_TXT[r.kind]}</td>
-              <td className="r num">{r.fee ? money(r.fee) : ''}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {list.length > 0 && (
+        <SortTable
+          rows={list.slice(0, 300)}
+          rowKey={(r) => r.y + ':' + r.d + ':' + r.pid + ':' + r.kind + ':' + r.to}
+          onRow={(r) => W.pmap[r.pid] && openModal({ kind: 'player', id: r.pid })}
+          cols={[
+            {
+              k: 'when',
+              label: 'Quando',
+              cls: 'num muted',
+              get: (r) => r.y * 1000 + r.d,
+              cell: (r) => (
+                <>
+                  {r.y} · {r.y === W.year && isDays(W) ? fmtDate(dateOf(W, r.d)) : 'rod. ' + r.d}
+                </>
+              ),
+            },
+            { k: 'n', label: 'Jogador', cls: 'nm', get: (r) => r.n, cell: (r) => r.n },
+            {
+              k: 'from',
+              label: 'De',
+              get: (r) => (r.from >= 0 ? W.clubs[r.from].n : 'sem clube'),
+              cell: (r) => <ClubCell W={W} cid={r.from} />,
+            },
+            {
+              k: 'to',
+              label: 'Para',
+              get: (r) => (r.to >= 0 ? W.clubs[r.to].n : 'sem clube'),
+              cell: (r) => <ClubCell W={W} cid={r.to} />,
+            },
+            { k: 'kind', label: 'Tipo', cls: 'muted', get: (r) => KIND_TXT[r.kind], cell: (r) => KIND_TXT[r.kind] },
+            {
+              k: 'fee',
+              label: 'Valor',
+              cls: 'r num',
+              get: (r) => r.fee,
+              cell: (r) => (r.fee ? money(r.fee) : ''),
+            },
+          ]}
+        />
+      )}
     </div>
   );
 }

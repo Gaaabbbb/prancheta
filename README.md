@@ -111,7 +111,9 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
 - Novidades de interface (não mudam as regras esportivas):
   - Caixa de entrada com mensagens novas em negrito. Ao clicar, a mensagem abre com ações (ver relatório, ajustar
     escalação, ver patrocínios…) e a ação tomada fica registrada.
-  - **Calendário** (`src/ui/pages/Calendar.tsx`): grade mensal e lista com os jogos, casa/fora, resultados e dias de
+  - **Calendário** (`src/ui/pages/Calendar.tsx`): todas as competições do clube, com o dia pintado na cor da
+    competição (`src/ui/compStyle.ts`: Brasileirão verde, Copa do Brasil azul, Libertadores dourado, Sul-Americana
+    laranja), ícone de casa ou avião, janela de transferências em roxo; grade mensal e lista com resultados e dias de
     pagamento.
   - Elenco: coluna **Evolução** (`src/core/player/evolution.ts`) e cartões amarelos/vermelhos da temporada (CA/CV).
   - Tática: arrastar jogadores entre campo, banco e reservas; o banco é escolhido pelo usuário (`swapSpots`);
@@ -139,14 +141,17 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     65% do cansaço, três dias cerca de 36%). Quem joga sempre começa as partidas com ~88% em média e cai para ~75% nas
     semanas com duas rodadas; cansado rende menos e se lesiona mais. A IA roda o elenco.
   - **Desempenho:** além de OVR e condição, a moral (±6%) e a nota média da temporada (±4%) entram no rendimento
-    (`src/core/player/performance.ts`). A Tática mostra o desempenho previsto de cada jogador.
+    (`src/core/player/performance.ts`). Na tela fica só o OVR; condição, moral e nota aparecem como C/M/N em cada
+    jogador da Tática.
   - **Lesões e cartões:** menos cartões por falta, menos lesões e menos lesões longas (`cardRate`, `injuryRate`,
     `longInjury`): em média um desfalque a cada quatro jogos.
   - **Base:** evolução dos jovens pela metade (`youthGrowth`).
   - **Desfalques:** lesionados e suspensos não saem sozinhos da escalação do usuário (`tidyLineup` / `lineupIssues`).
     O jogo só começa depois da troca, e a caixa de entrada avisa quando o jogador volta a ficar disponível.
   - **Patrocínio:** cada espaço só pode ser trocado uma vez por temporada, salvo se a marca romper.
-- **Mercado e contratos (v0.2)**, em `src/core/market/market.ts` e na página Mercado (desligado com
+- **Mercado e contratos (v0.2)**, em `src/core/market/market.ts` e na página Mercado (abas Buscar, À venda, Para
+  empréstimo, Livres, Observados, Propostas, Meu elenco e Movimentações; toda coluna ordena com um clique, pela
+  `SortTable` de `src/ui/components/`) (desligado com
   `applyLegacyRules()`, então a paridade não muda):
   - Janelas de transferência pelas datas da CBF (`src/core/market/windows.ts`): 1ª de 5/jan a 3/mar, complementar de
     4 a 27/mar (só mercado nacional; no jogo funciona igual às outras) e 2ª de 20/jul a 11/set. O Calendário marca os dias de janela aberta. Fora delas, só jogadores livres e renovações.
