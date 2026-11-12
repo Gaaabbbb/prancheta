@@ -42,15 +42,36 @@ export const expandDb = (D: RawDb): Database => {
 };
 
 let cached: Database | null = null;
+let cachedSula: Database | null = null;
 
-/** Carrega (sob demanda) o banco padrão com clubes e jogadores reais de 2026. */
+/** Junta dois bancos (o segundo vem depois, com ids de clube maiores). */
+export const mergeDb = (a: Database, b: Database): Database => ({
+  clubs: [...a.clubs, ...b.clubs],
+  players: [...a.players, ...b.players],
+  youth: [...a.youth, ...b.youth],
+});
+
+/** Clubes e jogadores sul-americanos (fora do Brasil), sob demanda. */
+export const loadSulaDb = async (): Promise<Database> => {
+  if (!cachedSula) {
+    const mod = await import('../../data/sula-db.json');
+    cachedSula = expandDb(mod.default as unknown as RawDb);
+  }
+  return cachedSula;
+};
+
+/** Carrega (sob demanda) o banco padrão: clubes brasileiros e sul-americanos reais de 2026. */
 export const loadDefaultDb = async (): Promise<Database> => {
   if (!cached) {
     const mod = await import('../../data/default-db.json');
-    cached = expandDb(mod.default as unknown as RawDb);
+    cached = mergeDb(expandDb(mod.default as unknown as RawDb), await loadSulaDb());
   }
   return cached;
 };
+
+/** Completa um banco só com clubes brasileiros (planilha do usuário) com os sul-americanos padrão. */
+export const withSula = async (db: Database): Promise<Database> =>
+  db.clubs.some((c) => c.div === 'SUL') ? db : mergeDb(db, await loadSulaDb());
 
 /** Fonte dos dados do banco padrão (para exibir na interface). */
 export const DEFAULT_DB_SOURCE = 'Transfermarkt, coletado em 10/11/2026';

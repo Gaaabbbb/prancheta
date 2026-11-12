@@ -69,6 +69,13 @@ const WEEKDAYS: Record<Div, { mid: [number, number][]; end: [number, number][] }
       [7, 0.05],
     ],
   },
+  SUL: {
+    mid: [[2, 1]],
+    end: [
+      [5, 0.5],
+      [6, 0.5],
+    ],
+  },
 };
 
 const DAY_MS = 86400000;

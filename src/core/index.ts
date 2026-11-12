@@ -16,6 +16,7 @@ export * from './world/squad';
 export * from './world/factory';
 export * from './world/fillSquad';
 export * from './world/createWorld';
+export * from './world/foreign';
 export * from './world/strength';
 export * from './youth/youth';
 export * from './lineup/lineup';

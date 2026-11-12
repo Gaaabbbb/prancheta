@@ -5,11 +5,11 @@ import type { Database } from '../types';
 /** Valida um banco vindo da planilha antes de começar uma carreira nova. */
 export const validateDb = (db: Database) => {
   const errs: string[] = [],
-    cnt: Record<Div, number> = { A: 0, B: 0, C: 0, D: 0 };
+    cnt: Record<Div, number> = { A: 0, B: 0, C: 0, D: 0, SUL: 0 };
   const names = new Set<string>(),
     sigs = new Set<string>();
   for (const c of db.clubs) {
-    if (!(DIVS as readonly string[]).includes(c.div)) {
+    if (!(DIVS as readonly string[]).includes(c.div) && c.div !== 'SUL') {
       errs.push('Divisão inválida para ' + c.n + ': "' + c.div + '"');
       continue;
     }

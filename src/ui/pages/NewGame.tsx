@@ -5,6 +5,7 @@ import {
   DIV_NAME,
   DIVS,
   loadDefaultDb,
+  withSula,
   ovr,
   validateDb,
   teamStrength,
@@ -82,7 +83,7 @@ export function NewGame() {
         });
         return;
       }
-      buildPreview(db);
+      buildPreview(await withSula(db));
       setSheet({
         file: file.name,
         clubs: db.clubs.length,

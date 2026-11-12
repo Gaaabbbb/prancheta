@@ -21,6 +21,7 @@ const LEGEND: Record<Div, [string, string][]> = {
     ['z-dn', 'Rebaixamento'],
   ],
   D: [['z-po', 'Classifica para o mata-mata']],
+  SUL: [],
 };
 
 const rulesText = (div: Div, year: number): string =>
@@ -31,6 +32,7 @@ const rulesText = (div: Div, year: number): string =>
     D:
       '16 grupos regionais de 6; os 4 melhores avançam ao mata-mata em ida e volta. Os semifinalistas sobem' +
       (promD(year) === 6 ? ', e os eliminados nas quartas disputam a repescagem por mais 2 vagas.' : '.'),
+    SUL: '',
   })[div];
 
 export function Legend({ div, year }: { div: Div; year: number }) {

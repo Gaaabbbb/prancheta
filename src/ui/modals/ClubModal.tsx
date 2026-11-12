@@ -1,4 +1,4 @@
-import { DIV_NAME, ovr, squad, teamStrength, youth } from '@/core';
+import { DIV_NAME, leagueName, ovr, squad, teamStrength, youth } from '@/core';
 import { useWorld } from '@/store/gameStore';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
@@ -22,7 +22,8 @@ export function ClubModal({ id }: { id: number }) {
         <div style={{ flex: 1 }}>
           <h2>{c.n}</h2>
           <div className="muted">
-            {DIV_NAME[c.div]}, {c.uf} &nbsp; {c.std} ({int(c.cap)}) &nbsp; <StrengthStars s={teamStrength(W, c)} />
+            {c.div === 'SUL' ? leagueName(c) : `${DIV_NAME[c.div]}, ${c.uf}`} &nbsp; {c.std} ({int(c.cap)}) &nbsp;{' '}
+            <StrengthStars s={teamStrength(W, c)} />
           </div>
         </div>
       </ModalHeader>

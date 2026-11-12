@@ -6,7 +6,7 @@ import type { PageProps } from './types';
 
 export function Competitions({ W }: PageProps) {
   const { tab, stage, stageDiv, rday, set, openModal } = useUi();
-  const div: Div = tab && DIVS.includes(tab) ? tab : W.clubs[W.user!].div;
+  const div: Div = tab && (DIVS as readonly string[]).includes(tab) ? tab : W.clubs[W.user!].div;
   const comp = W.comps[div];
   const si = stage != null && stage < comp.stages.length && stageDiv === div ? stage : comp.si;
   const st = comp.stages[si];

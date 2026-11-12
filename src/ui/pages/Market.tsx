@@ -5,7 +5,9 @@ import {
   calcValue,
   counterIncoming,
   counterIncomingShare,
+  COUNTRIES,
   DIV_NAME,
+  FOREIGN,
   DIVS,
   ensureMarket,
   keyRole,
@@ -27,6 +29,7 @@ import {
   type Player,
   type TransferRecord,
   type World,
+  leagueName,
 } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { toast, useUi, type MarketTab } from '@/store/uiStore';
@@ -93,6 +96,7 @@ const ClubCell = ({ W, cid }: { W: World; cid: number }) =>
   cid >= 0 ? (
     <span className="clubcell">
       <Crest club={W.clubs[cid]} size={16} /> {W.clubs[cid].n}
+      {W.clubs[cid].country && <span className="ctry">{W.clubs[cid].country}</span>}
     </span>
   ) : (
     <span className="muted">sem clube</span>
@@ -153,6 +157,7 @@ function Search({ W }: { W: World }) {
   const me = W.clubs[W.user!];
   const [g, setG] = useState(0);
   const [div, setDiv] = useState<Div | 'all'>('all');
+  const [country, setCountry] = useState<string>('all');
   const [maxAge, setMaxAge] = useState(40);
   const [minOvr, setMinOvr] = useState(Math.max(40, Math.round(ovrOf(W) - 6)));
   const [maxVal, setMaxVal] = useState<number>(0);
@@ -165,6 +170,7 @@ function Search({ W }: { W: World }) {
       if (p.c < 0 || p.c === W.user || p.y) return false;
       if (g && POS_GROUP[p.p] !== g - 1) return false;
       if (div !== 'all' && W.clubs[p.c].div !== div) return false;
+      if (div === 'SUL' && country !== 'all' && W.clubs[p.c].country !== country) return false;
       if (p.a > maxAge || ovr(p) < minOvr) return false;
       if (q && !p.n.toLowerCase().includes(q.toLowerCase())) return false;
       if (maxVal && calcValue(p) > maxVal) return false;
@@ -197,7 +203,18 @@ function Search({ W }: { W: World }) {
               {DIV_NAME[d]}
             </option>
           ))}
+          <option value="SUL">Sul-América (fora do Brasil)</option>
         </select>
+        {div === 'SUL' && (
+          <select value={country} onChange={(e) => setCountry(e.target.value)} aria-label="País">
+            <option value="all">Todos os países</option>
+            {FOREIGN.map((k) => (
+              <option key={k} value={k}>
+                {COUNTRIES[k]}
+              </option>
+            ))}
+          </select>
+        )}
         <label>
           OVR mín.{' '}
           <input type="number" min={30} max={99} value={minOvr} onChange={(e) => setMinOvr(+e.target.value || 0)} />
@@ -459,7 +476,7 @@ function Offers({ W }: { W: World }) {
                   <div>
                     <b className="spname">{club.n}</b>
                     <span className="muted">
-                      {DIV_NAME[club.div]} · quer {o.kind === 'loan' ? 'emprestado' : 'comprar'}
+                      {leagueName(club)} · quer {o.kind === 'loan' ? 'emprestado' : 'comprar'}
                     </span>
                   </div>
                 </div>

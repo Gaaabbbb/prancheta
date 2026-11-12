@@ -74,7 +74,7 @@ export const wageBills = (W: World): Record<number, number> => {
 export const monthlyWages = (W: World, clubId: number): number => wageBills(W)[clubId] || 0;
 
 /** Fator de patrocínio por divisão (modelo 'div'). */
-const SPONSOR_DIV: Record<Div, number> = { A: 0.7, B: 0.68, C: 0.7, D: 0.85 };
+const SPONSOR_DIV: Record<Div, number> = { A: 0.7, B: 0.68, C: 0.7, D: 0.85, SUL: 0.8 };
 
 /** Patrocínio anual em relação à folha anual. */
 export const sponsorFactor = (c: Club): number =>

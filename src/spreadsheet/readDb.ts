@@ -1,4 +1,4 @@
-import { clamp, normName, POS, type Database, type DbClub, type DbPlayer } from '@/core';
+import { clamp, COUNTRIES, normName, POS, type Database, type DbClub, type DbPlayer } from '@/core';
 import { loadXlsx } from './xlsx';
 
 export const normHex = (v: unknown, def: string): string => {
@@ -42,6 +42,7 @@ export const readDb = async (file: File): Promise<SheetDb> => {
     s: C.col('sigla'),
     div: C.col('divisao'),
     uf: C.col('uf'),
+    pais: C.col('pais'),
     std: C.col('estadio'),
     cap: C.col('capacidade'),
     rep: C.col('reputacao'),
@@ -51,15 +52,26 @@ export const readDb = async (file: File): Promise<SheetDb> => {
   };
   if (ci.div < 0) throw new Error('A aba Clubes precisa da coluna “Divisão”.');
   const clubs: DbClub[] = [];
+  // país dos clubes sul-americanos (Divisão = SUL): aceita o nome ("Argentina") ou a sigla ("ARG")
+  const countryOf = (v: unknown): string => {
+    const t = normName(str(v));
+    const hit = Object.entries(COUNTRIES).find(([k, name]) => normName(k) === t || normName(name) === t);
+    return hit ? hit[0] : '';
+  };
   C.rows.forEach((r, i) => {
     const n = str(r[ci.n]);
     if (!n) return;
+    const div = str(r[ci.div]).toUpperCase();
+    if (div === 'SUL' && !countryOf(ci.pais >= 0 ? r[ci.pais] : '')) {
+      errs.push(`Linha ${C.line0 + i}: ${n} é SUL mas o país não foi reconhecido.`);
+      return;
+    }
     const g = ci.grp >= 0 ? parseInt(String(r[ci.grp]), 10) : NaN;
     clubs.push({
       n,
       s: ci.s >= 0 ? str(r[ci.s]).toUpperCase().slice(0, 3) || null : null,
-      div: str(r[ci.div]).toUpperCase(),
-      uf: ci.uf >= 0 ? str(r[ci.uf]).toUpperCase() : '',
+      div,
+      uf: div === 'SUL' ? countryOf(r[ci.pais]) : ci.uf >= 0 ? str(r[ci.uf]).toUpperCase() : '',
       std: ci.std >= 0 ? str(r[ci.std]) : '',
       cap: ci.cap >= 0 ? +(r[ci.cap] as number) || 0 : 0,
       rep: ci.rep >= 0 ? +(r[ci.rep] as number) || 0 : 0,

@@ -1,6 +1,5 @@
 import {
   available,
-  DIV_NAME,
   EXP_TXT,
   fmtDate,
   dateOf,
@@ -8,6 +7,7 @@ import {
   squad,
   teamStrength,
   userStanding,
+  leagueName,
 } from '@/core';
 import { continueGame } from '@/app/gameFlow';
 import { useUi } from '@/store/uiStore';
@@ -79,7 +79,7 @@ export function Home({ W }: PageProps) {
           </div>
         </div>
         <p className="muted" style={{ textAlign: 'center', margin: '4px 0 0' }}>
-          {h.std} &nbsp; Adversário: {oppPos || DIV_NAME[W.clubs[oppId].div]} &nbsp; força{' '}
+          {h.std} &nbsp; Adversário: {oppPos || leagueName(W.clubs[oppId])} &nbsp; força{' '}
           <StrengthStars s={teamStrength(W, W.clubs[oppId])} /> contra <StrengthStars s={teamStrength(W, me)} /> do seu
           time
         </p>

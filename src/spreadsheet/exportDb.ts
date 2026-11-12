@@ -1,10 +1,10 @@
-import { ovr, POS, type World } from '@/core';
+import { COUNTRIES, ovr, POS, type World } from '@/core';
 import { loadXlsx } from './xlsx';
 
 /** Gera a planilha do banco de dados atual (.xlsx) para editar no Excel. */
 export const exportDb = async (W: World): Promise<{ data: ArrayBuffer; filename: string }> => {
   const X = await loadXlsx();
-  const DIVORD = { A: 0, B: 1, C: 2, D: 3 };
+  const DIVORD = { A: 0, B: 1, C: 2, D: 3, SUL: 4 };
   const clubs = W.clubs
     .slice()
     .sort((a, b) => DIVORD[a.div] - DIVORD[b.div] || (a.div === 'D' ? a.grp - b.grp : 0) || b.rep - a.rep);
@@ -27,6 +27,7 @@ export const exportDb = async (W: World): Promise<{ data: ArrayBuffer; filename:
       'Sigla',
       'Divisão',
       'UF',
+      'País',
       'Estádio',
       'Capacidade',
       'Reputação',
@@ -40,7 +41,8 @@ export const exportDb = async (W: World): Promise<{ data: ArrayBuffer; filename:
       c.n,
       c.s,
       c.div,
-      c.uf,
+      c.div === 'SUL' ? '' : c.uf,
+      COUNTRIES[c.country || 'BRA'],
       c.std,
       c.cap,
       c.rep,
@@ -53,14 +55,14 @@ export const exportDb = async (W: World): Promise<{ data: ArrayBuffer; filename:
   ]);
   clubs.forEach((c, i) => {
     const r = i + 2;
-    wsC['K' + r] = { t: 'n', v: cnt[c.id] || 0, f: `COUNTIF(Jogadores!$A:$A,A${r})` };
-    wsC['L' + r] = {
+    wsC['L' + r] = { t: 'n', v: cnt[c.id] || 0, f: `COUNTIF(Jogadores!$A:$A,A${r})` };
+    wsC['M' + r] = {
       t: 'n',
       v: avg(c.id) || 0,
       f: `IFERROR(ROUND(AVERAGEIF(Jogadores!$A:$A,A${r},Jogadores!$F:$F),1),"")`,
     };
   });
-  wsC['!cols'] = [24, 8, 9, 6, 26, 12, 11, 10, 10, 13, 11, 11].map((w) => ({ wch: w }));
+  wsC['!cols'] = [24, 8, 9, 6, 11, 26, 12, 11, 10, 10, 13, 11, 11].map((w) => ({ wch: w }));
 
   const divFormula = (r: number) => `IFERROR(INDEX(Clubes!$C:$C,MATCH(A${r},Clubes!$A:$A,0)),"?")`;
   const wsJ = X.utils.aoa_to_sheet([
@@ -116,6 +118,9 @@ export const exportDb = async (W: World): Promise<{ data: ArrayBuffer; filename:
       'A Divisão das abas Jogadores e Base vem da aba Clubes. Origem: Real ou Gerado. Na Base, o Potencial é o teto real do garoto (no jogo ele aparece como faixa).',
     ],
     ['Posições: GOL, ZAG, LD, LE, VOL, MC, MEI, PD, PE, ATA. Nota de 1 a 99.'],
+    [
+      'Divisão SUL = clube sul-americano de fora do Brasil (joga a liga do seu país, a Libertadores e a Sul-Americana; não pode ser comandado). Para eles, preencha a coluna País.',
+    ],
   ]);
   wsL['!cols'] = [{ wch: 110 }];
 

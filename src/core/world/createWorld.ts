@@ -26,6 +26,13 @@ const startBalance = (c: Club): number =>
           : 2e5 + c.rep * 5e3) / 1e5,
   ) * 1e5;
 
+/** Caixa inicial dos clubes sul-americanos: alguns meses de folha, mais para os de maior reputação. */
+export const foreignBalances = (W: World, clubs: Club[] = W.clubs): void => {
+  const wages: Record<number, number> = {};
+  for (const p of W.players) if (p.c >= 0 && !p.y) wages[p.c] = (wages[p.c] || 0) + p.sal;
+  for (const c of clubs) if (c.div === 'SUL') c.bal = Math.round(((wages[c.id] || 0) * (3 + c.rep / 25)) / 1e5) * 1e5;
+};
+
 /** Cria um mundo novo (clubes, elencos e bases) a partir de um banco de dados. */
 export const createWorld = (worldSeed: number | null, db: Database): World => {
   seed(worldSeed || Date.now() >>> 0);
@@ -58,6 +65,7 @@ export const createWorld = (worldSeed: number | null, db: Database): World => {
       uf: d.uf || 'SP',
       std: d.std || 'Estádio ' + d.n,
       grp: d.grp == null ? -1 : d.grp,
+      ...(d.div === 'SUL' ? { country: d.uf } : {}),
     } as Club);
   }
   const bySig: Record<string, Club> = {},
@@ -94,11 +102,13 @@ export const createWorld = (worldSeed: number | null, db: Database): World => {
     });
     hasYouth.add(c.id);
   }
-  for (const c of W.clubs) if (!hasYouth.has(c.id)) seedYouth(W, c);
+  // clubes sul-americanos não têm categoria de base no jogo
+  for (const c of W.clubs) if (!hasYouth.has(c.id) && c.div !== 'SUL') seedYouth(W, c);
   for (const c of W.clubs) fillSquad(W, c);
   for (const pl of W.players) {
     pl.val = calcValue(pl);
     pl.sal = calcWage(pl, W.clubs[pl.c].div);
   }
+  foreignBalances(W);
   return W;
 };

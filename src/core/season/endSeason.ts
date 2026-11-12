@@ -174,7 +174,8 @@ export const endSeason = (W: World): SeasonReport => {
   }
   // peneira: novos garotos na base; elenco profissional completado (primeiro com garotos da base)
   for (const c of W.clubs) {
-    const kids = youthIntake(W, c);
+    // clubes sul-americanos não têm base: o elenco é completado direto
+    const kids = c.div === 'SUL' ? [] : youthIntake(W, c);
     const filled = fillSquad(W, c, { fromBase: true });
     if (c.id === user) {
       news(
@@ -210,6 +211,7 @@ export const endSeason = (W: World): SeasonReport => {
   }
   // reputação acompanha a divisão
   for (const c of W.clubs) {
+    if (c.div === 'SUL') continue;
     const target = DIV_REP_TARGET[c.div];
     c.rep = Math.round(c.rep + (target - c.rep) * 0.12);
   }

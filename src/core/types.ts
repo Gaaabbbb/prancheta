@@ -70,6 +70,7 @@ export interface Club {
   uf: string;
   /** estádio */ std: string;
   /** grupo fixo da Série D (-1 = nenhum) */ grp: number;
+  /** país (sigla FIFA); sem valor = Brasil */ country?: string;
   tac: Tactic;
   /** saldo em caixa */ bal: number;
   lineup: (number | null)[] | null;

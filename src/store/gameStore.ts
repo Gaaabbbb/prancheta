@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { World } from '@/core';
+import { addForeignClubs, loadSulaDb, RULES, type World } from '@/core';
 import { gunzip, gzip } from '@/persistence/compression';
 import { deserialize, serialize } from '@/persistence/serialize';
 import { getBackend, type SaveMeta } from '@/persistence/storage';
@@ -71,6 +71,15 @@ export const useGame = create<GameState>((setState, getState) => ({
   loadSave: async (data) => {
     const json = await gunzip(data.trim());
     const W = deserialize(json);
+    // saves de antes da v0.4: os clubes sul-americanos entram agora (as copas começam na próxima temporada)
+    if (RULES.market && W.user != null && addForeignClubs(W, await loadSulaDb()))
+      W.news.unshift({
+        y: W.year,
+        d: W.day,
+        t: 'Clubes sul-americanos no jogo',
+        b: 'Clubes de nove países chegaram ao mercado. A Copa do Brasil, a Libertadores, a Sul-Americana e o avanço por dias começam na próxima temporada.',
+        k: 'info',
+      });
     setState((s) => ({ world: W, rev: s.rev + 1 }));
   },
 }));

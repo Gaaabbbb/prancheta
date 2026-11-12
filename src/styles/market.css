@@ -172,3 +172,13 @@ td.nowrap {
 .loansplit .r {
   text-align: right;
 }
+
+.ctry {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--dim);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0 3px;
+}

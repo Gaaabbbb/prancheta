@@ -1,15 +1,39 @@
 import type { Pos } from './attributes';
 
+/** Divisões do futebol brasileiro (as ligas que o usuário pode disputar). */
 export const DIVS = ['A', 'B', 'C', 'D'] as const;
-export type Div = (typeof DIVS)[number];
+export type BrDiv = (typeof DIVS)[number];
+/** 'SUL' = clube sul-americano (fora do Brasil): joga a liga do seu país e as copas da Conmebol. */
+export type Div = BrDiv | 'SUL';
 
-export const DIV_NAME: Record<Div, string> = { A: 'Série A', B: 'Série B', C: 'Série C', D: 'Série D' };
+export const DIV_NAME: Record<Div, string> = {
+  A: 'Série A',
+  B: 'Série B',
+  C: 'Série C',
+  D: 'Série D',
+  SUL: 'Sul-América',
+};
 /** Preço padrão do ingresso (R$) */
-export const TICKET: Record<Div, number> = { A: 60, B: 35, C: 20, D: 12 };
+export const TICKET: Record<Div, number> = { A: 60, B: 35, C: 20, D: 12, SUL: 30 };
 /** Salário mínimo por divisão (R$/mês) */
-export const DIV_MIN_SAL: Record<Div, number> = { A: 70000, B: 22000, C: 9000, D: 3500 };
-/** Reputação para a qual o clube converge na divisão */
-export const DIV_REP_TARGET: Record<Div, number> = { A: 80, B: 58, C: 45, D: 32 };
+export const DIV_MIN_SAL: Record<Div, number> = { A: 70000, B: 22000, C: 9000, D: 3500, SUL: 15000 };
+/** Reputação para a qual o clube converge na divisão (os sul-americanos não convergem) */
+export const DIV_REP_TARGET: Record<Div, number> = { A: 80, B: 58, C: 45, D: 32, SUL: 70 };
+
+/** Países da Conmebol no jogo (sigla FIFA → nome). */
+export const COUNTRIES: Record<string, string> = {
+  BRA: 'Brasil',
+  ARG: 'Argentina',
+  BOL: 'Bolívia',
+  CHI: 'Chile',
+  COL: 'Colômbia',
+  ECU: 'Equador',
+  PAR: 'Paraguai',
+  PER: 'Peru',
+  URU: 'Uruguai',
+  VEN: 'Venezuela',
+};
+export const FOREIGN = ['ARG', 'BOL', 'CHI', 'COL', 'ECU', 'PAR', 'PER', 'URU', 'VEN'] as const;
 
 /** Ordem geográfica (norte → sul), usada para montar grupos regionais. */
 export const REGION_ORDER = [
