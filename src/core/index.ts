@@ -35,6 +35,7 @@ export * from './finance/finance';
 export * from './finance/sponsorCatalog';
 export * from './finance/sponsors';
 export * from './market/market';
+export * from './market/windows';
 export * from './board/board';
 export * from './db/defaultDb';
 export * from './db/validateDb';

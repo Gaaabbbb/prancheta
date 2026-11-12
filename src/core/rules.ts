@@ -37,6 +37,18 @@ export interface Rules {
   formImpact: number;
   /** mercado e contratos: contratos vencem, transferências, empréstimos, jogadores livres */
   market: boolean;
+  /**
+   * público dos jogos:
+   * - 'fill': ocupação do estádio pela reputação (original; estádio grande sempre enche mais)
+   * - 'demand': torcida pela reputação, limitada pela capacidade (estádio pequeno pode lotar, grande nem sempre)
+   */
+  gateModel: 'fill' | 'demand';
+  /**
+   * patrocínio anual = folha anual * fator:
+   * - 'rep': 0,8 + reputação/250 (original)
+   * - 'div': fator da divisão (A 0,70 · B 0,68 · C 0,70 · D 0,85) + (reputação − reputação típica da divisão)/300
+   */
+  sponsorModel: 'rep' | 'div';
 }
 
 export const LEGACY_RULES: Readonly<Rules> = {
@@ -56,6 +68,8 @@ export const LEGACY_RULES: Readonly<Rules> = {
   cardRate: 1,
   formImpact: 0,
   market: false,
+  gateModel: 'fill',
+  sponsorModel: 'rep',
 };
 
 export const CURRENT_RULES: Readonly<Rules> = {
@@ -75,6 +89,8 @@ export const CURRENT_RULES: Readonly<Rules> = {
   cardRate: 0.5,
   formImpact: 0.02,
   market: true,
+  gateModel: 'demand',
+  sponsorModel: 'div',
 };
 
 /** Regras em vigor (mutável de propósito, para os testes trocarem). */

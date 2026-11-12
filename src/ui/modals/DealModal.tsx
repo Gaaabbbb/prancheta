@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   calcValue,
   ensureMarket,
+  keyRole,
   loanRequest,
   MAX_TRIES,
   offerContract,
@@ -12,6 +13,7 @@ import {
   renewContract,
   roundMoney,
   triesLeft,
+  untouchable,
   windowState,
   type ClubAnswer,
   type PlayerAnswer,
@@ -55,6 +57,7 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
   const [playerAns, setPlayerAns] = useState<PlayerAnswer | null>(null);
   const from = p.c >= 0 ? W.clubs[p.c] : null;
   const ws = windowState(W);
+  const role = mode === 'buy' || mode === 'loan' ? keyRole(W, p) : null;
   const save = () => void useGame.getState().save();
 
   /** roda uma ação do núcleo no mundo e redesenha */
@@ -126,10 +129,32 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
         <dd className="num">{money(W.clubs[W.user!].bal)}</dd>
       </dl>
 
+      {role && clubStep && !needWindow && (
+        <p className="keynote">
+          {untouchable(W, p) ? (
+            <>
+              <b>Inegociável nesta janela.</b> {p.n} é um dos destaques do {from!.n}, que não quer nem ouvir propostas
+              agora. Tente na próxima janela.
+            </>
+          ) : role === 'star' ? (
+            <>
+              <b>Destaque do {from!.n}.</b> O clube pede bem acima do valor de mercado, só conversa com propostas perto
+              do pedido e quase não cede. Ele também pede um salário maior para sair.
+            </>
+          ) : (
+            <>
+              <b>Titular importante do {from!.n}.</b> Sai mais caro e o clube cede pouco na negociação.
+            </>
+          )}
+        </p>
+      )}
+
       {needWindow ? (
         <p className="warnbox">
           A janela de transferências está fechada.{' '}
-          {ws.opens ? `A próxima abre em ${ws.rounds + 1} rodada(s).` : 'A próxima é na pré-temporada.'}
+          {ws.opens
+            ? `A próxima (${ws.name.toLowerCase()}) abre em ${ws.opens.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}, daqui a ${ws.rounds} rodada(s).`
+            : 'A próxima abre em 5 de janeiro, na pré-temporada.'}
         </p>
       ) : clubStep ? (
         <div className="dealstep">

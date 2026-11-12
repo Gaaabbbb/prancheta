@@ -103,10 +103,16 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   - Salários e patrocínios são pagos **uma vez por mês**, de fevereiro a novembro (`src/core/finance/ledger.ts`).
     O total da temporada continua igual ao do original (10 meses de salário).
   - **Patrocínio master e secundário** (`src/core/finance/sponsors.ts`), com 33 marcas fictícias em
-    `sponsorCatalog.ts`. Contratos por desempenho pagam bônus por vitória de até R$ 1 mi na Série A (menos nas outras séries). Propostas chegam ao longo da temporada; dá para aceitar, pedir mais, recusar, rescindir
+    `sponsorCatalog.ts`. Não há bônus por vitória: contratos de valor fixo, longos (3 a 4 anos, valor um pouco menor) ou
+    exigentes (1 ano, valor um pouco maior, menos paciência). Propostas chegam ao longo da temporada; dá para aceitar, pedir mais, recusar, rescindir
     (pagando multa) ou buscar marcas. Marcas insatisfeitas podem romper, e outras tentam tirar o patrocinador atual.
     Os patrocínios usam um sorteio próprio, separado do sorteio dos jogos.
   - Finanças em abas: resumo com gráficos, patrocínio e extrato mensal.
+  - **Equilíbrio** (`gateModel` e `sponsorModel` em `rules.ts`): o público vem da torcida (cresce com a reputação) e o
+    estádio só limita, então estádio pequeno lota e estádio grande de clube médio não enche. O patrocínio é uma parte da
+    folha que depende da divisão e da reputação do clube perto dos rivais. Sem mexer em nada, um clube típico termina a
+    temporada com 15% a 20% a mais de caixa; folha alta com estádio pequeno dá prejuízo. Ingresso acima do padrão só
+    compensa quando o estádio lota.
 - Regras esportivas novas, todas em `src/core/rules.ts` (`CURRENT_RULES`). Os testes de paridade chamam
   `applyLegacyRules()` para continuar comparando com o original:
   - **Calendário real** (`seasonDates` em `src/core/season/calendar.ts`): semanas com uma ou duas rodadas e pausas;
@@ -125,14 +131,19 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   - **Patrocínio:** cada espaço só pode ser trocado uma vez por temporada, salvo se a marca romper.
 - **Mercado e contratos (v0.2)**, em `src/core/market/market.ts` e na página Mercado (desligado com
   `applyLegacyRules()`, então a paridade não muda):
-  - Janelas de transferência na pré-temporada (até a 5ª rodada) e no meio do ano (junho e julho). Fora delas, só
-    jogadores livres e renovações.
+  - Janelas de transferência pelas datas da CBF (`src/core/market/windows.ts`): 1ª de 5/jan a 3/mar, complementar de
+    4 a 27/mar (só mercado nacional, igual às outras porque todos os clubes do jogo são brasileiros) e 2ª de 20/jul a
+    11/set. O Calendário marca os dias de janela aberta. Fora delas, só jogadores livres e renovações.
+  - Destaques (`keyRole`): os 3 melhores de cada elenco, o artilheiro e o dono da melhor nota custam bem mais, o clube
+    quase não cede, às vezes não negocia naquela janela, e o jogador pede salário maior para sair. Titulares do 4º ao
+    7º melhor também saem mais caros. A IA não tira destaques de outros clubes.
   - Compra em duas etapas: valor com o clube (aceita, contraproposta ou recusa, até 3 tentativas por janela) e
     salário/duração com o jogador, que pode recusar clube muito menor.
   - Empréstimos até o fim da temporada, com divisão do salário; jogadores livres; renovação; dispensa com multa de
     metade do salário que falta; lista de observação com avisos.
   - Contratos vencem: quem não renova sai de graça no fim da temporada. A IA renova a maioria, compra e vende entre si
-    e manda propostas pelos jogadores do usuário (principalmente os colocados à venda).
+    e manda propostas pelos jogadores do usuário (principalmente os colocados à venda). Negociações entre outros clubes
+    ficam só em Mercado > Movimentações, sem notícias na caixa de entrada.
   - Transferências entram em Finanças (extrato, cascata do caixa e histórico).
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão

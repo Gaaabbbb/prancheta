@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { dateOf, isPayday, SEASON_DAYS, WEEKDAY_SHORT, type Competition, type Fixture, type World } from '@/core';
+import {
+  dateOf,
+  isPayday,
+  SEASON_DAYS,
+  TRANSFER_WINDOWS,
+  WEEKDAY_SHORT,
+  windowOn,
+  windowRange,
+  windowState,
+  type Competition,
+  type Fixture,
+  type World,
+} from '@/core';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { int } from '../format';
@@ -87,8 +99,18 @@ export function Calendar({ W }: PageProps) {
   // dias de jogo da temporada (todas as rodadas), para marcar salários e rodadas sem jogo do usuário
   const seasonDays = new Map<string, number>();
   for (let d = 1; d <= SEASON_DAYS; d++) seasonDays.set(dayKey(dateOf(W, d)), d);
-  const firstMonth = dateOf(W, 1).getMonth(),
+  // janeiro entra por causa da 1ª janela de transferências
+  const firstMonth = 0,
     lastMonth = dateOf(W, SEASON_DAYS).getMonth();
+  const ws = windowState(W);
+  const dm = (d: Date) => d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+  const winStatus = (i: number) => {
+    const w = TRANSFER_WINDOWS[i];
+    if (ws.open && ws.win?.id === w.id) return 'aberta agora';
+    const [, end] = windowRange(W.year, w);
+    const past = W.seasonDone || (W.day > 0 && dateOf(W, Math.min(W.day, SEASON_DAYS)) > end);
+    return past ? 'encerrada' : 'ainda vai abrir';
+  };
 
   const open = (g: Game) => {
     if (g.f.pl) openModal({ kind: 'report', comp: g.comp.id, fid: g.f.id });
@@ -212,6 +234,25 @@ export function Calendar({ W }: PageProps) {
         </div>
       </div>
 
+      <div className="panel calwins">
+        <span className="kl">Janelas de transferência</span>
+        {TRANSFER_WINDOWS.map((w, i) => {
+          const [a, b] = windowRange(W.year, w);
+          const st = winStatus(i);
+          return (
+            <div key={w.id} className={`calwin ${st === 'aberta agora' ? 'on' : st === 'encerrada' ? 'past' : ''}`}>
+              <b>{w.name}</b>
+              <span className="num">
+                {dm(a)} a {dm(b)}
+              </span>
+              <span className="muted">
+                {w.note} · {st}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
       {view === 'month' ? (
         <div className="grid g21" style={{ marginTop: 16 }}>
           <div className="panel">
@@ -249,14 +290,23 @@ export function Calendar({ W }: PageProps) {
                 const sd = seasonDays.get(k);
                 const pay = sd != null && isPayday(W, sd);
                 const today = sd != null && sd === W.day + 1;
+                const win = windowOn(new Date(W.year, month, day));
+                const winStart = win && win.from[0] === month && win.from[1] === day;
+                const winEnd = win && win.to[0] === month && win.to[1] === day;
                 return (
                   <div
                     key={i}
-                    className={`cal-c ${g ? 'game ' + (g.home ? 'h' : 'a') : ''} ${g?.res ? 'r' + g.res : ''} ${today ? 'today' : ''}`}
+                    className={`cal-c ${g ? 'game ' + (g.home ? 'h' : 'a') : ''} ${g?.res ? 'r' + g.res : ''} ${today ? 'today' : ''} ${win ? 'win' : ''}`}
                     onClick={g ? () => open(g) : undefined}
                     title={g ? `${g.comp.name}, ${g.comp.stages[g.f.st]?.name}` : undefined}
                   >
                     <span className="cal-n">{day}</span>
+                    {(winStart || winEnd) && (
+                      <span className="cal-win" title={`${winStart ? 'Abre' : 'Fecha'} a ${win.name.toLowerCase()}`}>
+                        {winStart ? 'abre ' : 'fecha '}
+                        {win.id === 2 ? 'compl.' : win.id === 1 ? '1ª' : '2ª'}
+                      </span>
+                    )}
                     {g && chip(g, true)}
                     {!g && sd != null && <span className="cal-rd">rodada {sd}</span>}
                     {pay && <span className="cal-pay">salários</span>}
@@ -273,6 +323,9 @@ export function Calendar({ W }: PageProps) {
               </span>
               <span>
                 <i style={{ background: 'var(--muted)' }} /> Dia de pagamento de salários e patrocínio
+              </span>
+              <span>
+                <i style={{ background: 'var(--ok)' }} /> Janela de transferências aberta
               </span>
             </div>
           </div>
@@ -302,6 +355,7 @@ export function Calendar({ W }: PageProps) {
                 <th>Adversário</th>
                 <th>Fase</th>
                 <th>Resultado</th>
+                <th title="Janela de transferências aberta na data do jogo">Janela</th>
                 <th className="r">Público</th>
               </tr>
             </thead>
@@ -342,6 +396,13 @@ export function Calendar({ W }: PageProps) {
                         <span className="cg-next">próximo</span>
                       ) : (
                         <span className="dim">–</span>
+                      )}
+                    </td>
+                    <td>
+                      {windowOn(g.date) && (
+                        <span className="tag win">
+                          {windowOn(g.date)!.id === 2 ? 'complementar' : windowOn(g.date)!.name}
+                        </span>
                       )}
                     </td>
                     <td className="r num muted">{g.f.att ? int(g.f.att) : ''}</td>

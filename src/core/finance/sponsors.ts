@@ -3,22 +3,15 @@ import { clamp } from '../math';
 import { news } from '../news';
 import { hash } from '../rng';
 import type { SponsorContract, SponsorOffer, SponsorSlot, SponsorState, World } from '../types';
-import { addMoney, monthlyWages, PAYDAYS, remainingPaydays } from './ledger';
+import { addMoney, monthlyWages, PAYDAYS, remainingPaydays, sponsorFactor } from './ledger';
 import { SPONSOR_BY_ID, SPONSORS, type SponsorDef } from './sponsorCatalog';
 
 export const SLOTS: SponsorSlot[] = ['master', 'sec'];
 export const SLOT_NAME: Record<SponsorSlot, string> = { master: 'Patrocinador master', sec: 'Patrocinador secundário' };
 /** Parte do potencial de patrocínio do clube que cada espaço vale. */
 const SLOT_SHARE: Record<SponsorSlot, number> = { master: 0.68, sec: 0.32 };
-const STYLE_FACTOR = { fixo: 1, longo: 0.92, desempenho: 0.86 };
-/** Teto do bônus por vitória em cada divisão (Série A: R$ 1 mi). */
-export const WIN_BONUS_CAP: Record<Div, number> = { A: 1e6, B: 4e5, C: 15e4, D: 5e4 };
-
-/** Bônus por vitória de um contrato por desempenho: ~1,2% do valor anual, com teto por divisão. */
-export const winBonus = (val: number, div: Div): number => {
-  const v = Math.min(WIN_BONUS_CAP[div], val * 0.012);
-  return v >= 1e5 ? Math.round(v / 1e4) * 1e4 : Math.round(v / 1e3) * 1e3;
-};
+/** Fixo paga o valor cheio; longo, um pouco menos por durar mais; exigente, um pouco mais por 1 ano só. */
+const STYLE_FACTOR = { fixo: 1, longo: 0.92, desempenho: 1.06 };
 /** Multa por rescisão: parte do que ainda falta pagar no contrato. */
 const FEE_RATE = 0.4;
 /** Dias de espera entre duas buscas ativas por patrocinador. */
@@ -45,7 +38,7 @@ export const sponsorDef = (sid: number): SponsorDef => SPONSOR_BY_ID[sid];
 /** Quanto o clube atrai de patrocínio por ano (folha, reputação). */
 export const sponsorPotential = (W: World): number => {
   const c = W.clubs[W.user!];
-  return monthlyWages(W, c.id) * 10 * (0.8 + c.rep / 250);
+  return monthlyWages(W, c.id) * 10 * sponsorFactor(c);
 };
 
 /** Patrocinadores que aceitam a divisão do clube e não estão no outro espaço. */
@@ -61,12 +54,12 @@ const makeContract = (W: World, def: SponsorDef, slot: SponsorSlot, mult: number
   const sp = W.sp!;
   const base = sponsorPotential(W) * SLOT_SHARE[slot] * def.mult * STYLE_FACTOR[def.style] * mult;
   const val = nice(base * (0.9 + rnd(sp) * 0.2));
-  const years = def.style === 'longo' ? rint(sp, 3, 4) : rint(sp, 1, 2);
+  const years = def.style === 'longo' ? rint(sp, 3, 4) : def.style === 'desempenho' ? 1 : rint(sp, 1, 2);
   return {
     sid: def.id,
     slot,
     val,
-    win: def.style === 'desempenho' ? winBonus(val, W.clubs[W.user!].div) : 0,
+    win: 0,
     from: W.year,
     to: W.year + years - 1,
   };
@@ -96,9 +89,7 @@ const newOffer = (W: World, slot: SponsorSlot, replace: boolean, silent = false)
   if (replace && cur) {
     // quem quer tirar o atual paga mais e às vezes ajuda com a multa
     const c = makeContract(W, def, slot, 1);
-    // contrato por desempenho compensa o valor menor com o bônus por vitória
     c.val = nice(Math.max(c.val, cur.val * (1.12 + rnd(sp) * 0.23) * STYLE_FACTOR[def.style]));
-    if (c.win) c.win = winBonus(c.val, W.clubs[W.user!].div);
     o = pushOffer(W, c, { cover: [0, 0.25, 0.5][rint(sp, 0, 2)] });
     if (!silent)
       news(
@@ -146,18 +137,18 @@ const lockSlot = (W: World, slot: SponsorSlot) => {
   sp.lock = { ...(sp.lock || {}), [slot]: W.year };
 };
 
-/** Ajusta bônus por vitória de contratos e propostas antigos ao teto atual. */
-export const capWinBonuses = (W: World): void => {
+/** Saves antigos: o bônus por vitória saiu do jogo. */
+export const clearWinBonuses = (W: World): void => {
   const sp = W.sp;
-  if (!sp || W.user == null) return;
-  const div = W.clubs[W.user].div;
-  for (const c of [sp.master, sp.sec, ...sp.offers]) if (c && c.win) c.win = Math.min(c.win, winBonus(c.val, div));
+  if (!sp) return;
+  for (const c of [sp.master, sp.sec, ...sp.offers]) if (c) c.win = 0;
 };
 
 /** Satisfação do patrocinador (0..100): resultados recentes e paciência da marca. */
 export const sponsorSatisfaction = (W: World, c: SponsorContract): number => {
   const conf = W.board?.conf ?? 60;
-  return Math.round(clamp(conf * 0.7 + sponsorDef(c.sid).pat * 35, 0, 100));
+  const def = sponsorDef(c.sid);
+  return Math.round(clamp(conf * 0.7 + def.pat * 35 - (def.style === 'desempenho' ? 10 : 0), 0, 100));
 };
 
 /** Valor que ainda falta receber do contrato. */
@@ -167,7 +158,7 @@ export const remainingValue = (W: World, c: SponsorContract): number =>
 /** Multa para encerrar o contrato antes do fim. */
 export const terminationFee = (W: World, c: SponsorContract): number => nice(remainingValue(W, c) * FEE_RATE);
 
-/** Total anual dos contratos atuais (sem bônus). */
+/** Total anual dos contratos atuais. */
 export const sponsorAnnual = (W: World): number => SLOTS.reduce((t, s) => t + (W.sp?.[s]?.val || 0), 0);
 
 /** Parcela mensal de cada contrato (chamado nos dias de pagamento). */
@@ -176,16 +167,6 @@ export const sponsorPay = (W: World, months = 1): void => {
   for (const s of SLOTS) {
     const c = W.sp![s];
     if (c) addMoney(W, me, 'pat', (c.val / PAYDAYS) * months);
-  }
-};
-
-/** Bônus por vitória dos contratos por desempenho. */
-export const sponsorWin = (W: World): void => {
-  if (!W.sp) return;
-  const me = W.clubs[W.user!];
-  for (const s of SLOTS) {
-    const c = W.sp[s];
-    if (c?.win) addMoney(W, me, 'bon', c.win);
   }
 };
 
@@ -203,13 +184,13 @@ export const acceptOffer = (W: World, id: number): string | null => {
     if (fee) addMoney(W, me, 'mul', -fee);
     lockSlot(W, o.slot);
   }
-  const { sid, slot, val, win, from, to } = o;
-  sp[slot] = { sid, slot, val, win, from, to };
+  const { sid, slot, val, from, to } = o;
+  sp[slot] = { sid, slot, val, win: 0, from, to };
   sp.offers = sp.offers.filter((x) => x.slot !== slot && x.sid !== sid);
   news(
     W,
     `Novo ${SLOT_NAME[slot].toLowerCase()}: ${sponsorDef(sid).n}`,
-    `Contrato assinado até ${to}, ${brl(val)} por ano${win ? ` mais ${brl(win)} por vitória` : ''}.`,
+    `Contrato assinado até ${to}, ${brl(val)} por ano.`,
     'spon',
   );
   return null;
@@ -229,7 +210,6 @@ export const haggleOffer = (W: World, id: number): 'up' | 'same' | 'gone' | null
   const r = rnd(sp);
   if (r < 0.5 + (rep - 50) / 250) {
     o.val = nice(o.val * (1.08 + rnd(sp) * 0.08));
-    if (o.win) o.win = winBonus(o.val, W.clubs[W.user!].div);
     return 'up';
   }
   if (rnd(sp) < 0.4) {

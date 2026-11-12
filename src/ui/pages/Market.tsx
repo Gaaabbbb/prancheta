@@ -7,7 +7,10 @@ import {
   DIV_NAME,
   DIVS,
   ensureMarket,
+  keyRole,
+  KEY_ROLE_NAME,
   ovr,
+  POS,
   playerDemand,
   POS_GROUP,
   rejectIncoming,
@@ -40,6 +43,27 @@ const TABS: [MarketTab, string][] = [
   ['log', 'Movimentações'],
 ];
 const GROUPS = ['Todos', 'Goleiros', 'Defesa', 'Meio', 'Ataque'];
+
+/** "3 de março" */
+const dm = (d: Date) => d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' });
+
+/** Etiqueta de destaque (estrela do clube ou titular importante). */
+function KeyTag({ W, p }: { W: World; p: Player }) {
+  const role = keyRole(W, p);
+  if (!role) return null;
+  return (
+    <span
+      className={`tag ktag ${role === 'star' ? 'top' : ''}`}
+      title={
+        role === 'star'
+          ? 'Um dos destaques do clube: pede bem mais, cede pouco e às vezes é inegociável'
+          : 'Titular importante: mais caro e mais difícil de negociar'
+      }
+    >
+      {KEY_ROLE_NAME[role].toLowerCase()}
+    </span>
+  );
+}
 
 /** Estrela para observar o jogador. */
 function Star({ W, p }: { W: World; p: Player }) {
@@ -91,8 +115,8 @@ export function Market({ W }: PageProps) {
         <h2>Mercado</h2>
         <span className={`winbadge ${ws.open ? 'open' : ''}`}>
           {ws.open
-            ? `${ws.name} aberta · fecha em ${ws.rounds} rodada${ws.rounds > 1 ? 's' : ''}`
-            : `Janela fechada · ${ws.opens ? `${ws.name.toLowerCase()} abre em ${ws.rounds + 1} rodada(s)` : 'próxima na pré-temporada'}`}
+            ? `${ws.name} aberta até ${dm(ws.closes!)} · ${ws.rounds} rodada${ws.rounds !== 1 ? 's' : ''}`
+            : `Janela fechada · ${ws.opens ? `${ws.name.toLowerCase()} abre em ${dm(ws.opens)} (daqui a ${ws.rounds} rodada${ws.rounds !== 1 ? 's' : ''})` : '1ª janela abre em 5 de janeiro'}`}
         </span>
         <span className="sp" />
         <div className="seg">
@@ -228,6 +252,7 @@ function Search({ W }: { W: World }) {
               <td className="nm">
                 {p.n}
                 {aiListed(W, p) && <span className="tag mk">à venda</span>}
+                <KeyTag W={W} p={p} />
                 {p.ct <= W.year && <span className="tag sus">último ano</span>}
                 <StatusTags p={p} />
               </td>
@@ -567,15 +592,65 @@ function Offers({ W }: { W: World }) {
   );
 }
 
+type MineK = 'pos' | 'n' | 'a' | 'ovr' | 'sal' | 'ct' | 'val' | 'sit';
+
 function Mine({ W }: { W: World }) {
   const mutate = useGame((s) => s.mutate);
   const openModal = useUi((s) => s.openModal);
   const mk = W.mk!;
   const me = W.user!;
-  const list = squad(W, me).sort((a, b) => a.ct - b.ct || ovr(b) - ovr(a));
+  const [sort, setSort] = useState<{ k: MineK; d: 1 | -1 }>({ k: 'ct', d: 1 });
+  const [g, setG] = useState(0);
+  /** situação: emprestado, à venda, para empréstimo, contrato no fim, normal */
+  const sit = (p: Player) =>
+    p.loan ? 0 : mk.sell[p.id] != null ? 1 : mk.loan.includes(p.id) ? 2 : p.ct <= W.year ? 3 : 4;
+  const key = (p: Player): number | string => {
+    switch (sort.k) {
+      case 'pos':
+        return POS.indexOf(p.p);
+      case 'n':
+        return p.n;
+      case 'a':
+        return p.a;
+      case 'ovr':
+        return ovr(p);
+      case 'sal':
+        return p.sal;
+      case 'ct':
+        return p.loan ? 9999 : p.ct;
+      case 'val':
+        return calcValue(p);
+      case 'sit':
+        return sit(p);
+    }
+  };
+  const cmp = (a: Player, b: Player) => {
+    const x = key(a),
+      y = key(b);
+    const r = typeof x === 'string' ? x.localeCompare(y as string, 'pt-BR') : x - (y as number);
+    return r * sort.d || ovr(b) - ovr(a);
+  };
+  const all = squad(W, me);
+  const list = all.filter((p) => !g || POS_GROUP[p.p] === g - 1).sort(cmp);
+  const th = (k: MineK, label: string, cls = '') => (
+    <th
+      className={`s ${cls}`}
+      onClick={() =>
+        setSort({
+          k,
+          // texto e posição começam do A/goleiro; números, do maior; contrato, do que termina antes
+          d: sort.k === k ? (sort.d === 1 ? -1 : 1) : k === 'n' || k === 'pos' || k === 'ct' || k === 'sit' ? 1 : -1,
+        })
+      }
+      title="Clique para ordenar"
+    >
+      {label}
+      {sort.k === k ? (sort.d > 0 ? ' ▲' : ' ▼') : ''}
+    </th>
+  );
   const out = W.players.filter((p) => p.loan?.from === me);
   const save = () => void useGame.getState().save();
-  const ending = list.filter((p) => !p.loan && p.ct <= W.year).length;
+  const ending = all.filter((p) => !p.loan && p.ct <= W.year).length;
   return (
     <>
       <div className="panel">
@@ -588,18 +663,25 @@ function Mine({ W }: { W: World }) {
                 : 'nenhum contrato termina nesta temporada'}
             </small>
           </span>
+          <div className="seg">
+            {GROUPS.map((l, i) => (
+              <button key={l} className={g === i ? 'on' : ''} onClick={() => setG(i)}>
+                {l}
+              </button>
+            ))}
+          </div>
         </h3>
         <table className="t">
           <thead>
             <tr>
-              <th>Pos</th>
-              <th>Nome</th>
-              <th className="r">Idade</th>
-              <th className="c">OVR</th>
-              <th className="r">Salário</th>
-              <th className="r">Contrato</th>
-              <th className="r">Valor</th>
-              <th>Situação</th>
+              {th('pos', 'Pos')}
+              {th('n', 'Nome')}
+              {th('a', 'Idade', 'r')}
+              {th('ovr', 'OVR', 'c')}
+              {th('sal', 'Salário', 'r')}
+              {th('ct', 'Contrato', 'r')}
+              {th('val', 'Valor', 'r')}
+              {th('sit', 'Situação')}
               <th />
             </tr>
           </thead>

@@ -1,26 +1,58 @@
 import { TICKET } from '../constants/divisions';
 import { clamp } from '../math';
 import { rand } from '../rng';
+import { RULES } from '../rules';
 import type { Club, Competition, Fixture, World } from '../types';
 import { squad } from '../world/squad';
-import { addMoney, finDay, monthlyWages, paydayMonths, PAYDAYS, remainingPaydays, wageBills } from './ledger';
+import {
+  addMoney,
+  finDay,
+  monthlyWages,
+  paydayMonths,
+  PAYDAYS,
+  remainingPaydays,
+  sponsorFactor,
+  wageBills,
+} from './ledger';
 import { ensureSponsors, sponsorAnnual, sponsorPay } from './sponsors';
 
-/** Taxa de ocupação base do estádio (sem o sorteio do dia). */
+/** Taxa de ocupação base do estádio (sem o sorteio do dia). Modelo original. */
 const baseFill = (h: Club, oppRep: number): number => 0.22 + h.rep / 190 + (oppRep - 50) / 400;
 
-/** Efeito do preço do ingresso no público (1 = preço padrão). */
-export const ticketElasticity = (h: Club, price: number): number =>
-  clamp(Math.pow(TICKET[h.div] / price, 0.6), 0.3, 1.6);
+/** Torcida que costuma ir ao estádio num jogo comum, pela reputação (rep 90 ≈ 59 mil, rep 50 ≈ 20 mil, rep 30 ≈ 8 mil). */
+export const fanBase = (rep: number): number => 2000 + rep * rep * 7;
+
+/** Parte da torcida que vai num jogo, pelo tamanho do adversário (sem o sorteio do dia). */
+const demandShare = (oppRep: number): number => 0.5 + (oppRep - 50) / 300;
+
+/**
+ * Público do jogo. `noise` é o sorteio do dia (-0,05 a 0,05); `elastic`, o efeito do preço do ingresso.
+ * No modelo de torcida, o preço mexe na procura e o estádio só limita depois (estádio lotado aguenta preço maior).
+ */
+const gateAttendance = (h: Club, oppRep: number, noise: number, elastic: number): number => {
+  if (RULES.gateModel === 'demand')
+    return Math.round(Math.min(h.cap, fanBase(h.rep) * clamp(demandShare(oppRep) + noise, 0.15, 0.95) * elastic));
+  const att = Math.round(h.cap * clamp(baseFill(h, oppRep) + noise, 0.08, 0.98));
+  return Math.min(h.cap, Math.round(att * elastic));
+};
+
+/**
+ * Efeito do preço do ingresso no público (1 = preço padrão). No modelo de torcida, acima do padrão o público cai mais
+ * rápido que o preço sobe: só compensa cobrar mais quando o estádio lota.
+ */
+export const ticketElasticity = (h: Club, price: number): number => {
+  const r = TICKET[h.div] / price;
+  if (RULES.gateModel === 'demand') return clamp(Math.pow(r, r >= 1 ? 0.6 : 1.4), 0.15, 1.6);
+  return clamp(Math.pow(r, 0.6), 0.3, 1.6);
+};
 
 /** Público e bilheteria do mandante. */
 export const matchMoney = (W: World, _comp: Competition, f: Fixture): void => {
   const h = W.clubs[f.h];
-  const fill = clamp(baseFill(h, W.clubs[f.a].rep) + (rand() * 0.1 - 0.05), 0.08, 0.98);
-  const att = Math.round(h.cap * fill);
+  const noise = rand() * 0.1 - 0.05;
   const price = h.id === W.user && W.ticket ? W.ticket : TICKET[h.div];
   const elastic = h.id === W.user && W.ticket ? ticketElasticity(h, W.ticket) : 1;
-  const att2 = Math.min(h.cap, Math.round(att * elastic));
+  const att2 = gateAttendance(h, W.clubs[f.a].rep, noise, elastic);
   f.att = att2;
   addMoney(W, h, 'bil', att2 * price);
   if (h.id === W.user) {
@@ -32,8 +64,7 @@ export const matchMoney = (W: World, _comp: Competition, f: Fixture): void => {
 
 /** Público e renda esperados (média, sem o sorteio do dia) de um jogo em casa. */
 export const expectedGate = (h: Club, oppRep: number, price: number): { att: number; rev: number } => {
-  const fill = clamp(baseFill(h, oppRep), 0.08, 0.98);
-  const att = Math.min(h.cap, Math.round(Math.round(h.cap * fill) * ticketElasticity(h, price)));
+  const att = gateAttendance(h, oppRep, 0, ticketElasticity(h, price));
   return { att, rev: att * price };
 };
 
@@ -41,7 +72,7 @@ export const expectedGate = (h: Club, oppRep: number, price: number): { att: num
 export const sponsorYear = (W: World, c: Club, wages?: number | null): number => {
   if (c.spon == null) {
     if (wages == null) wages = squad(W, c.id).reduce((t, p) => t + p.sal, 0);
-    c.spon = Math.round((wages * 10 * (0.8 + c.rep / 250)) / 1e5) * 1e5;
+    c.spon = Math.round((wages * 10 * sponsorFactor(c)) / 1e5) * 1e5;
   }
   return c.spon;
 };

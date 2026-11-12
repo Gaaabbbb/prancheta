@@ -133,7 +133,6 @@ function BalanceChart({ W, log, startBal, projection }: Omit<Props, 'mode'>) {
               )}
               {hv.bil !== 0 && <div>Bilheteria {money(hv.bil)}</div>}
               {hv.pat !== 0 && <div>Patrocínio (parcela) {money(hv.pat)}</div>}
-              {!!hv.bon && <div>Bônus por vitória {money(hv.bon)}</div>}
               {hv.sal !== 0 && <div>Salários do mês {money(hv.sal)}</div>}
               {!!hv.mul && <div>Multas e rescisões {money(hv.mul)}</div>}
               <div className="sum">Saldo {money(hv.bal)}</div>

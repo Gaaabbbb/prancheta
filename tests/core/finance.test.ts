@@ -15,7 +15,6 @@ import {
   SEASON_DAYS,
   seekSponsors,
   slotLocked,
-  WIN_BONUS_CAP,
   sponsorPotential,
   SPONSORS,
   terminateContract,
@@ -99,7 +98,7 @@ describe('patrocínios', () => {
     }
   });
 
-  it('o bônus por vitória nunca passa de R$ 1 mi (e é menor nas divisões de baixo)', () => {
+  it('patrocinadores não pagam mais bônus por vitória', () => {
     for (const user of [0, 30, 60, 100]) {
       const W = career(user, 13);
       W.clubs[user].bal = 1e10;
@@ -107,9 +106,7 @@ describe('patrocínios', () => {
         W.sp!.seek = undefined;
         seekSponsors(W);
       }
-      const cap = WIN_BONUS_CAP[W.clubs[user].div];
-      for (const c of [W.sp!.master, W.sp!.sec, ...W.sp!.offers]) if (c) expect(c.win).toBeLessThanOrEqual(cap);
-      expect(cap).toBeLessThanOrEqual(1e6);
+      for (const c of [W.sp!.master, W.sp!.sec, ...W.sp!.offers]) if (c) expect(c.win).toBe(0);
     }
   });
 

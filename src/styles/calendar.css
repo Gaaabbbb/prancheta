@@ -188,3 +188,51 @@ table.t tr.mstart td {
   color: var(--yellow);
   font-weight: 700;
 }
+
+/* janelas de transferência */
+.cal-c.win {
+  box-shadow: inset 0 -3px 0 var(--ok);
+}
+.cal-c.win:not(.game) {
+  background: #4cc38a10;
+}
+.cal-win {
+  margin-left: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ok);
+  white-space: nowrap;
+}
+.calwins {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  margin-top: 16px;
+}
+.calwin {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 10px;
+  border-left: 3px solid var(--line);
+  font-size: 12px;
+}
+.calwin b {
+  font-size: 13px;
+}
+.calwin.on {
+  border-left-color: var(--ok);
+}
+.calwin.on b {
+  color: var(--ok);
+}
+.calwin.past {
+  opacity: 0.55;
+}
+.tag.win {
+  background: #4cc38a22;
+  color: var(--ok);
+}

@@ -1,4 +1,5 @@
-import { SEASON_DAYS } from '../constants/divisions';
+import { DIV_REP_TARGET, SEASON_DAYS, type Div } from '../constants/divisions';
+import { RULES } from '../rules';
 import { dateOf } from '../season/calendar';
 import type { Club, FinDay, World } from '../types';
 
@@ -71,3 +72,12 @@ export const wageBills = (W: World): Record<number, number> => {
 
 /** Folha salarial mensal de um clube (inclui a parte dos emprestados). */
 export const monthlyWages = (W: World, clubId: number): number => wageBills(W)[clubId] || 0;
+
+/** Fator de patrocínio por divisão (modelo 'div'). */
+const SPONSOR_DIV: Record<Div, number> = { A: 0.7, B: 0.68, C: 0.7, D: 0.85 };
+
+/** Patrocínio anual em relação à folha anual. */
+export const sponsorFactor = (c: Club): number =>
+  RULES.sponsorModel === 'div'
+    ? Math.max(0.45, SPONSOR_DIV[c.div] + (c.rep - DIV_REP_TARGET[c.div]) / 300)
+    : 0.8 + c.rep / 250;

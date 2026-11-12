@@ -132,3 +132,21 @@ td.nowrap {
   justify-content: flex-end;
   margin-top: 10px;
 }
+
+.tag.ktag.top {
+  background: #ffd23f22;
+  color: var(--yellow);
+}
+.tag.ktag {
+  background: #f59e4222;
+  color: var(--orange);
+}
+
+.keynote {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--yellow);
+  background: #ffd23f12;
+  border-radius: var(--r);
+  font-size: 13px;
+}

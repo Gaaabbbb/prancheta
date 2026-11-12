@@ -171,7 +171,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
         {mode === 'month' && (
           <div className="legend">
             <span>
-              <i style={{ background: 'var(--ok)' }} /> Entradas (bilheteria, patrocínio e bônus)
+              <i style={{ background: 'var(--ok)' }} /> Entradas (bilheteria e patrocínio)
             </span>
             <span>
               <i style={{ background: 'var(--red)' }} /> Saídas (salários e multas)
@@ -330,7 +330,6 @@ function Ledger({ W }: { W: World }) {
               <th className="r">Jogos em casa</th>
               <th className="r">Bilheteria</th>
               <th className="r">Patrocínio</th>
-              <th className="r">Bônus</th>
               <th className="r">Salários</th>
               <th className="r">Multas</th>
               <th className="r">Transferências</th>
@@ -348,8 +347,7 @@ function Ledger({ W }: { W: World }) {
                   </td>
                   <td className="r num">{b.games.length || ''}</td>
                   <td className="r num">{neg(b.bil)}</td>
-                  <td className="r num">{neg(b.pat)}</td>
-                  <td className="r num">{neg(b.bon)}</td>
+                  <td className="r num">{neg(b.pat + b.bon)}</td>
                   <td className="r num neg">{neg(b.sal)}</td>
                   <td className={`r num ${b.mul < 0 ? 'neg' : ''}`}>{neg(b.mul)}</td>
                   <td className={`r num ${b.tra < 0 ? 'neg' : ''}`}>{neg(b.tra)}</td>
@@ -362,7 +360,7 @@ function Ledger({ W }: { W: World }) {
                 </tr>
                 {open === b.m && (
                   <tr className="sub">
-                    <td colSpan={10}>
+                    <td colSpan={9}>
                       {b.games.length === 0 && b.fines.length === 0 && (
                         <span className="muted">Sem jogos em casa neste mês.</span>
                       )}
@@ -395,8 +393,7 @@ function Ledger({ W }: { W: World }) {
               </td>
               <td className="r num">{months.reduce((t, b) => t + b.games.length, 0)}</td>
               <td className="r num">{neg(tot.bil)}</td>
-              <td className="r num">{neg(tot.pat)}</td>
-              <td className="r num">{neg(tot.bon)}</td>
+              <td className="r num">{neg(tot.pat + tot.bon)}</td>
               <td className="r num neg">{neg(tot.sal)}</td>
               <td className="r num">{neg(tot.mul)}</td>
               <td className="r num">{neg(tot.tra)}</td>
@@ -410,7 +407,7 @@ function Ledger({ W }: { W: World }) {
       )}
       <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
         Salários e parcelas de patrocínio são pagos uma vez por mês, de fevereiro a novembro (10 vezes por temporada). A
-        bilheteria entra a cada jogo em casa e o bônus a cada vitória.
+        bilheteria entra a cada jogo em casa.
       </p>
     </div>
   );

@@ -1,5 +1,4 @@
 import { POS, POS_GROUP, type Pos } from '../constants/attributes';
-import { SEASON_DAYS } from '../constants/divisions';
 import { addMoney, remainingPaydays } from '../finance/ledger';
 import { clamp } from '../math';
 import { news } from '../news';
@@ -8,9 +7,9 @@ import { ovr } from '../player/ratings';
 import { calcValue, calcWage } from '../player/value';
 import { hash } from '../rng';
 import { RULES } from '../rules';
-import { dateOf } from '../season/calendar';
 import type { Club, IncomingOffer, MarketState, Player, TransferRecord, World } from '../types';
 import { clubLevel, makePlayer } from '../world/factory';
+import { marketDate, windowId, windowState } from './windows';
 import { dirty, removeFromLineups, squad } from '../world/squad';
 
 /** Mínimo de jogadores no elenco profissional para um clube aceitar vender. */
@@ -85,39 +84,6 @@ const seedFreeAgents = (W: World, n: number) => {
   dirty(W);
 };
 
-export interface WindowState {
-  open: boolean;
-  name: string;
-  /** rodadas até fechar (aberta) ou abrir (fechada) */
-  rounds: number;
-  /** data aproximada de abertura (fechada) */
-  opens?: Date;
-}
-
-const midWindow = (dt: Date) => {
-  const m = dt.getMonth(),
-    d = dt.getDate();
-  return (m === 5 && d >= 1) || m === 6;
-};
-
-/** Janela de transferências: pré-temporada (até a 5ª rodada) e meio do ano (junho e julho). */
-export const windowState = (W: World): WindowState => {
-  if (W.seasonDone) return { open: false, name: 'Janela da pré-temporada', rounds: 0 };
-  if (W.day < 5) return { open: true, name: 'Janela da pré-temporada', rounds: 5 - W.day };
-  if (midWindow(dateOf(W, W.day + 1))) {
-    let n = 0;
-    for (let d = W.day + 1; d <= SEASON_DAYS && midWindow(dateOf(W, d)); d++) n++;
-    return { open: true, name: 'Janela do meio do ano', rounds: n };
-  }
-  for (let d = W.day + 1; d <= SEASON_DAYS; d++)
-    if (midWindow(dateOf(W, d)))
-      return { open: false, name: 'Janela do meio do ano', rounds: d - W.day - 1, opens: dateOf(W, d) };
-  return { open: false, name: 'Janela da pré-temporada', rounds: SEASON_DAYS - W.day };
-};
-
-/** Identificador da janela atual (para zerar tentativas quando muda). */
-const windowId = (W: World) => W.year * 10 + (W.day < 5 ? 1 : 2);
-
 const tryKey = (pid: number, stage: string) => pid + ':' + stage;
 const spendTry = (W: World, pid: number, stage: string): number => {
   const mk = W.mk!;
@@ -158,6 +124,31 @@ export const sellBlock = (W: World, p: Player): string | null => {
   return null;
 };
 
+export type KeyRole = 'star' | 'key';
+
+/**
+ * Destaques do elenco: os 3 melhores, o artilheiro (5+ gols) e o dono da melhor nota (6+ jogos) são "estrelas";
+ * do 4º ao 7º melhor são "titulares importantes". Tirar qualquer um deles do clube custa mais caro e é mais difícil.
+ */
+export const keyRole = (W: World, p: Player): KeyRole | null => {
+  if (p.c < 0 || p.y || p.loan) return null;
+  const sq = squad(W, p.c);
+  const rank = sq.sort((a, b) => ovr(b) - ovr(a)).findIndex((x) => x.id === p.id);
+  if (rank < 3) return 'star';
+  if (p.st.g >= 5 && sq.every((x) => x.st.g <= p.st.g)) return 'star';
+  if (p.st.j >= 6) {
+    const avg = (x: Player) => (x.st.j >= 6 ? x.st.nt / x.st.j : 0);
+    if (sq.every((x) => avg(x) <= avg(p))) return 'star';
+  }
+  return rank < 7 ? 'key' : null;
+};
+
+export const KEY_ROLE_NAME: Record<KeyRole, string> = { star: 'Destaque', key: 'Titular importante' };
+
+/** Estrela que o clube não aceita negociar nesta janela (sorteio fixo por janela). */
+export const untouchable = (W: World, p: Player): boolean =>
+  keyRole(W, p) === 'star' && fixed01(W, p.id, 'inegociavel' + windowId(W)) < 0.45;
+
 /** O clube da IA quer se desfazer? (pouco usado no elenco) */
 export const aiListed = (W: World, p: Player): boolean =>
   p.c >= 0 && p.c !== W.user && !p.y && !p.loan && squadRank(W, p) >= 18;
@@ -165,9 +156,11 @@ export const aiListed = (W: World, p: Player): boolean =>
 /** Preço que o clube pede pelo jogador. */
 export const askingPrice = (W: World, p: Player): number => {
   const rank = squadRank(W, p);
-  let f = rank < 3 ? 1.7 : rank < 11 ? 1.3 : rank < 18 ? 1.05 : 0.8;
+  const role = keyRole(W, p);
+  let f = role === 'star' ? 2.3 : role === 'key' ? 1.6 : rank < 11 ? 1.3 : rank < 18 ? 1.05 : 0.8;
   const left = yearsLeft(W, p);
-  f *= left <= 0 ? 0.5 : left === 1 ? 0.8 : 1;
+  // contrato no fim derruba o preço (destaques perdem menos: o clube prefere segurar)
+  f *= left <= 0 ? (role ? 0.7 : 0.5) : left === 1 ? (role ? 0.9 : 0.8) : 1;
   if (W.clubs[p.c].bal < 0) f *= 0.85;
   f *= 0.92 + 0.16 * fixed01(W, p.id, 'pede');
   return Math.max(10000, roundMoney(calcValue(p) * f));
@@ -185,6 +178,8 @@ export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
   if (!windowState(W).open) return { r: 'reject', msg: 'A janela de transferências está fechada.' };
   const block = sellBlock(W, p);
   if (block) return { r: 'reject', msg: block };
+  if (untouchable(W, p))
+    return { r: 'reject', msg: `${p.n} é inegociável para o ${W.clubs[p.c].n} nesta janela. Tente na próxima.` };
   if (triesLeft(W, pid, 'club') <= 0)
     return { r: 'reject', msg: `O ${W.clubs[p.c].n} encerrou as conversas nesta janela.` };
   const me = W.clubs[W.user!];
@@ -196,9 +191,13 @@ export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
     mk.agreed[pid] = { fee, kind: 'buy', share: 1 };
     return { r: 'accept', fee, msg: `O ${club} aceitou ${brl(fee)}. Agora acerte o contrato com o jogador.` };
   }
-  if (fee >= ask * 0.75 && n < MAX_TRIES) {
+  // destaques: o clube só conversa com propostas próximas do pedido e quase não cede
+  const role = keyRole(W, p);
+  const floor = role === 'star' ? 0.92 : role === 'key' ? 0.85 : 0.75;
+  const give = role === 'star' ? 0 : role === 'key' ? 0.02 : 0.04;
+  if (fee >= ask * floor && n < MAX_TRIES) {
     // a cada nova rodada o clube cede um pouco
-    const counter = roundMoney(ask * (1 - 0.04 * (n - 1)));
+    const counter = roundMoney(ask * (1 - give * (n - 1)));
     return { r: 'counter', fee: counter, msg: `O ${club} quer ${brl(counter)}.` };
   }
   if (n >= MAX_TRIES) return { r: 'reject', msg: `O ${club} recusou e encerrou as conversas nesta janela.` };
@@ -256,7 +255,10 @@ export const playerDemand = (W: World, p: Player, kind: 'buy' | 'free' | 'renew'
   let refuse: string | undefined;
   if (kind === 'buy' && from) {
     const gap = from.rep - me.rep;
-    if (gap > 30) refuse = `${p.n} não quer jogar num clube tão menor que o ${from.n}.`;
+    const role = keyRole(W, p);
+    // destaque está bem no clube: pede mais e não aceita descer tanto de patamar
+    if (role) wage *= role === 'star' ? 1.2 : 1.1;
+    if (gap > (role === 'star' ? 15 : 30)) refuse = `${p.n} não quer jogar num clube tão menor que o ${from.n}.`;
     else if (gap > 0) wage *= 1 + gap / 100;
   }
   if (ovr(p) > clubLevel(me) + 8) wage *= 1.15;
@@ -364,8 +366,8 @@ export const executeTransfer = (W: World, p: Player, to: number, fee: number, wa
   if (from >= 0) removeFromLineups(W, p.id, [from]);
   p.c = to;
   p.sal = wage;
-  // na pré-temporada a temporada atual conta como o 1º ano do contrato
-  p.ct = W.year + years - (W.day < 5 ? 1 : 0);
+  // no 1º semestre a temporada atual conta como o 1º ano do contrato
+  p.ct = W.year + years - (marketDate(W).getMonth() < 6 ? 1 : 0);
   p.mo = clamp(Math.max(p.mo, 70), 10, 100);
   delete p.fa;
   delete p.loan;
@@ -506,7 +508,6 @@ const planSize = (c: Club) => (c.div === 'D' ? 24 : 27);
 const aiTransfers = (W: World) => {
   const mk = W.mk!;
   const ai = W.clubs.filter((c) => c.id !== W.user && c.bal > 5e5);
-  const shown: string[] = [];
   const free = W.players.filter((p) => p.c < 0 && !p.y);
   for (let k = rint(mk, 4, 8); k > 0; k--) {
     if (!ai.length) break;
@@ -535,7 +536,6 @@ const aiTransfers = (W: World) => {
     if (fa.length && (sq.length < planSize(buyer) || rnd(mk) < 0.35)) {
       const p = pickOne(mk, fa);
       executeTransfer(W, p, buyer.id, 0, calcWage(p, buyer.div), rint(mk, 1, 3));
-      if (buyer.div === W.clubs[W.user!].div && shown.length < 1) shown.push(`${buyer.n} contratou ${p.n} (livre)`);
       continue;
     }
     const cands = W.players.filter((p) => {
@@ -548,15 +548,13 @@ const aiTransfers = (W: World) => {
     if (!cands.length) continue;
     const p = pickOne(mk, cands.slice(0, 400));
     if (sellBlock(W, p)) continue;
+    const role = keyRole(W, p);
+    if (role === 'star' || (role === 'key' && rnd(mk) < 0.7)) continue;
     const fee = roundMoney(askingPrice(W, p) * (0.95 + rnd(mk) * 0.2));
     if (fee > buyer.bal * 0.5) continue;
-    const seller = W.clubs[p.c];
+    // negociações entre outros clubes não vão para a caixa de entrada (ficam em Mercado > Movimentações)
     executeTransfer(W, p, buyer.id, fee, Math.max(p.sal, calcWage(p, buyer.div)), rint(mk, 2, 4));
-    const userDiv = W.clubs[W.user!].div;
-    if ((fee >= 8e6 || buyer.div === userDiv || seller.div === userDiv) && shown.length < 2)
-      shown.push(`${buyer.n} comprou ${p.n} do ${seller.n} por ${brl(fee)}`);
   }
-  if (shown.length) news(W, 'Mercado', shown.join('. ') + '.', 'mkt');
 };
 
 /** Clubes da IA mandam propostas pelos jogadores do usuário. */

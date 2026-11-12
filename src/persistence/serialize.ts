@@ -1,4 +1,4 @@
-import { capWinBonuses, ovr, rebuildPmap, rng, seedYouth, WORLD_VERSION, type World } from '@/core';
+import { clearWinBonuses, ovr, rebuildPmap, rng, seedYouth, WORLD_VERSION, type World } from '@/core';
 
 type SavedWorld = Omit<World, 'pmap' | '_sq'> & { rng?: number };
 
@@ -44,7 +44,7 @@ export const deserialize = (json: string): World => {
   }
   W.v = WORLD_VERSION;
   normalizeFinance(W);
-  capWinBonuses(W);
+  clearWinBonuses(W);
   return W;
 };
 

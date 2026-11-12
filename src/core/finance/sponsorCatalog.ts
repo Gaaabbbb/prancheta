@@ -4,7 +4,7 @@ import type { Div } from '../constants/divisions';
  * Estilo do contrato:
  * - fixo: valor cheio, contratos de 1 a 2 anos;
  * - longo: valor um pouco menor, contratos de 3 a 4 anos, paciência maior;
- * - desempenho: valor base menor e bônus por vitória.
+ * - desempenho ("exigente"): paga um pouco mais, contrato de 1 ano, rompe mais fácil com resultados ruins.
  */
 export type SponsorStyle = 'fixo' | 'longo' | 'desempenho';
 
@@ -396,5 +396,5 @@ export const SPONSOR_BY_ID: Record<number, SponsorDef> = Object.fromEntries(SPON
 export const STYLE_NAME: Record<SponsorStyle, string> = {
   fixo: 'Valor fixo',
   longo: 'Contrato longo',
-  desempenho: 'Por desempenho',
+  desempenho: 'Exigente',
 };

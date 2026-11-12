@@ -53,7 +53,7 @@ export function CashWaterfall({ flow }: { flow: CashFlow }) {
     acc += v;
   };
   add('Bilheteria', flow.bil, 'Renda dos jogos em casa');
-  add('Patrocínio', flow.pat + flow.bon, 'Parcelas mensais dos patrocinadores e bônus por vitória');
+  add('Patrocínio', flow.pat + flow.bon, 'Parcelas mensais dos patrocinadores');
   add('Transferências', flow.tra, 'Vendas menos compras de jogadores');
   add('Compensações', flow.inMul, 'Multas pagas ao clube por patrocinadores que romperam');
   add('Salários', flow.sal, 'Salários do elenco profissional, pagos uma vez por mês');

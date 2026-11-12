@@ -22,6 +22,10 @@ import {
   setForSale,
   squad,
   windowState,
+  marketDate,
+  keyRole,
+  untouchable,
+  calcValue,
   type RawDb,
   type World,
 } from '../../src/core';
@@ -39,20 +43,41 @@ const career = (user = 0, seed = 41): World => {
 
 /** Um jogador de outro clube que pode ser vendido. */
 const target = (W: World, maxOvr = 75) =>
-  W.players.find((p) => p.c >= 0 && p.c !== W.user && !p.y && ovr(p) <= maxOvr && ovr(p) >= 60 && !sellBlock(W, p))!;
+  W.players.find(
+    (p) => p.c >= 0 && p.c !== W.user && !p.y && ovr(p) <= maxOvr && ovr(p) >= 60 && !sellBlock(W, p) && !keyRole(W, p),
+  )!;
 
 describe('mercado', () => {
-  it('janelas: pré-temporada e meio do ano', () => {
+  it('janelas: 5/jan a 3/mar, complementar de 4 a 27/mar e 20/jul a 11/set', () => {
     const W = career();
-    expect(windowState(W).open).toBe(true);
-    W.day = 8;
-    expect(windowState(W).open).toBe(false);
-    let opened = false;
-    for (let d = 5; d < 40; d++) {
+    expect(windowState(W).open).toBe(true); // pré-temporada
+    const names = new Set<string>();
+    let closed = 0;
+    for (let d = 0; d < 40; d++) {
       W.day = d;
-      if (windowState(W).open) opened = true;
+      const ws = windowState(W);
+      const dt = marketDate(W);
+      const md = dt.getMonth() * 100 + dt.getDate();
+      const inside = (md >= 5 && md <= 227) || (md >= 620 && md <= 811);
+      expect(ws.open).toBe(inside);
+      if (ws.open) names.add(ws.name);
+      else closed++;
     }
-    expect(opened).toBe(true);
+    expect([...names].sort()).toEqual(['1ª janela', '2ª janela', 'Janela complementar']);
+    expect(closed).toBeGreaterThan(10);
+  });
+
+  it('destaques: custam bem mais, às vezes são inegociáveis, e a IA não os tira', () => {
+    const W = career();
+    const stars = W.players.filter((p) => p.c >= 0 && p.c !== W.user && keyRole(W, p) === 'star').slice(0, 60);
+    expect(stars.length).toBeGreaterThan(20);
+    for (const p of stars.filter((x) => x.ct >= W.year + 2).slice(0, 10))
+      expect(askingPrice(W, p)).toBeGreaterThan(calcValue(p) * 1.5);
+    const locked = stars.filter((p) => untouchable(W, p));
+    expect(locked.length).toBeGreaterThan(0);
+    expect(locked.length).toBeLessThan(stars.length);
+    const p = locked.find((x) => !sellBlock(W, x));
+    if (p) expect(offerToClub(W, p.id, askingPrice(W, p) * 3).r).toBe('reject');
   });
 
   it('compra: clube aceita o preço pedido e o jogador assina', () => {

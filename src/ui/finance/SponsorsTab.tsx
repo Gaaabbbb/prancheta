@@ -186,12 +186,6 @@ export function SponsorsTab({ W }: { W: World }) {
                 </dd>
                 <dt>Parcela mensal</dt>
                 <dd className="num">{money(c.val / PAYDAYS)}</dd>
-                {c.win > 0 && (
-                  <>
-                    <dt>Bônus por vitória</dt>
-                    <dd className="num">{money(c.win)}</dd>
-                  </>
-                )}
                 <dt>Multa para rescindir</dt>
                 <dd className="num">{money(terminationFee(W, c))}</dd>
               </dl>
@@ -264,12 +258,6 @@ export function SponsorsTab({ W }: { W: World }) {
                     <b>{money(o.val)}</b>
                     {replace && <span className="up"> +{Math.round((o.val / cur!.val - 1) * 100)}% que o atual</span>}
                   </dd>
-                  {o.win > 0 && (
-                    <>
-                      <dt>Bônus por vitória</dt>
-                      <dd className="num">{money(o.win)}</dd>
-                    </>
-                  )}
                   <dt>Contrato</dt>
                   <dd>{years(o)}</dd>
                   {replace && (
@@ -333,9 +321,10 @@ export function SponsorsTab({ W }: { W: World }) {
         </div>
         <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
           Valor fixo paga o valor cheio. Contrato longo paga um pouco menos, mas dura 3 a 4 anos e tem mais paciência.
-          Por desempenho paga menos de base e um bônus a cada vitória. Cada espaço só pode ser trocado uma vez por
-          temporada (rescindir ou aceitar substituto); preencher um espaço vazio não conta. Marcas impacientes podem
-          romper quando os resultados são ruins, e cada marca só patrocina certas divisões.
+          Exigente paga um pouco mais, mas o contrato é de 1 ano e a marca tem menos paciência com resultados ruins.
+          Cada espaço só pode ser trocado uma vez por temporada (rescindir ou aceitar substituto); preencher um espaço
+          vazio não conta. Marcas impacientes podem romper quando os resultados são ruins, e cada marca só patrocina
+          certas divisões.
         </p>
       </div>
     </>
