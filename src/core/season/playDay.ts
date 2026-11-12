@@ -13,6 +13,7 @@ import { teamStrength } from '../world/strength';
 import { dirty } from '../world/squad';
 import { youthReport, youthTick } from '../youth/youth';
 import { advanceComp } from './advance';
+import { advanceForeignLeague, isForeignLeague, quickPlay } from './foreignLeagues';
 import { compList, dayFixtures, DAYS_START, isDays, restDays, seasonLastDay } from './calendar';
 
 /** Contexto de mata-mata de um jogo (placar da ida, pênaltis). */
@@ -116,6 +117,11 @@ export const playDay = (W: World, userMatch?: Match): void => {
   });
   const serving = new Set(W.players.filter((p) => p.sus > 0 && playingClubs.has(p.c)).map((p) => p.id));
   for (const { comp, f } of list) {
+    // ligas sul-americanas: resultado rápido, sem o motor de partida
+    if (isForeignLeague(comp.id)) {
+      quickPlay(W, comp, f);
+      continue;
+    }
     let m: Match;
     if (userMatch && (f.h === W.user || f.a === W.user)) m = userMatch;
     else {
@@ -167,6 +173,11 @@ const playFixtures = (W: World, list: { comp: Competition; f: Fixture }[], userM
   });
   const serving = new Set(W.players.filter((p) => p.sus > 0 && playingClubs.has(p.c)).map((p) => p.id));
   for (const { comp, f } of list) {
+    // ligas sul-americanas: resultado rápido, sem o motor de partida
+    if (isForeignLeague(comp.id)) {
+      quickPlay(W, comp, f);
+      continue;
+    }
     let m: Match;
     if (userMatch && (f.h === W.user || f.a === W.user)) m = userMatch;
     else {
@@ -188,7 +199,8 @@ const playFixtures = (W: World, list: { comp: Competition; f: Fixture }[], userM
 
 /** Competição terminou? Avança fases (as copas e ligas de fora têm regras próprias, registradas à parte). */
 export const compAdvancers: Record<string, (W: World, comp: Competition) => void> = {};
-const advanceAny = (W: World, comp: Competition) => (compAdvancers[comp.id] || advanceComp)(W, comp);
+const advanceAny = (W: World, comp: Competition) =>
+  (isForeignLeague(comp.id) ? advanceForeignLeague : compAdvancers[comp.id] || advanceComp)(W, comp);
 
 /**
  * Calendário por dias: um dia inteiro. Joga os jogos do dia (de todas as competições), recupera a condição por um dia

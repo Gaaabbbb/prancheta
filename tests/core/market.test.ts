@@ -13,7 +13,7 @@ import {
   offerContract,
   offerToClub,
   ovr,
-  playDay,
+  stepDay,
   playerDemand,
   releasePlayer,
   renewContract,
@@ -135,7 +135,7 @@ describe('mercado', () => {
     expect(p.c).toBe(0);
     expect(p.loan).toEqual({ from: owner, share: sh });
     expect(monthlyWages(W, 0)).toBeCloseTo(before + p.sal * sh, 0);
-    while (!W.seasonDone) playDay(W);
+    while (!W.seasonDone) stepDay(W);
     endSeason(W);
     expect(p.c).toBe(owner);
     expect(p.loan).toBeUndefined();
@@ -163,7 +163,7 @@ describe('mercado', () => {
   it('contratos vencidos: quem é do usuário sai; a temporada roda com o mercado vivo', () => {
     const W = career(45, 77);
     const ending = squad(W, 45).filter((p) => p.ct <= W.year);
-    while (!W.seasonDone) playDay(W);
+    while (!W.seasonDone) stepDay(W);
     endSeason(W);
     for (const p of ending) if (W.pmap[p.id]) expect(W.pmap[p.id].c).not.toBe(45);
     expect(W.mk!.log.some((r) => r.kind === 'compra' || r.kind === 'livre')).toBe(true);

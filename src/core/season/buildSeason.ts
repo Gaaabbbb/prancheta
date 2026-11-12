@@ -7,6 +7,7 @@ import { dirty } from '../world/squad';
 import { RULES } from '../rules';
 import { DAYS_START, leagueDays } from './calendar';
 import { addLeagueStage } from './fixtures';
+import { buildForeignLeagues } from './foreignLeagues';
 
 const byRegion = (W: World) => (a: number, b: number) =>
   REGION_ORDER.indexOf(W.clubs[a].uf) - REGION_ORDER.indexOf(W.clubs[b].uf);
@@ -69,6 +70,8 @@ export const buildSeason = (W: World): void => {
       addLeagueStage(comp, 'Fase de grupos', groups, true, 1);
     }
   }
+  // calendário por dias: ligas dos clubes sul-americanos (só para definir as vagas nas copas da Conmebol)
+  if (days) buildForeignLeagues(W);
   dirty(W);
   for (const p of W.players) p.sy = ovr(p);
   for (const c of W.clubs) {

@@ -10,7 +10,7 @@ import {
   haggleOffer,
   paydayMonths,
   monthlyWages,
-  playDay,
+  stepDay,
   rng,
   seasonLastDay,
   ticks,
@@ -51,7 +51,7 @@ describe('finanças mensais', () => {
   it('uma temporada paga 10 meses de salário', () => {
     const W = career(45);
     const wages = monthlyWages(W, 45);
-    while (!W.seasonDone) playDay(W);
+    while (!W.seasonDone) stepDay(W);
     expect(Math.round(-W.fin!.sal!)).toBe(Math.round(wages * 10));
   }, 60000);
 });
@@ -127,7 +127,7 @@ describe('patrocínios', () => {
 
   it('a temporada inteira com patrocínio, virada de ano e renovações funciona', () => {
     const W = career(100, 7);
-    while (!W.seasonDone) playDay(W);
+    while (!W.seasonDone) stepDay(W);
     const pat = W.fin!.pat!;
     expect(pat).toBeGreaterThan(0);
     endSeason(W);

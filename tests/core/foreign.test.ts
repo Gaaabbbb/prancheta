@@ -9,7 +9,7 @@ import {
   ensureMarket,
   expandDb,
   mergeDb,
-  playDay,
+  stepDay,
   rng,
   squad,
   youth,
@@ -52,7 +52,17 @@ describe('clubes sul-americanos', () => {
     rng.seed(8);
     buildSeason(W);
     ensureMarket(W);
-    while (!W.seasonDone) playDay(W);
+    while (!W.seasonDone) stepDay(W);
+    // ligas nacionais simuladas: todas terminam, com campeão e classificação completa
+    for (const k of ['ARG', 'BOL', 'CHI', 'COL', 'ECU', 'PAR', 'PER', 'URU', 'VEN']) {
+      const c = W.comps[k];
+      expect(c.done).toBe(true);
+      expect(c.res.champ).not.toBeNull();
+      expect(c.res.lib!.length).toBe(c.n);
+      expect(c.fx.every((f) => f.pl)).toBe(true);
+    }
+    expect(W.comps.ARG.fx.length).toBe((30 * 29) / 2);
+    expect(W.comps.COL.fx.length).toBe(20 * 19);
     const log = W.mk!.log;
     const foreign = (id: number) => id >= 0 && W.clubs[id].div === 'SUL';
     expect(log.some((r) => foreign(r.from) || foreign(r.to))).toBe(true);

@@ -31,6 +31,8 @@ export * from './season/advance';
 export * from './season/calendar';
 export * from './season/playDay';
 export * from './season/endSeason';
+export * from './season/foreignLeagues';
+export * from './season/cupDates';
 export * from './finance/ledger';
 export * from './finance/finance';
 export * from './finance/sponsorCatalog';
