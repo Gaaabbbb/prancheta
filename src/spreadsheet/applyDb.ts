@@ -13,7 +13,7 @@ import {
   promote,
   rebuildPmap,
   shiftOvr,
-  validateLineup,
+  tidyLineup,
   type Club,
   type Database,
   type Player,
@@ -129,12 +129,12 @@ export const applyDb = (W: World, db: Database): ApplyReport => {
   rep.fill = Math.max(0, rep.fill - goneFill);
   for (const p of W.players) {
     p.val = calcValue(p);
-    p.sal = p.y ? 0 : calcWage(p, W.clubs[p.c].div);
+    if (p.c >= 0) p.sal = p.y ? 0 : calcWage(p, W.clubs[p.c].div);
   }
   for (const c of W.clubs) {
     if (c.lineup) c.lineup = c.lineup.map((id) => (id != null && W.pmap[id] && W.pmap[id].c === c.id ? id : null));
     if (c.bench) c.bench = c.bench.filter((id) => W.pmap[id] && W.pmap[id].c === c.id);
-    if (c.id === W.user) validateLineup(W, c);
+    if (c.id === W.user) tidyLineup(W, c);
     else if (touched.has(c.id)) autoLineup(W, c);
   }
   return rep;

@@ -46,7 +46,7 @@ export function EditAttrsModal({ id }: { id: number }) {
               p.at = clean;
               p.pt = Math.max(p.pt, ovr(p));
               p.val = calcValue(p);
-              p.sal = calcWage(p, W.clubs[p.c].div);
+              if (p.c >= 0) p.sal = calcWage(p, W.clubs[p.c].div);
             });
             closeModal();
             toast('Atributos salvos.');

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { BENCH_SIZE, createWorld, loadDefaultDb, squad, swapSpots, validateLineup } from '../../src/core';
+import {
+  BENCH_SIZE,
+  createWorld,
+  lineupIssues,
+  loadDefaultDb,
+  squad,
+  swapSpots,
+  tidyLineup,
+  validateLineup,
+} from '../../src/core';
 
 describe('escalação manual', async () => {
   const db = await loadDefaultDb();
@@ -42,7 +51,41 @@ describe('escalação manual', async () => {
     const used = new Set([...me.lineup!, ...me.bench!]);
     const hurt = squad(W, 0).find((p) => !used.has(p.id))!;
     hurt.inj = 3;
-    expect(swapSpots(W, me, { z: 'res', pid: hurt.id }, { z: 'xi', i: 2 })).toMatch(/disponível/);
+    expect(swapSpots(W, me, { z: 'res', pid: hurt.id }, { z: 'xi', i: 2 })).toMatch(/lesionado/);
     hurt.inj = 0;
+  });
+});
+
+describe('desfalques são trocados à mão', async () => {
+  const db = await loadDefaultDb();
+  const W = createWorld(11, db);
+  W.user = 0;
+  const me = W.clubs[0];
+  validateLineup(W, me);
+
+  it('tidyLineup não tira lesionado nem suspenso; lineupIssues aponta os dois', () => {
+    const a = W.pmap[me.lineup![4]!],
+      b = W.pmap[me.bench![1]];
+    a.inj = 2;
+    b.sus = 1;
+    tidyLineup(W, me);
+    expect(me.lineup![4]).toBe(a.id);
+    expect(me.bench).toContain(b.id);
+    const issues = lineupIssues(W, me);
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        { pid: a.id, where: 'xi', why: 'lesionado' },
+        { pid: b.id, where: 'bench', why: 'suspenso' },
+      ]),
+    );
+  });
+
+  it('trocar o lesionado por alguém do banco manda o lesionado para as reservas', () => {
+    const hurt = me.lineup![4]!;
+    const sub = me.bench![0];
+    expect(swapSpots(W, me, { z: 'bench', i: 0 }, { z: 'xi', i: 4 })).toBeNull();
+    expect(me.lineup![4]).toBe(sub);
+    expect(me.bench).not.toContain(hurt);
+    expect(me.lineup).not.toContain(hurt);
   });
 });

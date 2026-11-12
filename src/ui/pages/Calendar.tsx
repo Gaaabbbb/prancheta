@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { dateOf, isPayday, SEASON_DAYS, type Competition, type Fixture, type World } from '@/core';
+import { dateOf, isPayday, SEASON_DAYS, WEEKDAY_SHORT, type Competition, type Fixture, type World } from '@/core';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { int } from '../format';
@@ -53,6 +53,9 @@ const userGames = (W: World): Game[] => {
   return out.sort((a, b) => a.f.d - b.f.d);
 };
 
+/** Dias entre dois jogos. */
+const rest = (g: Game, prev: Game) => Math.round((g.date.getTime() - prev.date.getTime()) / 864e5);
+
 const dayKey = (d: Date) => `${d.getMonth()}-${d.getDate()}`;
 
 const record = (gs: Game[]) => {
@@ -74,6 +77,11 @@ export function Calendar({ W }: PageProps) {
   const [where, setWhere] = useState<Where>('all');
   const [view, setView] = useState<View>('month');
 
+  /** descanso desde o jogo anterior do time (com ou sem filtro) */
+  const restBefore = (g: Game): number | null => {
+    const i = games.indexOf(g);
+    return i > 0 ? rest(g, games[i - 1]) : null;
+  };
   const shown = games.filter((g) => where === 'all' || (where === 'home') === g.home);
   const byDay = new Map(shown.map((g) => [dayKey(g.date), g]));
   // dias de jogo da temporada (todas as rodadas), para marcar salários e rodadas sem jogo do usuário
@@ -288,7 +296,8 @@ export function Calendar({ W }: PageProps) {
             <thead>
               <tr>
                 <th>Data</th>
-                <th>Rodada</th>
+                <th>Dia</th>
+                <th title="Dias desde o jogo anterior">Descanso</th>
                 <th>Local</th>
                 <th>Adversário</th>
                 <th>Fase</th>
@@ -307,7 +316,10 @@ export function Calendar({ W }: PageProps) {
                     onClick={() => open(g)}
                   >
                     <td className="num">{g.date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}</td>
-                    <td className="num muted">{g.f.d}</td>
+                    <td className="muted">{WEEKDAY_SHORT[g.date.getDay()]}</td>
+                    <td className={`num ${restBefore(g) != null && restBefore(g)! <= 4 ? 'restwarn' : 'muted'}`}>
+                      {restBefore(g) != null ? restBefore(g) + ' dias' : ''}
+                    </td>
                     <td>
                       <span className={`cg-where ${g.home ? 'h' : 'a'}`}>{g.home ? 'Casa' : 'Fora'}</span>
                     </td>

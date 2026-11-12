@@ -1,6 +1,6 @@
 import { actOnNews, type NewsItem, type World } from '@/core';
 import { useGame } from '@/store/gameStore';
-import { useUi, type FinTab, type ModalSpec, type PageId } from '@/store/uiStore';
+import { useUi, type FinTab, type MarketTab, type ModalSpec, type PageId } from '@/store/uiStore';
 
 /** Nome e cor de cada categoria de mensagem. */
 export const NEWS_KIND: Record<string, { label: string; color: string }> = {
@@ -10,6 +10,8 @@ export const NEWS_KIND: Record<string, { label: string; color: string }> = {
   youth: { label: 'Base', color: 'var(--ok)' },
   board: { label: 'Diretoria', color: 'var(--orange)' },
   season: { label: 'Temporada', color: 'var(--chalk)' },
+  apt: { label: 'Liberado', color: 'var(--ok)' },
+  mkt: { label: 'Mercado', color: 'var(--blue)' },
   spon: { label: 'Patrocínio', color: 'var(--yellow2)' },
   info: { label: 'Clube', color: 'var(--muted)' },
 };
@@ -23,6 +25,8 @@ export interface NewsAction {
   go?: PageId;
   /** aba de Finanças a abrir */
   finTab?: FinTab;
+  /** aba do Mercado a abrir */
+  marketTab?: MarketTab;
   modal?: ModalSpec;
   primary?: boolean;
 }
@@ -47,6 +51,23 @@ export const newsActions = (W: World, it: NewsItem): NewsAction[] => {
       out.push({ label: 'Ver classificação', done: 'Classificação vista', go: 'tables' });
       break;
     }
+    case 'mkt': {
+      const offer = /^Proposta por/.test(it.t);
+      const ending = /^Contratos terminando/.test(it.t);
+      out.push({
+        label: offer ? 'Ver proposta' : ending ? 'Renovar contratos' : 'Abrir o Mercado',
+        done: offer ? 'Proposta vista' : ending ? 'Contratos vistos' : 'Mercado visto',
+        go: 'market',
+        marketTab: offer ? 'offers' : ending ? 'mine' : it.t.startsWith('Observado') ? 'watch' : 'log',
+        primary: true,
+      });
+      if (hasPlayer) out.push(playerAct('Jogador visto'));
+      break;
+    }
+    case 'apt':
+      out.push({ label: 'Escalar', done: 'Escalação revista', go: 'tactics', primary: true });
+      if (hasPlayer) out.push(playerAct('Jogador visto'));
+      break;
     case 'med':
     case 'disc':
       out.push({ label: 'Ajustar escalação', done: 'Escalação revista', go: 'tactics', primary: true });
@@ -84,5 +105,6 @@ export const runNewsAction = (it: NewsItem, a: NewsAction): void => {
   if (a.modal) ui.openModal(a.modal);
   else ui.closeModal();
   if (a.finTab) ui.set({ finTab: a.finTab });
+  if (a.marketTab) ui.set({ marketTab: a.marketTab });
   if (a.go) ui.go(a.go);
 };

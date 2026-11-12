@@ -164,3 +164,102 @@
 .benchbox .sp {
   flex: 1;
 }
+.tok.out .sh {
+  outline: 3px solid var(--red);
+  outline-offset: 2px;
+  filter: grayscale(0.6);
+}
+.tok .xtag {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--red);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+/* táticas salvas */
+.savedtac {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line2);
+}
+.stlist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.stchip {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--panel2);
+  font-size: 13px;
+  line-height: 1.2;
+}
+.stchip span {
+  font-size: 11px;
+  color: var(--muted);
+}
+.stchip:hover {
+  border-color: var(--muted);
+}
+.stchip.on {
+  border-color: var(--yellow);
+  box-shadow: inset 0 0 0 1px var(--yellow);
+}
+.stchip:focus-visible {
+  outline: 2px solid var(--yellow);
+}
+.stbtns,
+.stform {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.stform input {
+  flex: 1;
+  min-width: 140px;
+}
+
+/* condição, moral e nota em cada jogador */
+.tok .st3 {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  font-style: normal;
+}
+.tok .st3 i {
+  font-style: normal;
+  background: #0e1828cc;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.tok .sh {
+  position: relative;
+}
+.tok .sh .pd {
+  position: absolute;
+  right: -8px;
+  top: -6px;
+  font-size: 10px;
+}
+.tok .sh .pd.dn {
+  color: #ff9a9d;
+}
+.tok .sh .pd.up {
+  color: var(--ok);
+}

@@ -27,6 +27,8 @@ export const snapshot = (W: World | any): unknown => {
     delete p.st?.ca;
     delete p.st?.cv;
   }
-  if (Array.isArray(out.news)) out.news = out.news.filter((n: { k: string }) => n.k !== 'spon');
+  // mensagens só da versão nova saem da comparação; como a caixa guarda no máximo 120, compara as 60 mais recentes
+  if (Array.isArray(out.news))
+    out.news = out.news.filter((n: { k: string }) => n.k !== 'spon' && n.k !== 'apt' && n.k !== 'mkt').slice(0, 60);
   return out;
 };

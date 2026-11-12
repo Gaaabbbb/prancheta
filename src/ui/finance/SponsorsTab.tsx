@@ -8,6 +8,7 @@ import {
   seekWait,
   SLOT_NAME,
   SLOTS,
+  slotLocked,
   sponsorDef,
   sponsorSatisfaction,
   SPONSORS,
@@ -202,8 +203,14 @@ export function SponsorsTab({ W }: { W: World }) {
                   <i style={{ width: `${sat}%`, background: si.col }} />
                 </div>
               </div>
+              {slotLocked(W, slot) && (
+                <p className="muted" style={{ margin: '0 0 8px', fontSize: 12 }}>
+                  Este espaço já foi trocado nesta temporada. A próxima troca só em {W.year + 1}, a não ser que a marca
+                  rompa o contrato.
+                </p>
+              )}
               <div className="spbtns">
-                <button className="btn danger sm" onClick={() => terminate(c)}>
+                <button className="btn danger sm" onClick={() => terminate(c)} disabled={slotLocked(W, slot)}>
                   Rescindir contrato
                 </button>
               </div>
@@ -233,6 +240,7 @@ export function SponsorsTab({ W }: { W: World }) {
             const def = sponsorDef(o.sid);
             const cur = sp[o.slot];
             const replace = !!cur && !o.renewal;
+            const locked = replace && slotLocked(W, o.slot);
             const fee = replace ? Math.round(terminationFee(W, cur!) * (1 - o.cover)) : 0;
             const left = o.exp - W.day;
             return (
@@ -277,7 +285,12 @@ export function SponsorsTab({ W }: { W: World }) {
                   <dd>{left <= 0 ? 'hoje' : `${left} rodada(s)`}</dd>
                 </dl>
                 <div className="spbtns">
-                  <button className="btn pri sm" onClick={() => accept(o)}>
+                  <button
+                    className="btn pri sm"
+                    onClick={() => accept(o)}
+                    disabled={locked}
+                    title={locked ? 'Este espaço já foi trocado nesta temporada' : undefined}
+                  >
                     Aceitar
                   </button>
                   <button
@@ -320,8 +333,9 @@ export function SponsorsTab({ W }: { W: World }) {
         </div>
         <p className="muted" style={{ margin: '10px 0 0', fontSize: 12 }}>
           Valor fixo paga o valor cheio. Contrato longo paga um pouco menos, mas dura 3 a 4 anos e tem mais paciência.
-          Por desempenho paga menos de base e um bônus a cada vitória. Marcas impacientes podem romper quando os
-          resultados são ruins, e cada marca só patrocina certas divisões.
+          Por desempenho paga menos de base e um bônus a cada vitória. Cada espaço só pode ser trocado uma vez por
+          temporada (rescindir ou aceitar substituto); preencher um espaço vazio não conta. Marcas impacientes podem
+          romper quando os resultados são ruins, e cada marca só patrocina certas divisões.
         </p>
       </div>
     </>

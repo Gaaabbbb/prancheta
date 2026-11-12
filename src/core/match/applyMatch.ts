@@ -1,4 +1,5 @@
 import { clamp } from '../math';
+import { RULES } from '../rules';
 import { chance, ri } from '../rng';
 import type { World } from '../types';
 import type { Match } from './engine';
@@ -28,7 +29,7 @@ export const applyMatch = (W: World, m: Match) => {
       }
       if (s.out[pid] === 'red') pl.sus = Math.max(pl.sus, s.yel[pid] >= 2 ? 1 : 2);
       if (pl._injNow) {
-        pl.inj = chance(0.15) ? ri(6, 16) : ri(1, 4);
+        pl.inj = chance(RULES.longInjury) ? ri(6, 16) : ri(1, 4);
         delete pl._injNow;
       }
     }

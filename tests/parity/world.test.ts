@@ -3,6 +3,10 @@ import rawDb from '../../src/data/default-db.json';
 import { buildSeason, createWorld, endSeason, expandDb, playDay, rng, type RawDb, type World } from '../../src/core';
 import { loadLegacyCore } from './legacyCore';
 import { snapshot } from './helpers';
+import { applyLegacyRules } from '../../src/core/rules';
+
+// a paridade compara com as regras do original (a versão nova muda cansaço e evolução da base)
+applyLegacyRules();
 
 const G = loadLegacyCore();
 const db = () => expandDb(rawDb as unknown as RawDb);

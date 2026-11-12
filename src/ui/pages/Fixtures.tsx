@@ -1,4 +1,4 @@
-import { fmtDate, dateOf } from '@/core';
+import { fmtDate, dateOf, WEEKDAY_SHORT } from '@/core';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { int } from '../format';
@@ -8,6 +8,13 @@ export function Fixtures({ W }: PageProps) {
   const openModal = useUi((s) => s.openModal);
   const comp = W.comps[W.clubs[W.user!].div];
   const list = comp.fx.filter((f) => f.h === W.user || f.a === W.user).sort((a, b) => a.d - b.d);
+  /** "Rodada 01" nos pontos corridos/grupos; nome da fase e jogo de ida/volta no mata-mata. */
+  const roundLabel = (f: (typeof list)[number]) => {
+    const st = comp.stages[f.st];
+    if (st.type !== 'league') return f.leg ? (f.leg === 1 ? 'Ida' : 'Volta') : 'Jogo único';
+    const days = [...new Set(comp.fx.filter((x) => x.st === f.st).map((x) => x.d))].sort((a, b) => a - b);
+    return 'Rodada ' + String(days.indexOf(f.d) + 1).padStart(2, '0');
+  };
   return (
     <>
       <div className="ph">
@@ -20,6 +27,7 @@ export function Fixtures({ W }: PageProps) {
         <table className="t">
           <thead>
             <tr>
+              <th>Rodada</th>
               <th>Data</th>
               <th>Fase</th>
               <th>Local</th>
@@ -60,11 +68,13 @@ export function Fixtures({ W }: PageProps) {
                   className={f.pl ? 'click' : ''}
                   onClick={f.pl ? () => openModal({ kind: 'report', comp: comp.id, fid: f.id }) : undefined}
                 >
-                  <td className="num muted">{fmtDate(dateOf(W, f.d))}</td>
-                  <td>
-                    {comp.stages[f.st].name}
-                    {f.leg ? ' (' + f.leg + 'º jogo)' : ''}
+                  <td className="num">
+                    <b>{roundLabel(f)}</b>
                   </td>
+                  <td className="num muted">
+                    {WEEKDAY_SHORT[dateOf(W, f.d).getDay()]}, {fmtDate(dateOf(W, f.d))}
+                  </td>
+                  <td>{comp.stages[f.st].name}</td>
                   <td>{home ? 'Casa' : 'Fora'}</td>
                   <td>
                     <Crest club={opp} size={20} /> {opp.n}

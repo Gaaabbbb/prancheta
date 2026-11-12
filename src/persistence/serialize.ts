@@ -1,4 +1,4 @@
-import { ovr, rebuildPmap, rng, seedYouth, WORLD_VERSION, type World } from '@/core';
+import { capWinBonuses, ovr, rebuildPmap, rng, seedYouth, WORLD_VERSION, type World } from '@/core';
 
 type SavedWorld = Omit<World, 'pmap' | '_sq'> & { rng?: number };
 
@@ -43,5 +43,24 @@ export const deserialize = (json: string): World => {
     v++;
   }
   W.v = WORLD_VERSION;
+  normalizeFinance(W);
+  capWinBonuses(W);
   return W;
+};
+
+/**
+ * Saves de versões de teste tinham a ampliação de estádio (categoria `inv`). Ela entra como "multas e outros"
+ * para o caixa continuar batendo com as entradas e saídas.
+ */
+const normalizeFinance = (W: World): void => {
+  type Legacy = { inv?: number; mul?: number };
+  const move = (o: Legacy | undefined) => {
+    if (o && o.inv) {
+      o.mul = (o.mul || 0) + o.inv;
+      delete o.inv;
+    }
+  };
+  move(W.fin as Legacy | undefined);
+  W.finLog?.forEach((it) => move(it as unknown as Legacy));
+  W.finHist?.forEach((it) => move(it as unknown as Legacy));
 };

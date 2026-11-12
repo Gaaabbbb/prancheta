@@ -107,3 +107,13 @@
   transform: none;
   font-size: inherit;
 }
+
+/* aviso de escalação */
+.warnbox {
+  background: #e5484d1f;
+  border: 1px solid #e5484d66;
+  border-radius: var(--r);
+  padding: 8px 12px;
+  color: #ffb3b5;
+  font-size: 14px;
+}

@@ -9,7 +9,10 @@ import {
   ovrRole,
   squad,
   teamStrength,
-  validateLineup,
+  lineupIssues,
+  tidyLineup,
+  restDays,
+  WEEKDAY_SHORT,
   type KOStage,
 } from '@/core';
 import { currentFixture, liveMatch, quickMatch } from '@/app/gameFlow';
@@ -26,12 +29,14 @@ export function PrematchModal() {
   if (!uf) return null;
   const { comp, f } = uf;
   const me = W.clubs[W.user!];
-  validateLineup(W, me);
+  tidyLineup(W, me);
+  const issues = lineupIssues(W, me);
   const h = W.clubs[f.h],
     a = W.clubs[f.a];
   const oppC = f.h === W.user ? a : h;
   const missing = squad(W, W.user!).filter((p) => !available(p));
   const tired = me.lineup!.map((id) => W.pmap[id!]).filter((p) => p && p.f < 75);
+  const rest = restDays(W, f.d, me.div);
   const ko = koContext(comp, f);
   const f1 = ko && ko.leg === 2 ? comp.fx[(comp.stages[f.st] as KOStage).ties[f.g].f[0]] : null;
   const slots = FORMATIONS[me.tac.f];
@@ -57,7 +62,11 @@ export function PrematchModal() {
         <div className="vs">
           {h.std}
           <br />
-          {fmtDate(dateOf(W, f.d))}
+          {WEEKDAY_SHORT[dateOf(W, f.d).getDay()]}, {fmtDate(dateOf(W, f.d))}
+          <br />
+          <span className={rest <= 4 ? 'restwarn' : ''}>
+            {rest >= 20 ? 'início da temporada' : `${rest} dias de descanso`}
+          </span>
         </div>
         <div className="tm">
           <Crest club={a} size={56} />
@@ -88,7 +97,10 @@ export function PrematchModal() {
                     <td>
                       <PosTag p={role} />
                     </td>
-                    <td className="nm">{p.n}</td>
+                    <td className="nm">
+                      {p.n}
+                      <StatusTags p={p} />
+                    </td>
                     <td className="c">
                       <Ovr v={ovrRole(p, role)} />
                     </td>
@@ -127,6 +139,11 @@ export function PrematchModal() {
               ))}
             </p>
           )}
+          {rest <= 4 && rest < 20 && (
+            <p style={{ margin: '8px 0 0', color: 'var(--yellow)' }}>
+              Semana com dois jogos: só {rest} dias desde a última rodada. Quem jogou recuperou pouco.
+            </p>
+          )}
           {tired.length > 0 && (
             <p style={{ margin: '8px 0 0', color: 'var(--orange)' }}>
               Cansados entre os titulares: {tired.map((p) => p.n + ' (' + Math.round(p.f) + '%)').join(', ')}
@@ -134,9 +151,16 @@ export function PrematchModal() {
           )}
         </div>
       </div>
+      {issues.length > 0 && (
+        <p className="warnbox" style={{ marginTop: 14 }}>
+          <b>Não dá para começar:</b>{' '}
+          {issues.map((x) => `${W.pmap[x.pid].n} (${x.why}, ${x.where === 'xi' ? 'titular' : 'banco'})`).join(', ')}.
+          Troque na Tática.
+        </p>
+      )}
       <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 18 }}>
         <button
-          className="btn"
+          className={`btn ${issues.length ? 'pri big' : ''}`}
           onClick={() => {
             closeModal();
             go('tactics');
@@ -144,10 +168,10 @@ export function PrematchModal() {
         >
           Mexer na escalação
         </button>
-        <button className="btn" onClick={quickMatch}>
+        <button className="btn" onClick={quickMatch} disabled={issues.length > 0}>
           Resultado rápido
         </button>
-        <button className="btn pri big" onClick={liveMatch} autoFocus>
+        <button className="btn pri big" onClick={liveMatch} disabled={issues.length > 0} autoFocus>
           Ir para o jogo
         </button>
       </div>

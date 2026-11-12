@@ -1,23 +1,34 @@
 import { SEASON_DAYS } from '../constants/divisions';
 import { dateOf } from '../season/calendar';
 import type { Club, FinDay, World } from '../types';
-import { squad } from '../world/squad';
 
 /** Categorias do extrato: bilheteria, patrocínio, bônus de patrocínio, salários, multas e rescisões. */
-export type FinKey = 'bil' | 'pat' | 'bon' | 'sal' | 'mul';
-export const FIN_KEYS: FinKey[] = ['bil', 'pat', 'bon', 'sal', 'mul'];
+export type FinKey = 'bil' | 'pat' | 'bon' | 'sal' | 'mul' | 'tra';
+export const FIN_KEYS: FinKey[] = ['bil', 'pat', 'bon', 'sal', 'mul', 'tra'];
 
 /** Salários e patrocínios são pagos 10 vezes por temporada (de fevereiro a novembro). */
 export const PAYDAYS = 10;
 
-/** O dia de jogos é o primeiro do mês? Nele saem salários e parcelas de patrocínio. */
-export const isPayday = (W: World, d: number = W.day): boolean =>
-  d >= 2 && d <= SEASON_DAYS && dateOf(W, d).getMonth() !== dateOf(W, d - 1).getMonth();
+/**
+ * Quantos meses de salário e patrocínio vencem na rodada `d`: os meses de fevereiro a novembro que começaram desde a
+ * rodada anterior. Normalmente 0 ou 1; depois de uma pausa longa pode ser 2.
+ */
+export const paydayMonths = (W: World, d: number = W.day): number => {
+  if (d < 2 || d > SEASON_DAYS) return 0;
+  const a = dateOf(W, d - 1).getMonth(),
+    b = dateOf(W, d).getMonth();
+  let n = 0;
+  for (let m = a + 1; m <= b; m++) if (m >= 1 && m <= 10) n++;
+  return n;
+};
+
+/** A rodada é dia de pagamento? */
+export const isPayday = (W: World, d: number = W.day): boolean => paydayMonths(W, d) > 0;
 
 /** Quantos pagamentos mensais ainda faltam na temporada (depois do dia atual). */
 export const remainingPaydays = (W: World): number => {
   let n = 0;
-  for (let d = W.day + 1; d <= SEASON_DAYS; d++) if (isPayday(W, d)) n++;
+  for (let d = W.day + 1; d <= SEASON_DAYS; d++) n += paydayMonths(W, d);
   return n;
 };
 
@@ -43,6 +54,20 @@ export const addMoney = (W: World, c: Club, k: FinKey, v: number): void => {
   }
 };
 
-/** Folha salarial mensal do elenco profissional. */
-export const monthlyWages = (W: World, clubId: number): number =>
-  squad(W, clubId).reduce((t, p) => t + (p.y ? 0 : p.sal), 0);
+/**
+ * Folha mensal de cada clube. Emprestados: quem está com o jogador paga a parte combinada, o dono paga o resto.
+ */
+export const wageBills = (W: World): Record<number, number> => {
+  const out: Record<number, number> = {};
+  for (const p of W.players) {
+    if (p.c < 0 || p.y) continue;
+    if (p.loan) {
+      out[p.c] = (out[p.c] || 0) + p.sal * p.loan.share;
+      out[p.loan.from] = (out[p.loan.from] || 0) + p.sal * (1 - p.loan.share);
+    } else out[p.c] = (out[p.c] || 0) + p.sal;
+  }
+  return out;
+};
+
+/** Folha salarial mensal de um clube (inclui a parte dos emprestados). */
+export const monthlyWages = (W: World, clubId: number): number => wageBills(W)[clubId] || 0;

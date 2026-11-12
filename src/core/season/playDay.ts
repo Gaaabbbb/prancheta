@@ -2,16 +2,18 @@ import { boardAfterMatch } from '../board/board';
 import { DIVS } from '../constants/divisions';
 import { dailyMoney, matchMoney } from '../finance/finance';
 import { sponsorTick, sponsorWin } from '../finance/sponsors';
+import { marketTick } from '../market/market';
 import { autoLineup, validateLineup } from '../lineup/lineup';
 import { applyMatch } from '../match/applyMatch';
 import { Match, type KoContext, type MatchOptions } from '../match/engine';
 import { news } from '../news';
+import { recoverFitness } from '../rules';
 import type { Club, Competition, Fixture, World } from '../types';
 import { teamStrength } from '../world/strength';
 import { dirty } from '../world/squad';
 import { youthReport, youthTick } from '../youth/youth';
 import { advanceComp } from './advance';
-import { dayFixtures } from './calendar';
+import { dayFixtures, restDays } from './calendar';
 
 /** Contexto de mata-mata de um jogo (placar da ida, pênaltis). */
 export const koContext = (comp: Competition, f: Fixture): KoContext | null => {
@@ -116,11 +118,17 @@ export const playDay = (W: World, userMatch?: Match): void => {
   }
   for (const id of serving) {
     const p = W.pmap[id];
-    if (p && p.sus > 0) p.sus--;
+    if (p && p.sus > 0) {
+      p.sus--;
+      if (p.sus === 0 && p.c === W.user)
+        news(W, 'Liberado: ' + p.n, p.n + ' cumpriu a suspensão e pode voltar a jogar.', 'apt', { pid: p.id });
+    }
   }
-  // recuperação e lesões
+  // recuperação (pelos dias de descanso até a próxima rodada da divisão) e lesões
+  const rest: Record<string, number> = {};
+  for (const div of DIVS) rest[div] = restDays(W, W.day + 1, div);
   for (const p of W.players) {
-    p.f = Math.min(100, p.f + 20 * (0.75 + p.at[9] / 40));
+    p.f = recoverFitness(p.f, p.at[9], p.c >= 0 ? rest[W.clubs[p.c].div] : 7);
     if (p.inj > 0) {
       p.inj--;
       if (p.inj === 0 && p.c === W.user)
@@ -129,6 +137,7 @@ export const playDay = (W: World, userMatch?: Match): void => {
   }
   dailyMoney(W);
   sponsorTick(W);
+  marketTick(W);
   youthTick(W);
   if (W.day % 10 === 0) youthReport(W);
   for (const div of DIVS) {

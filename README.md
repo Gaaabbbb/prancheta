@@ -97,15 +97,43 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   - **Calendário** (`src/ui/pages/Calendar.tsx`): grade mensal e lista com os jogos, casa/fora, resultados e dias de
     pagamento.
   - Elenco: coluna **Evolução** (`src/core/player/evolution.ts`) e cartões amarelos/vermelhos da temporada (CA/CV).
-  - Tática: arrastar jogadores entre campo, banco e reservas; o banco é escolhido pelo usuário (`swapSpots`).
+  - Tática: arrastar jogadores entre campo, banco e reservas; o banco é escolhido pelo usuário (`swapSpots`);
+    até 8 táticas salvas com nome (`src/core/lineup/presets.ts`), que também podem ser aplicadas durante o jogo.
 - Regras novas de dinheiro (o saldo não influencia nada esportivo, então os testes de paridade deixam o saldo de fora):
   - Salários e patrocínios são pagos **uma vez por mês**, de fevereiro a novembro (`src/core/finance/ledger.ts`).
     O total da temporada continua igual ao do original (10 meses de salário).
   - **Patrocínio master e secundário** (`src/core/finance/sponsors.ts`), com 33 marcas fictícias em
-    `sponsorCatalog.ts`. Propostas chegam ao longo da temporada; dá para aceitar, pedir mais, recusar, rescindir
+    `sponsorCatalog.ts`. Contratos por desempenho pagam bônus por vitória de até R$ 1 mi na Série A (menos nas outras séries). Propostas chegam ao longo da temporada; dá para aceitar, pedir mais, recusar, rescindir
     (pagando multa) ou buscar marcas. Marcas insatisfeitas podem romper, e outras tentam tirar o patrocinador atual.
     Os patrocínios usam um sorteio próprio, separado do sorteio dos jogos.
   - Finanças em abas: resumo com gráficos, patrocínio e extrato mensal.
+- Regras esportivas novas, todas em `src/core/rules.ts` (`CURRENT_RULES`). Os testes de paridade chamam
+  `applyLegacyRules()` para continuar comparando com o original:
+  - **Calendário real** (`seasonDates` em `src/core/season/calendar.ts`): semanas com uma ou duas rodadas e pausas;
+    cada divisão joga nos dias da semana de costume (Série A sáb/dom e qua/qui, Série B sex a seg e ter/qua, Séries C
+    e D no fim de semana). Os pagamentos mensais seguem essas datas.
+  - **Condição física:** a recuperação depende dos dias de descanso até a rodada seguinte (uma semana devolve cerca de
+    65% do cansaço, três dias cerca de 36%). Quem joga sempre começa as partidas com ~88% em média e cai para ~75% nas
+    semanas com duas rodadas; cansado rende menos e se lesiona mais. A IA roda o elenco.
+  - **Desempenho:** além de OVR e condição, a moral (±6%) e a nota média da temporada (±4%) entram no rendimento
+    (`src/core/player/performance.ts`). A Tática mostra o desempenho previsto de cada jogador.
+  - **Lesões e cartões:** menos cartões por falta, menos lesões e menos lesões longas (`cardRate`, `injuryRate`,
+    `longInjury`): em média um desfalque a cada quatro jogos.
+  - **Base:** evolução dos jovens pela metade (`youthGrowth`).
+  - **Desfalques:** lesionados e suspensos não saem sozinhos da escalação do usuário (`tidyLineup` / `lineupIssues`).
+    O jogo só começa depois da troca, e a caixa de entrada avisa quando o jogador volta a ficar disponível.
+  - **Patrocínio:** cada espaço só pode ser trocado uma vez por temporada, salvo se a marca romper.
+- **Mercado e contratos (v0.2)**, em `src/core/market/market.ts` e na página Mercado (desligado com
+  `applyLegacyRules()`, então a paridade não muda):
+  - Janelas de transferência na pré-temporada (até a 5ª rodada) e no meio do ano (junho e julho). Fora delas, só
+    jogadores livres e renovações.
+  - Compra em duas etapas: valor com o clube (aceita, contraproposta ou recusa, até 3 tentativas por janela) e
+    salário/duração com o jogador, que pode recusar clube muito menor.
+  - Empréstimos até o fim da temporada, com divisão do salário; jogadores livres; renovação; dispensa com multa de
+    metade do salário que falta; lista de observação com avisos.
+  - Contratos vencem: quem não renova sai de graça no fim da temporada. A IA renova a maioria, compra e vende entre si
+    e manda propostas pelos jogadores do usuário (principalmente os colocados à venda).
+  - Transferências entram em Finanças (extrato, cascata do caixa e histórico).
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

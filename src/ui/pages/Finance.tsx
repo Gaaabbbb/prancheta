@@ -1,25 +1,23 @@
 import { Fragment, useState } from 'react';
 import {
   DIV_NAME,
-  expectedGate,
   isPayday,
   monthlyWages,
   PAYDAYS,
   POS_GROUP,
-  remainingHomeGames,
   seasonProjection,
   seasonStartBalance,
   sponsorAnnual,
   squad,
-  TICKET,
   type World,
 } from '@/core';
-import { useGame } from '@/store/gameStore';
 import { useUi, type FinTab } from '@/store/uiStore';
 import { PosTag } from '../components/Badges';
 import { FinanceChart, type FinChartMode } from '../components/FinanceChart';
 import { MONTH_LONG, monthBuckets } from '../finance/months';
 import { SponsorsTab } from '../finance/SponsorsTab';
+import { CashWaterfall, type CashFlow } from '../finance/CashWaterfall';
+import { TicketPanel } from '../finance/TicketPanel';
 import { int, money } from '../format';
 import type { PageProps } from './types';
 
@@ -46,8 +44,8 @@ export function Finance({ W }: PageProps) {
   const setUi = useUi((s) => s.set);
   const me = W.clubs[W.user!];
   const f = W.fin || {};
-  const rec = (f.bil || 0) + (f.pat || 0) + (f.bon || 0) + Math.max(0, f.mul || 0);
-  const des = (f.sal || 0) + Math.min(0, f.mul || 0);
+  const rec = (f.bil || 0) + (f.pat || 0) + (f.bon || 0) + Math.max(0, f.mul || 0) + Math.max(0, f.tra || 0);
+  const des = (f.sal || 0) + Math.min(0, f.mul || 0) + Math.min(0, f.tra || 0);
   const start = seasonStartBalance(W);
   const proj = seasonProjection(W);
   const wage = monthlyWages(W, me.id);
@@ -74,32 +72,32 @@ export function Finance({ W }: PageProps) {
 
       <div className="grid g4" style={{ marginBottom: 16 }}>
         <Kpi
-          label="Saldo em caixa"
+          label="Caixa hoje"
           value={money(me.bal)}
-          sub={`${signed(me.bal - start)} na temporada`}
+          sub={`dinheiro disponível agora · ${signed(me.bal - start)} desde o início da temporada`}
           tone={me.bal < 0 ? 'bad' : undefined}
         />
         <Kpi
-          label="Resultado da temporada"
+          label={rec + des < 0 ? 'Prejuízo na temporada' : 'Lucro na temporada'}
           value={signed(rec + des)}
-          sub={`receitas ${money(rec)} · despesas ${money(-des)}`}
+          sub={`entrou ${money(rec)} · saiu ${money(-des)}`}
           tone={rec + des < 0 ? 'bad' : 'ok'}
         />
         <Kpi
-          label="Projeção para o fim da temporada"
+          label="Previsão para o fim da temporada"
           value={money(proj.bal)}
           sub={
             proj.months
-              ? `faltam ${proj.months} pagamento(s) mensais · bilheteria esperada ${money(proj.gate)}`
-              : 'sem pagamentos restantes'
+              ? `contando ${proj.months} mês(es) de salário e patrocínio e a bilheteria que falta`
+              : 'nada mais a pagar nesta temporada'
           }
           tone={proj.bal < 0 ? 'bad' : undefined}
         />
         <Kpi
-          label="Folha x patrocínio"
-          value={`${money(wage)} / ${money(spon / PAYDAYS)}`}
-          sub="salários por mês / parcela mensal dos patrocinadores"
-          tone={spon / PAYDAYS < wage ? 'bad' : undefined}
+          label="Todo mês"
+          value={`${signed(spon / PAYDAYS - wage)}`}
+          sub={`entra ${money(spon / PAYDAYS)} de patrocínio · sai ${money(wage)} de salários (sem bilheteria)`}
+          tone={spon / PAYDAYS < wage ? 'bad' : 'ok'}
         />
       </div>
 
@@ -111,61 +109,81 @@ export function Finance({ W }: PageProps) {
 }
 
 function Summary({ W, start, projection }: { W: World; start: number; projection: number }) {
-  const mutate = useGame((s) => s.mutate);
   const openModal = useUi((s) => s.openModal);
-  const [mode, setMode] = useState<FinChartMode>('bal');
+  const [mode, setMode] = useState<FinChartMode | 'cash'>('cash');
   const me = W.clubs[W.user!];
   const sq = squad(W, W.user!).filter((p) => !p.y);
   const wage = monthlyWages(W, me.id);
   const log = (W.finLog || []).filter((it) => it.y === W.year);
-  const std = TICKET[me.div];
-  const price = W.ticket || std;
-
-  // próximo jogo em casa: comparação do preço escolhido com o padrão
-  const nextHome = remainingHomeGames(W)[0];
-  const rivals = W.clubs.filter((c) => c.div === me.div && c.id !== me.id);
-  const oppRep = nextHome
-    ? W.clubs[nextHome.f.a].rep
-    : rivals.reduce((t, c) => t + c.rep, 0) / Math.max(1, rivals.length);
-  const gStd = expectedGate(me, oppRep, std);
-  const gNow = expectedGate(me, oppRep, price);
-  const homeFx = W.comps[me.div].fx.filter((x) => x.h === W.user && x.pl && x.att);
-  const avgAtt = homeFx.length ? Math.round(homeFx.reduce((s, x) => s + x.att!, 0) / homeFx.length) : 0;
 
   const byGroup = [0, 0, 0, 0];
   for (const p of sq) byGroup[POS_GROUP[p.p]] += p.sal;
   const maxGroup = Math.max(1, ...byGroup);
   const expiring = sq.filter((p) => p.ct <= W.year);
+  const f = W.fin || {};
+  const flow: CashFlow = {
+    start,
+    bil: f.bil || 0,
+    pat: f.pat || 0,
+    bon: f.bon || 0,
+    inMul: Math.max(0, f.mul || 0),
+    tra: f.tra || 0,
+    sal: f.sal || 0,
+    outMul: Math.min(0, f.mul || 0),
+    now: me.bal,
+    forecast: projection,
+  };
 
   return (
     <>
       <div className="panel">
         <h3>
-          <span>{mode === 'bal' ? 'Saldo ao longo da temporada' : 'Receitas e despesas por mês'}</span>
+          <span>
+            {mode === 'cash'
+              ? 'De onde veio e para onde foi o dinheiro'
+              : mode === 'bal'
+                ? 'Caixa rodada a rodada'
+                : 'Entradas e saídas por mês'}
+          </span>
           <span className="seg">
+            <button className={mode === 'cash' ? 'on' : ''} onClick={() => setMode('cash')}>
+              Resumo do caixa
+            </button>
             <button className={mode === 'bal' ? 'on' : ''} onClick={() => setMode('bal')}>
-              Saldo
+              Rodada a rodada
             </button>
             <button className={mode === 'month' ? 'on' : ''} onClick={() => setMode('month')}>
               Por mês
             </button>
           </span>
         </h3>
+        {mode === 'cash' && (
+          <>
+            <CashWaterfall flow={flow} />
+            <p className="muted" style={{ margin: '4px 0 0', fontSize: 13 }}>
+              O clube começou a temporada com <b>{money(start)}</b>. Entraram{' '}
+              <b>{money(flow.bil + flow.pat + flow.bon + flow.inMul + Math.max(0, flow.tra))}</b> e saíram{' '}
+              <b>{money(-(flow.sal + flow.outMul + Math.min(0, flow.tra)))}</b>, então o caixa está em{' '}
+              <b>{money(me.bal)}</b>. Se nada mudar, termina a temporada com cerca de <b>{money(projection)}</b>.
+            </p>
+          </>
+        )}
         {mode === 'month' && (
           <div className="legend">
             <span>
-              <i style={{ background: 'var(--ok)' }} /> Receitas (bilheteria, patrocínio e bônus)
+              <i style={{ background: 'var(--ok)' }} /> Entradas (bilheteria, patrocínio e bônus)
             </span>
             <span>
-              <i style={{ background: 'var(--red)' }} /> Despesas (salários e multas)
+              <i style={{ background: 'var(--red)' }} /> Saídas (salários e multas)
             </span>
           </div>
         )}
-        {log.length ? (
-          <FinanceChart W={W} log={log} startBal={start} projection={projection} mode={mode} />
-        ) : (
-          <p className="muted">O gráfico começa a ser preenchido no próximo dia de jogos.</p>
-        )}
+        {mode !== 'cash' &&
+          (log.length ? (
+            <FinanceChart W={W} log={log} startBal={start} projection={projection} mode={mode} />
+          ) : (
+            <p className="muted">O gráfico começa a ser preenchido no próximo dia de jogos.</p>
+          ))}
         {mode === 'bal' && log.length > 0 && (
           <p className="muted" style={{ margin: '4px 0 0', fontSize: 12 }}>
             Os degraus são os dias de pagamento: no primeiro jogo de cada mês saem os salários e entram as parcelas dos
@@ -175,68 +193,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
       </div>
 
       <div className="grid g2" style={{ marginTop: 16 }}>
-        <div className="panel">
-          <h3>Preço do ingresso</h3>
-          <p className="muted" style={{ margin: '0 0 10px' }}>
-            Ingresso mais caro rende mais por torcedor, mas esvazia o estádio. O preço padrão da {DIV_NAME[me.div]} é R${' '}
-            {std}.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <input
-              type="range"
-              min={Math.round(std * 0.4)}
-              max={Math.round(std * 3)}
-              value={price}
-              onChange={(e) => mutate((W) => (W.ticket = +e.target.value))}
-              style={{ flex: 1 }}
-              aria-label="Preço do ingresso"
-            />
-            <b className="num" style={{ fontFamily: 'var(--fd)', fontSize: 24 }}>
-              R$ {price}
-            </b>
-            {price !== std && (
-              <button className="btn ghost sm" onClick={() => mutate((W) => (W.ticket = std))}>
-                Padrão
-              </button>
-            )}
-          </div>
-          <table className="t" style={{ marginTop: 12 }}>
-            <thead>
-              <tr>
-                <th>{nextHome ? `Próximo jogo em casa: ${W.clubs[nextHome.f.a].n}` : 'Jogo médio em casa'}</th>
-                <th className="r">Público</th>
-                <th className="r">Ocupação</th>
-                <th className="r">Renda</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td className="muted">Preço padrão (R$ {std})</td>
-                <td className="r num">{int(gStd.att)}</td>
-                <td className="r num">{Math.round((gStd.att / me.cap) * 100)}%</td>
-                <td className="r num">{money(gStd.rev)}</td>
-              </tr>
-              <tr className="me">
-                <td>Seu preço (R$ {price})</td>
-                <td className="r num">{int(gNow.att)}</td>
-                <td className="r num">{Math.round((gNow.att / me.cap) * 100)}%</td>
-                <td className="r num">
-                  {money(gNow.rev)}{' '}
-                  {gStd.rev > 0 && gNow.rev !== gStd.rev && (
-                    <span style={{ color: gNow.rev > gStd.rev ? 'var(--ok)' : '#ff9a9d', fontSize: 12 }}>
-                      {gNow.rev > gStd.rev ? '+' : ''}
-                      {Math.round((gNow.rev / gStd.rev - 1) * 100)}%
-                    </span>
-                  )}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p className="muted" style={{ margin: '8px 0 0', fontSize: 12 }}>
-            Valores esperados; o público real varia um pouco a cada jogo. Média em casa até agora:{' '}
-            {avgAtt ? `${int(avgAtt)} (${Math.round((avgAtt / me.cap) * 100)}% do ${me.std})` : 'sem jogos ainda'}.
-          </p>
-        </div>
+        <TicketPanel W={W} />
 
         <div className="panel">
           <h3>
@@ -292,8 +249,9 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                 <th className="r">Patrocínio</th>
                 <th className="r">Salários</th>
                 <th className="r">Multas</th>
-                <th className="r">Resultado</th>
-                <th className="r">Saldo final</th>
+                <th className="r">Transferências</th>
+                <th className="r">Lucro / prejuízo</th>
+                <th className="r">Caixa no fim</th>
               </tr>
             </thead>
             <tbody>
@@ -302,7 +260,8 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                 .map((h) => {
                   const pat = (h.pat || 0) + (h.bon || 0);
                   const mul = h.mul || 0;
-                  const res = h.bil + pat + h.sal + mul;
+                  const tra = h.tra || 0;
+                  const res = h.bil + pat + h.sal + mul + tra;
                   return (
                     <tr key={h.year}>
                       <td className="num">{h.year}</td>
@@ -311,6 +270,7 @@ function Summary({ W, start, projection }: { W: World; start: number; projection
                       <td className="r num">{money(pat)}</td>
                       <td className="r num neg">{money(h.sal)}</td>
                       <td className="r num">{neg(mul)}</td>
+                      <td className="r num">{neg(tra)}</td>
                       <td className="r num" style={{ color: res < 0 ? '#ff9a9d' : 'var(--ok)' }}>
                         {signed(res)}
                       </td>
@@ -342,9 +302,10 @@ function Ledger({ W }: { W: World }) {
       bon: t.bon + b.bon,
       sal: t.sal + b.sal,
       mul: t.mul + b.mul,
+      tra: t.tra + b.tra,
       net: t.net + b.net,
     }),
-    { bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, net: 0 },
+    { bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, tra: 0, net: 0 },
   );
 
   return (
@@ -372,8 +333,9 @@ function Ledger({ W }: { W: World }) {
               <th className="r">Bônus</th>
               <th className="r">Salários</th>
               <th className="r">Multas</th>
-              <th className="r">Resultado</th>
-              <th className="r">Saldo no fim</th>
+              <th className="r">Transferências</th>
+              <th className="r">Lucro do mês</th>
+              <th className="r">Caixa no fim do mês</th>
             </tr>
           </thead>
           <tbody>
@@ -390,6 +352,7 @@ function Ledger({ W }: { W: World }) {
                   <td className="r num">{neg(b.bon)}</td>
                   <td className="r num neg">{neg(b.sal)}</td>
                   <td className={`r num ${b.mul < 0 ? 'neg' : ''}`}>{neg(b.mul)}</td>
+                  <td className={`r num ${b.tra < 0 ? 'neg' : ''}`}>{neg(b.tra)}</td>
                   <td className="r num" style={{ color: b.net < 0 ? '#ff9a9d' : 'var(--ok)' }}>
                     {signed(b.net)}
                   </td>
@@ -399,7 +362,7 @@ function Ledger({ W }: { W: World }) {
                 </tr>
                 {open === b.m && (
                   <tr className="sub">
-                    <td colSpan={9}>
+                    <td colSpan={10}>
                       {b.games.length === 0 && b.fines.length === 0 && (
                         <span className="muted">Sem jogos em casa neste mês.</span>
                       )}
@@ -436,6 +399,7 @@ function Ledger({ W }: { W: World }) {
               <td className="r num">{neg(tot.bon)}</td>
               <td className="r num neg">{neg(tot.sal)}</td>
               <td className="r num">{neg(tot.mul)}</td>
+              <td className="r num">{neg(tot.tra)}</td>
               <td className="r num" style={{ color: tot.net < 0 ? '#ff9a9d' : 'var(--ok)' }}>
                 <b>{signed(tot.net)}</b>
               </td>

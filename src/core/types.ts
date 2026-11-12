@@ -50,6 +50,10 @@ export interface Player {
   /** OVR no início da temporada */ sy: number;
   /** valor de mercado */ val: number;
   /** salário mensal */ sal: number;
+  /** emprestado: clube dono e parte do salário paga por quem está com ele (0..1) */
+  loan?: { from: number; share: number };
+  /** temporada em que ficou sem clube */
+  fa?: number;
   _injNow?: boolean;
   _promoted?: boolean;
 }
@@ -72,6 +76,15 @@ export interface Club {
   bench: number[] | null;
   /** patrocínio anual */ spon?: number | null;
   userTac?: Tactic;
+}
+
+/** Tática salva pelo usuário. */
+export interface SavedTactic {
+  id: number;
+  name: string;
+  tac: Tactic;
+  lineup: (number | null)[];
+  bench: number[];
 }
 
 export interface SideStats {
@@ -178,6 +191,7 @@ export interface FinDay {
   /** bônus de patrocínio por vitória */ bon: number;
   /** salários (pagos uma vez por mês) */ sal: number;
   /** multas e rescisões (pagas ou recebidas) */ mul: number;
+  /** transferências (compras negativas, vendas positivas) */ tra?: number;
   /** saldo no fim do dia */
   bal: number;
   /** público e adversário, quando houve jogo em casa */
@@ -194,7 +208,57 @@ export interface FinSeason {
   bon: number;
   sal: number;
   mul: number;
+  tra?: number;
   bal: number;
+}
+
+/** Proposta de um clube da IA por um jogador do usuário. */
+export interface IncomingOffer {
+  id: number;
+  pid: number;
+  from: number;
+  kind: 'buy' | 'loan';
+  /** valor oferecido (compra) */
+  fee: number;
+  /** parte do salário que o clube pagaria (empréstimo) */
+  share: number;
+  /** último dia para responder */
+  exp: number;
+  /** quanto o clube aceitaria pagar no máximo (escondido) */
+  max: number;
+  haggled?: boolean;
+}
+
+/** Movimentação registrada no mercado. */
+export interface TransferRecord {
+  y: number;
+  d: number;
+  pid: number;
+  n: string;
+  from: number;
+  to: number;
+  fee: number;
+  kind: 'compra' | 'empréstimo' | 'livre' | 'saída' | 'retorno';
+}
+
+export interface MarketState {
+  /** sorteio próprio do mercado */ rs: number;
+  nextId: number;
+  /** jogadores do usuário à venda e o preço pedido */
+  sell: Record<number, number>;
+  /** jogadores do usuário disponíveis para empréstimo */
+  loan: number[];
+  /** propostas recebidas */
+  offers: IncomingOffer[];
+  /** acordos fechados com o clube, faltando o contrato com o jogador */
+  agreed: Record<number, { fee: number; kind: 'buy' | 'loan'; share: number }>;
+  /** tentativas de negociação nesta janela (por jogador e etapa) */
+  tries: Record<string, number>;
+  /** identificador da janela em que as tentativas valem */
+  win: number;
+  log: TransferRecord[];
+  /** lista de observação */
+  watch: number[];
 }
 
 export type SponsorSlot = 'master' | 'sec';
@@ -225,6 +289,8 @@ export interface SponsorState {
   /** estado do sorteio próprio dos patrocínios (separado do jogo) */ rs: number;
   nextId: number;
   /** dia (ano*100+dia) da última busca ativa por patrocinador */ seek?: number;
+  /** temporada em que o usuário trocou cada espaço (só uma troca por temporada) */
+  lock?: Partial<Record<SponsorSlot, number>>;
 }
 
 export interface Board {
@@ -278,6 +344,11 @@ export interface World {
   finHist?: FinSeason[];
   /** patrocinadores do usuário */
   sp?: SponsorState;
+  /** mercado de transferências */
+  mk?: MarketState;
+  /** táticas salvas do usuário e a que está em uso */
+  tacs?: SavedTactic[];
+  tacActive?: number;
   ticket?: number;
   youthDecisions?: Record<number, YouthDecision>;
   /** cache do índice de elencos (não é salvo) */

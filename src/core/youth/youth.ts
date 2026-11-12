@@ -2,6 +2,7 @@ import { POS } from '../constants/attributes';
 import { clamp } from '../math';
 import { news } from '../news';
 import { ovr, shiftOvr } from '../player/ratings';
+import { RULES } from '../rules';
 import { calcValue, calcWage } from '../player/value';
 import { genName } from '../player/names';
 import { chance, gauss, ri, wpick } from '../rng';
@@ -79,7 +80,7 @@ export const youthYearly = (W: World, p: Player): number => {
   if (gap <= 0) return 0;
   const play = p.y ? 1 : 1 + Math.min(p.st.j, 20) / 40;
   const top = 1 - Math.max(0, ovr(p) - 74) / 40;
-  return gap * youthRate(p.a) * youthFac(W.clubs[p.c]) * (p.dv || 1) * play * top;
+  return gap * youthRate(p.a) * youthFac(W.clubs[p.c]) * (p.dv || 1) * play * top * RULES.youthGrowth;
 };
 
 /** Evolução contínua de quem tem até 21 anos (base e profissional), a cada dia de jogo. */

@@ -10,7 +10,15 @@ export const SLOTS: SponsorSlot[] = ['master', 'sec'];
 export const SLOT_NAME: Record<SponsorSlot, string> = { master: 'Patrocinador master', sec: 'Patrocinador secundário' };
 /** Parte do potencial de patrocínio do clube que cada espaço vale. */
 const SLOT_SHARE: Record<SponsorSlot, number> = { master: 0.68, sec: 0.32 };
-const STYLE_FACTOR = { fixo: 1, longo: 0.92, desempenho: 0.72 };
+const STYLE_FACTOR = { fixo: 1, longo: 0.92, desempenho: 0.86 };
+/** Teto do bônus por vitória em cada divisão (Série A: R$ 1 mi). */
+export const WIN_BONUS_CAP: Record<Div, number> = { A: 1e6, B: 4e5, C: 15e4, D: 5e4 };
+
+/** Bônus por vitória de um contrato por desempenho: ~1,2% do valor anual, com teto por divisão. */
+export const winBonus = (val: number, div: Div): number => {
+  const v = Math.min(WIN_BONUS_CAP[div], val * 0.012);
+  return v >= 1e5 ? Math.round(v / 1e4) * 1e4 : Math.round(v / 1e3) * 1e3;
+};
 /** Multa por rescisão: parte do que ainda falta pagar no contrato. */
 const FEE_RATE = 0.4;
 /** Dias de espera entre duas buscas ativas por patrocinador. */
@@ -58,7 +66,7 @@ const makeContract = (W: World, def: SponsorDef, slot: SponsorSlot, mult: number
     sid: def.id,
     slot,
     val,
-    win: def.style === 'desempenho' ? nice(val * 0.035) : 0,
+    win: def.style === 'desempenho' ? winBonus(val, W.clubs[W.user!].div) : 0,
     from: W.year,
     to: W.year + years - 1,
   };
@@ -90,7 +98,7 @@ const newOffer = (W: World, slot: SponsorSlot, replace: boolean, silent = false)
     const c = makeContract(W, def, slot, 1);
     // contrato por desempenho compensa o valor menor com o bônus por vitória
     c.val = nice(Math.max(c.val, cur.val * (1.12 + rnd(sp) * 0.23) * STYLE_FACTOR[def.style]));
-    if (c.win) c.win = nice(c.val * 0.035);
+    if (c.win) c.win = winBonus(c.val, W.clubs[W.user!].div);
     o = pushOffer(W, c, { cover: [0, 0.25, 0.5][rint(sp, 0, 2)] });
     if (!silent)
       news(
@@ -127,6 +135,25 @@ export const ensureSponsors = (W: World): void => {
   }
 };
 
+/**
+ * O usuário só pode trocar cada espaço uma vez por temporada (rescindir ou aceitar quem quer substituir).
+ * Preencher um espaço vazio não conta, nem quando foi a marca que rompeu.
+ */
+export const slotLocked = (W: World, slot: SponsorSlot): boolean => W.sp?.lock?.[slot] === W.year;
+
+const lockSlot = (W: World, slot: SponsorSlot) => {
+  const sp = W.sp!;
+  sp.lock = { ...(sp.lock || {}), [slot]: W.year };
+};
+
+/** Ajusta bônus por vitória de contratos e propostas antigos ao teto atual. */
+export const capWinBonuses = (W: World): void => {
+  const sp = W.sp;
+  if (!sp || W.user == null) return;
+  const div = W.clubs[W.user].div;
+  for (const c of [sp.master, sp.sec, ...sp.offers]) if (c && c.win) c.win = Math.min(c.win, winBonus(c.val, div));
+};
+
 /** Satisfação do patrocinador (0..100): resultados recentes e paciência da marca. */
 export const sponsorSatisfaction = (W: World, c: SponsorContract): number => {
   const conf = W.board?.conf ?? 60;
@@ -144,11 +171,11 @@ export const terminationFee = (W: World, c: SponsorContract): number => nice(rem
 export const sponsorAnnual = (W: World): number => SLOTS.reduce((t, s) => t + (W.sp?.[s]?.val || 0), 0);
 
 /** Parcela mensal de cada contrato (chamado nos dias de pagamento). */
-export const sponsorPay = (W: World): void => {
+export const sponsorPay = (W: World, months = 1): void => {
   const me = W.clubs[W.user!];
   for (const s of SLOTS) {
     const c = W.sp![s];
-    if (c) addMoney(W, me, 'pat', c.val / PAYDAYS);
+    if (c) addMoney(W, me, 'pat', (c.val / PAYDAYS) * months);
   }
 };
 
@@ -170,9 +197,11 @@ export const acceptOffer = (W: World, id: number): string | null => {
   const me = W.clubs[W.user!];
   const cur = sp[o.slot];
   if (cur && !o.renewal) {
+    if (slotLocked(W, o.slot)) return `Você já trocou o ${SLOT_NAME[o.slot].toLowerCase()} nesta temporada.`;
     const fee = nice(terminationFee(W, cur) * (1 - o.cover));
     if (fee > me.bal) return 'Dinheiro insuficiente para pagar a multa do contrato atual.';
     if (fee) addMoney(W, me, 'mul', -fee);
+    lockSlot(W, o.slot);
   }
   const { sid, slot, val, win, from, to } = o;
   sp[slot] = { sid, slot, val, win, from, to };
@@ -200,7 +229,7 @@ export const haggleOffer = (W: World, id: number): 'up' | 'same' | 'gone' | null
   const r = rnd(sp);
   if (r < 0.5 + (rep - 50) / 250) {
     o.val = nice(o.val * (1.08 + rnd(sp) * 0.08));
-    if (o.win) o.win = nice(o.val * 0.035);
+    if (o.win) o.win = winBonus(o.val, W.clubs[W.user!].div);
     return 'up';
   }
   if (rnd(sp) < 0.4) {
@@ -215,11 +244,13 @@ export const terminateContract = (W: World, slot: SponsorSlot): string | null =>
   const sp = W.sp!;
   const c = sp[slot];
   if (!c) return null;
+  if (slotLocked(W, slot)) return `Você já trocou o ${SLOT_NAME[slot].toLowerCase()} nesta temporada.`;
   const me = W.clubs[W.user!];
   const fee = terminationFee(W, c);
   if (fee > me.bal) return 'Dinheiro insuficiente para pagar a multa.';
   addMoney(W, me, 'mul', -fee);
   sp[slot] = null;
+  lockSlot(W, slot);
   news(
     W,
     `Contrato rescindido: ${sponsorDef(c.sid).n}`,
@@ -243,10 +274,12 @@ export const seekSponsors = (W: World): number => {
   if (seekWait(W) > 0) return 0;
   sp.seek = W.year * 100 + W.day;
   const empty = SLOTS.filter((s) => !sp[s]);
+  const open = empty.length ? empty : SLOTS.filter((s) => !slotLocked(W, s));
+  if (!open.length) return 0;
   let n = 0;
   const tries = rint(sp, 1, 2);
   for (let i = 0; i < tries; i++) {
-    const slot = empty.length ? empty[i % empty.length] : SLOTS[rint(sp, 0, 1)];
+    const slot = open[i % open.length];
     if (newOffer(W, slot, !!sp[slot], true)) n++;
   }
   return n;
@@ -279,7 +312,7 @@ export const sponsorTick = (W: World): void => {
       );
       continue;
     }
-    if (!sp.offers.some((o) => o.slot === slot) && rnd(sp) < 0.035) newOffer(W, slot, true);
+    if (!slotLocked(W, slot) && !sp.offers.some((o) => o.slot === slot) && rnd(sp) < 0.035) newOffer(W, slot, true);
   }
 };
 

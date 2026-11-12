@@ -7,6 +7,7 @@ import { Editor } from './Editor';
 import { Finance } from './Finance';
 import { Fixtures } from './Fixtures';
 import { Home } from './Home';
+import { Market } from './Market';
 import { Saves } from './Saves';
 import { Squad } from './Squad';
 import { Tactics } from './Tactics';
@@ -17,6 +18,7 @@ import type { PageProps } from './types';
 export const PAGES: Record<PageId, ComponentType<PageProps>> = {
   home: Home,
   squad: Squad,
+  market: Market,
   youth: Youth,
   tactics: Tactics,
   calendar: Calendar,

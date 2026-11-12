@@ -13,7 +13,7 @@ import {
   POS,
   promote,
   removeFromLineups,
-  validateLineup,
+  tidyLineup,
   type Club,
   type Player,
   type Pos,
@@ -81,7 +81,7 @@ export function Editor({ W }: PageProps) {
       if (p.y) promote(W, p, true);
       else {
         demote(W, p);
-        if (p.c === W.user) validateLineup(W, W.clubs[W.user]);
+        if (p.c === W.user) tidyLineup(W, W.clubs[W.user]);
         else autoLineup(W, W.clubs[p.c]);
       }
     });

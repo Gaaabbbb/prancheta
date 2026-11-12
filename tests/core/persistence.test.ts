@@ -5,6 +5,7 @@ import { gunzip, gzip } from '../../src/persistence/compression';
 import { deserialize, serialize } from '../../src/persistence/serialize';
 import { loadLegacyCore } from '../parity/legacyCore';
 import { snapshot } from '../parity/helpers';
+import { applyCurrentRules, applyLegacyRules } from '../../src/core/rules';
 
 const newCareer = () => {
   const W = createWorld(11, expandDb(rawDb as unknown as RawDb));
@@ -29,6 +30,8 @@ describe('saves', () => {
   });
 
   it('abre um save gerado pelo Prancheta.html original e continua igual', async () => {
+    // a comparação lance a lance só vale com as regras do original
+    applyLegacyRules();
     const G = loadLegacyCore();
     const L = G.newWorld(31);
     L.user = 0;
@@ -48,6 +51,7 @@ describe('saves', () => {
       G.playDay(L);
     }
     expect(snapshot(W)).toEqual(snapshot(L));
+    applyCurrentRules();
   });
 
   it('migra saves v1 (sem categoria de base)', () => {

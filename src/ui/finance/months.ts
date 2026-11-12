@@ -24,6 +24,7 @@ export interface FinMonth {
   bon: number;
   sal: number;
   mul: number;
+  tra: number;
   /** receitas - despesas */
   net: number;
   /** saldo no fim do mês (ou no último dia registrado) */
@@ -41,7 +42,7 @@ export const monthBuckets = (W: World, log: FinDay[]): FinMonth[] => {
     const m = dateOf(W, it.d).getMonth();
     let b = out[out.length - 1];
     if (!b || b.m !== m) {
-      b = { m, bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, net: 0, bal: it.bal, games: [], fines: [] };
+      b = { m, bil: 0, pat: 0, bon: 0, sal: 0, mul: 0, tra: 0, net: 0, bal: it.bal, games: [], fines: [] };
       out.push(b);
     }
     b.bil += it.bil || 0;
@@ -49,7 +50,8 @@ export const monthBuckets = (W: World, log: FinDay[]): FinMonth[] => {
     b.bon += it.bon || 0;
     b.sal += it.sal || 0;
     b.mul += it.mul || 0;
-    b.net = b.bil + b.pat + b.bon + b.sal + b.mul;
+    b.tra += it.tra || 0;
+    b.net = b.bil + b.pat + b.bon + b.sal + b.mul + b.tra;
     b.bal = it.bal;
     if (it.att != null) b.games.push(it);
     if (it.mul) b.fines.push(it);

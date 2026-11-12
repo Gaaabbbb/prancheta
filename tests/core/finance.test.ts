@@ -8,12 +8,14 @@ import {
   ensureSponsors,
   expandDb,
   haggleOffer,
-  isPayday,
+  paydayMonths,
   monthlyWages,
   playDay,
   rng,
   SEASON_DAYS,
   seekSponsors,
+  slotLocked,
+  WIN_BONUS_CAP,
   sponsorPotential,
   SPONSORS,
   terminateContract,
@@ -33,13 +35,16 @@ const career = (user: number, seed = 99): World => {
 };
 
 describe('finanças mensais', () => {
-  it('há exatamente 10 dias de pagamento por temporada (fevereiro a novembro)', () => {
+  it('cada temporada paga 10 meses (fevereiro a novembro), em qualquer divisão', () => {
     const W = career(0);
-    for (const year of [2026, 2027, 2028]) {
+    for (const year of [2026, 2027, 2028, 2031]) {
       W.year = year;
-      let n = 0;
-      for (let d = 1; d <= SEASON_DAYS; d++) if (isPayday(W, d)) n++;
-      expect(n).toBe(10);
+      for (const div of ['A', 'B', 'C', 'D'] as const) {
+        W.clubs[0].div = div;
+        let n = 0;
+        for (let d = 1; d <= SEASON_DAYS; d++) n += paydayMonths(W, d);
+        expect(n).toBe(10);
+      }
     }
   });
 
@@ -92,6 +97,34 @@ describe('patrocínios', () => {
       expect(W.sp!.master!.sid).toBe(o.sid);
       expect(W.sp!.offers.some((x) => x.slot === 'master')).toBe(false);
     }
+  });
+
+  it('o bônus por vitória nunca passa de R$ 1 mi (e é menor nas divisões de baixo)', () => {
+    for (const user of [0, 30, 60, 100]) {
+      const W = career(user, 13);
+      W.clubs[user].bal = 1e10;
+      for (let i = 0; i < 6; i++) {
+        W.sp!.seek = undefined;
+        seekSponsors(W);
+      }
+      const cap = WIN_BONUS_CAP[W.clubs[user].div];
+      for (const c of [W.sp!.master, W.sp!.sec, ...W.sp!.offers]) if (c) expect(c.win).toBeLessThanOrEqual(cap);
+      expect(cap).toBeLessThanOrEqual(1e6);
+    }
+  });
+
+  it('cada espaço só pode ser trocado uma vez por temporada', () => {
+    const W = career(0, 3);
+    W.clubs[0].bal = 1e10;
+    expect(terminateContract(W, 'sec')).toBeNull();
+    expect(slotLocked(W, 'sec')).toBe(true);
+    W.sp!.seek = undefined;
+    seekSponsors(W);
+    const fill = W.sp!.offers.find((o) => o.slot === 'sec');
+    if (fill) expect(acceptOffer(W, fill.id)).toBeNull(); // preencher o espaço vazio pode
+    expect(terminateContract(W, 'sec')).toMatch(/já trocou/);
+    W.year++;
+    expect(slotLocked(W, 'sec')).toBe(false);
   });
 
   it('a temporada inteira com patrocínio, virada de ano e renovações funciona', () => {

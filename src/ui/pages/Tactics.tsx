@@ -10,14 +10,19 @@ import {
   spotPlayer,
   squad,
   swapSpots,
-  validateLineup,
+  lineupIssues,
+  tidyLineup,
+  avgRating,
+  perfRating,
   type Player,
   type Spot,
+  type Pos,
   type Tactic,
 } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { toast } from '@/store/uiStore';
-import { Ovr, PosTag, StatusTags, FitBar } from '../components/Badges';
+import { Ovr, PosTag, StatusTags, FitBar, MoraleBar } from '../components/Badges';
+import { SavedTactics } from '../components/SavedTactics';
 import { sortPlayers } from '../sortPlayers';
 import { TacticControls } from '../components/TacticControls';
 import { fitColor, isLight } from '../format';
@@ -33,8 +38,11 @@ export function Tactics({ W }: PageProps) {
   /** lugar sob o cursor durante o arraste */
   const [over, setOver] = useState<string | null>(null);
   const drag = useRef<Spot | null>(null);
+  /** o que aparece no círculo: OVR na função ou desempenho previsto */
+  const [shirtMode, setShirtMode] = useState<'ovr' | 'perf'>('ovr');
   const me = W.clubs[W.user!];
-  validateLineup(W, me);
+  tidyLineup(W, me);
+  const issues = lineupIssues(W, me);
   const lineup = me.lineup!;
   const slots = FORMATIONS[me.tac.f];
 
@@ -116,21 +124,41 @@ export function Tactics({ W }: PageProps) {
   const benchHasGk = bench.some((id) => W.pmap[id]?.p === 'GOL');
   const shirt = { background: me.c1, borderColor: me.c2, color: isLight(me.c1) ? '#111' : '#fff' };
 
-  const token = (p: Player, rating: number, role: string) => (
-    <>
-      <div className="sh" style={shirt}>
-        {rating}
-      </div>
-      <span className="nm">{p.n}</span>
-      <span className="rl">
-        {role}
-        {p.p !== role ? ' (' + p.p + ')' : ''}
-      </span>
-      <div className="fit">
-        <i style={{ width: `${p.f}%`, background: fitColor(p.f) }} />
-      </div>
-    </>
-  );
+  const moraleColor = (m: number) => (m >= 65 ? 'var(--ok)' : m >= 40 ? 'var(--chalk)' : '#ff9a9d');
+  const ratingTxt = (p: Player) => {
+    const r = avgRating(p);
+    return r == null ? '–' : r.toFixed(1);
+  };
+  /** dica completa do jogador: OVR, desempenho e os três fatores */
+  const tip = (p: Player, role: Pos) =>
+    `${p.n} (${role}) · OVR ${ovrRole(p, role)} · desempenho previsto ${perfRating(p, role)}\n` +
+    `Condição ${Math.round(p.f)}% · Moral ${Math.round(p.mo)} · Nota ${ratingTxt(p)}`;
+
+  const token = (p: Player, role: Pos) => {
+    const o = ovrRole(p, role),
+      perf = perfRating(p, role);
+    return (
+      <>
+        <div className="sh" style={shirt}>
+          {shirtMode === 'ovr' ? o : perf}
+          {shirtMode === 'perf' && perf !== o && (
+            <span className={`pd ${perf < o ? 'dn' : 'up'}`}>{perf < o ? '▼' : '▲'}</span>
+          )}
+        </div>
+        <span className="nm">{p.n}</span>
+        <span className="rl">
+          {role}
+          {p.p !== role ? ' (' + p.p + ')' : ''}
+        </span>
+        <span className="st3">
+          <i style={{ color: fitColor(p.f) }}>C{Math.round(p.f)}</i>
+          <i style={{ color: moraleColor(p.mo) }}>M{Math.round(p.mo)}</i>
+          <i>N{ratingTxt(p)}</i>
+        </span>
+        {!available(p) && <span className="xtag">{p.inj > 0 ? `lesionado (${p.inj})` : 'suspenso'}</span>}
+      </>
+    );
+  };
 
   return (
     <>
@@ -138,9 +166,29 @@ export function Tactics({ W }: PageProps) {
         <h2>Tática</h2>
         <span className="muted">
           Arraste jogadores entre o campo, o banco e a lista de reservas. Também dá para clicar em um e depois em outro
-          para trocá-los.
+          para trocá-los. Em cada jogador: C = condição, M = moral, N = nota média. O desempenho previsto é o OVR
+          ajustado por esses três (a condição pesa mais).
         </span>
+        <span className="sp" />
+        <span className="muted" style={{ fontSize: 12 }}>
+          No círculo
+        </span>
+        <div className="seg">
+          <button className={shirtMode === 'ovr' ? 'on' : ''} onClick={() => setShirtMode('ovr')}>
+            OVR
+          </button>
+          <button className={shirtMode === 'perf' ? 'on' : ''} onClick={() => setShirtMode('perf')}>
+            Desempenho
+          </button>
+        </div>
       </div>
+      {issues.length > 0 && (
+        <p className="warnbox" style={{ margin: '0 0 14px' }}>
+          <b>Escalação com desfalques:</b>{' '}
+          {issues.map((x) => `${W.pmap[x.pid].n} (${x.why}, ${x.where === 'xi' ? 'titular' : 'banco'})`).join(', ')}.
+          Arraste um jogador disponível sobre ele ou mande-o para as reservas. O jogo só começa depois disso.
+        </p>
+      )}
       <div className="grid tacgrid">
         <div>
           <div className="board">
@@ -170,10 +218,15 @@ export function Tactics({ W }: PageProps) {
                     <span className="nm">{s[0]}</span>
                   </div>
                 );
-              const r = ovrRole(p, s[0]);
               return (
-                <div key={i} className={`tok ${cls(spot)}`} style={pos} title={`${p.n}: ${s[0]} ${r}`} {...dnd(spot)}>
-                  {token(p, r, s[0])}
+                <div
+                  key={i}
+                  className={`tok ${cls(spot)} ${available(p) ? '' : 'out'}`}
+                  style={pos}
+                  title={tip(p, s[0])}
+                  {...dnd(spot)}
+                >
+                  {token(p, s[0])}
                 </div>
               );
             })}
@@ -202,8 +255,13 @@ export function Tactics({ W }: PageProps) {
                     </div>
                   );
                 return (
-                  <div key={i} className={`tok bt ${cls(spot)}`} title={`${p.n}: ${p.p} ${ovr(p)}`} {...dnd(spot)}>
-                    {token(p, ovr(p), p.p)}
+                  <div
+                    key={i}
+                    className={`tok bt ${cls(spot)} ${available(p) ? '' : 'out'}`}
+                    title={tip(p, p.p)}
+                    {...dnd(spot)}
+                  >
+                    {token(p, p.p)}
                   </div>
                 );
               })}
@@ -213,6 +271,7 @@ export function Tactics({ W }: PageProps) {
         <div className="grid" style={{ alignContent: 'start' }}>
           <div className="panel">
             <h3>Instruções</h3>
+            <SavedTactics W={W} />
             <TacticControls tac={me.tac} onChange={setTac} />
             <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
               <button className="btn" onClick={() => mutate(() => autoLineup(W, me))}>
@@ -229,6 +288,19 @@ export function Tactics({ W }: PageProps) {
               Reservas <small>fora do time e do banco</small>
             </h3>
             <table className="t">
+              <thead>
+                <tr>
+                  <th>Pos</th>
+                  <th>Nome</th>
+                  <th className="c">OVR</th>
+                  <th className="c" title="Desempenho previsto: OVR ajustado por condição, moral e nota">
+                    Desemp.
+                  </th>
+                  <th>Cond.</th>
+                  <th>Moral</th>
+                  <th className="r">Nota</th>
+                </tr>
+              </thead>
               <tbody>
                 {pool.length === 0 && (
                   <tr>
@@ -253,9 +325,16 @@ export function Tactics({ W }: PageProps) {
                       <td className="c">
                         <Ovr v={ovr(p)} />
                       </td>
-                      <td style={{ width: 60 }}>
+                      <td className="c num">
+                        <b>{perfRating(p)}</b>
+                      </td>
+                      <td style={{ width: 56 }} title={`${Math.round(p.f)}%`}>
                         <FitBar f={p.f} />
                       </td>
+                      <td style={{ width: 56 }} title={String(Math.round(p.mo))}>
+                        <MoraleBar m={p.mo} />
+                      </td>
+                      <td className="r num">{ratingTxt(p)}</td>
                     </tr>
                   );
                 })}

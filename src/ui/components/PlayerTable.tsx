@@ -1,4 +1,4 @@
-import { ovr, type Player } from '@/core';
+import { ovr, RULES, type Player } from '@/core';
 import { useUi, type SortKey } from '@/store/uiStore';
 import { useWorld } from '@/store/gameStore';
 import { EvoBar } from './EvoBar';
@@ -60,6 +60,9 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
             <td className="nm">
               {p.n}
               <StatusTags p={p} />
+              {p.c === W.user && W.mk?.sell[p.id] != null && <span className="tag mk">à venda</span>}
+              {p.c === W.user && W.mk?.loan.includes(p.id) && <span className="tag">p/ empréstimo</span>}
+              {p.loan && <span className="tag">emprestado</span>}
             </td>
             <td className="r num">{p.a}</td>
             <td className="c">
@@ -83,7 +86,9 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
             <td className="r num">{rating(p)}</td>
             <td className="r num">{money(p.val)}</td>
             <td className="r num">{money(p.sal)}</td>
-            <td className="r num">{p.ct}</td>
+            <td className={`r num ${RULES.market && !p.loan && p.ct <= W.year ? 'ctend' : ''}`}>
+              {p.loan ? '—' : p.ct}
+            </td>
           </tr>
         ))}
       </tbody>

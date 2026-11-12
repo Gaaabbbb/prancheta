@@ -1,6 +1,8 @@
 import { DIV_NAME, DIV_REP_TARGET, DIVS, type Div } from '../constants/divisions';
 import { closeFinances } from '../finance/finance';
 import { sponsorSeasonEnd } from '../finance/sponsors';
+import { marketSeasonEnd } from '../market/market';
+import { RULES } from '../rules';
 import { clamp } from '../math';
 import { news } from '../news';
 import { ageEvoRange, seasonPlayBonus } from '../player/evolution';
@@ -151,6 +153,8 @@ export const endSeason = (W: World): SeasonReport => {
   W.players = W.players.filter((p) => !retired.has(p.id));
   rebuildPmap(W);
   dirty(W);
+  // mercado: empréstimos voltam, contratos vencidos acabam (só com as regras novas)
+  marketSeasonEnd(W);
   // IA enxuga elencos muito inchados e a base muito cheia
   for (const c of W.clubs) {
     if (c.id === user) continue;
@@ -200,7 +204,9 @@ export const endSeason = (W: World): SeasonReport => {
   }
   for (const p of W.players) {
     p.val = calcValue(p);
-    p.sal = p.y ? 0 : calcWage(p, W.clubs[p.c].div);
+    if (p.c < 0) continue;
+    // com o mercado ligado, o salário é o do contrato (só quem não tem salário ganha um agora)
+    p.sal = p.y ? 0 : RULES.market && p.sal ? p.sal : calcWage(p, W.clubs[p.c].div);
   }
   // reputação acompanha a divisão
   for (const c of W.clubs) {

@@ -184,3 +184,7 @@ table.t tr.mstart td {
     display: none;
   }
 }
+.restwarn {
+  color: var(--yellow);
+  font-weight: 700;
+}

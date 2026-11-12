@@ -1,4 +1,17 @@
-import { ATTR, ATTR_NAME, demote, ovr, ovrRole, POS, POS_NAME, validateLineup } from '@/core';
+import {
+  aiListed,
+  ATTR,
+  ATTR_NAME,
+  calcValue,
+  demote,
+  ovr,
+  ovrRole,
+  POS,
+  POS_NAME,
+  RULES,
+  tidyLineup,
+  toggleWatch,
+} from '@/core';
 import { useGame, useWorld } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
@@ -23,27 +36,35 @@ export function PlayerModal({ id }: { id: number }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
   const mine = p.c === W.user;
+  const market = RULES.market;
+  const watched = !!W.mk?.watch.includes(p.id);
   const evo = evoDelta(p);
   return (
     <Modal>
       <ModalHeader>
-        <Crest club={c} size={40} />
+        {c ? <Crest club={c} size={40} /> : <span className="fa-badge">LIVRE</span>}
         <div style={{ flex: 1 }}>
           <h2>
             {p.n} {p.real && <span className="tag real">real</span>}
           </h2>
           <div className="muted">
             {POS_NAME[p.p]}, {p.a} anos, {p.nat || 'Brasil'},{' '}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openModal({ kind: 'club', id: c.id });
-              }}
-            >
-              {c.n}
-            </a>
+            {c ? (
+              <a
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  openModal({ kind: 'club', id: c.id });
+                }}
+              >
+                {c.n}
+              </a>
+            ) : (
+              'sem clube'
+            )}
+            {p.loan && <> (emprestado pelo {W.clubs[p.loan.from].n})</>}
             {p.y ? ' (base)' : ''} <StatusTags p={p} />
+            {market && c && !mine && aiListed(W, p) && <span className="tag mk">à venda</span>}
           </div>
         </div>
         <div style={{ textAlign: 'center' }}>
@@ -84,7 +105,7 @@ export function PlayerModal({ id }: { id: number }) {
             <dt>Moral</dt>
             <dd>{Math.round(p.mo)}</dd>
             <dt>Valor de mercado</dt>
-            <dd>{money(p.val)}</dd>
+            <dd>{money(calcValue(p))}</dd>
             {p.y ? (
               <>
                 <dt>Evolução na temporada</dt>
@@ -100,10 +121,17 @@ export function PlayerModal({ id }: { id: number }) {
               </>
             ) : (
               <>
-                <dt>Salário</dt>
+                <dt>{c ? 'Salário' : 'Último salário'}</dt>
                 <dd>{money(p.sal)}/mês</dd>
-                <dt>Contrato até</dt>
-                <dd>{p.ct}</dd>
+                {c && (
+                  <>
+                    <dt>Contrato até</dt>
+                    <dd style={{ color: p.ct <= W.year ? 'var(--yellow)' : undefined }}>
+                      {p.ct}
+                      {p.ct <= W.year ? ' (último ano)' : ''}
+                    </dd>
+                  </>
+                )}
               </>
             )}
             <dt>Temporada</dt>
@@ -134,7 +162,7 @@ export function PlayerModal({ id }: { id: number }) {
                 onClick={() => {
                   mutate((W) => {
                     demote(W, p);
-                    validateLineup(W, W.clubs[W.user!]);
+                    tidyLineup(W, W.clubs[W.user!]);
                   });
                   closeModal();
                   toast(p.n + ' voltou para a base.');
@@ -142,6 +170,50 @@ export function PlayerModal({ id }: { id: number }) {
               >
                 Mandar para a base
               </button>
+            )}
+            {market && !p.y && !mine && (
+              <>
+                <button
+                  className="btn sm pri"
+                  onClick={() => openModal({ kind: 'deal', pid: p.id, mode: c ? 'buy' : 'free' })}
+                >
+                  {c ? 'Fazer proposta' : 'Contratar'}
+                </button>
+                {c && !p.loan && (
+                  <button className="btn sm" onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'loan' })}>
+                    Pedir emprestado
+                  </button>
+                )}
+                <button
+                  className="btn sm"
+                  onClick={() => {
+                    let on = false;
+                    mutate((W) => {
+                      on = toggleWatch(W, p.id);
+                    });
+                    toast(on ? `${p.n} na lista de observação.` : `${p.n} saiu da lista de observação.`);
+                  }}
+                >
+                  {watched ? '★ Observando' : '☆ Observar'}
+                </button>
+              </>
+            )}
+            {market && mine && !p.y && !p.loan && (
+              <>
+                <button className="btn sm pri" onClick={() => openModal({ kind: 'deal', pid: p.id, mode: 'renew' })}>
+                  Renovar contrato
+                </button>
+                <button
+                  className="btn sm"
+                  onClick={() => {
+                    useUi.getState().set({ marketTab: 'mine' });
+                    useUi.getState().go('market');
+                    closeModal();
+                  }}
+                >
+                  Vender, emprestar ou dispensar
+                </button>
+              </>
             )}
             <button className="btn sm" onClick={() => openModal({ kind: 'editAttrs', id: p.id })}>
               Editar jogador

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import rawDb from '../../src/data/default-db.json';
 import { buildSeason, createWorld, expandDb, prepareMatch, rng, userFixture, type RawDb } from '../../src/core';
 import { loadLegacyCore } from './legacyCore';
+import { applyLegacyRules } from '../../src/core/rules';
+
+// a paridade compara com as regras do original (a versão nova muda cansaço e evolução da base)
+applyLegacyRules();
 
 const G = loadLegacyCore();
 

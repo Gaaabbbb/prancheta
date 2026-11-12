@@ -1,13 +1,14 @@
 import { FORMATIONS } from '../constants/formations';
 import { available, ovr, ovrRole } from '../player/ratings';
 import type { Pos } from '../constants/attributes';
+import { RULES } from '../rules';
 import type { Club, Player, World } from '../types';
 import { squad } from '../world/squad';
 
 export const BENCH_SIZE = 9;
 
-const fitScore = (pl: Player, role: Pos) => ovrRole(pl, role) * (0.75 + (0.25 * pl.f) / 100);
-const benchScore = (p: Player) => ovr(p) * (0.8 + (0.2 * p.f) / 100);
+const fitScore = (pl: Player, role: Pos) => ovrRole(pl, role) * (RULES.aiFitBase + (RULES.aiFit * pl.f) / 100);
+const benchScore = (p: Player) => ovr(p) * (RULES.benchFitBase + (RULES.benchFit * p.f) / 100);
 
 /** Monta o banco: um goleiro e os melhores restantes. */
 export const pickBench = (rest: Player[]): number[] => {
@@ -139,10 +140,11 @@ export const swapSpots = (W: World, club: Club, a: Spot, b: Spot): string | null
   // um titular não pode sair deixando a vaga vazia
   if ((a.z === 'xi' && pb == null) || (b.z === 'xi' && pa == null))
     return 'Para tirar um titular, troque-o por outro jogador.';
+  // indisponível não entra no time titular; se for mandado para o banco, vai para as reservas
   const check = (pid: number | null, to: Spot) => {
-    if (pid == null || to.z === 'res') return null;
+    if (pid == null || to.z !== 'xi') return null;
     const p = W.pmap[pid];
-    return available(p) ? null : p.n + ' não está disponível.';
+    return available(p) ? null : p.n + (p.inj > 0 ? ' está lesionado.' : ' está suspenso.');
   };
   const err = check(pa, b) || check(pb, a);
   if (err) return err;
@@ -151,6 +153,7 @@ export const swapSpots = (W: World, club: Club, a: Spot, b: Spot): string | null
   const put = (s: Spot, pid: number | null) => {
     if (s.z === 'xi') lineup[s.i] = pid;
     else if (s.z === 'bench') {
+      if (pid != null && !available(W.pmap[pid])) pid = null;
       if (s.i >= bench.length) bench.push(pid);
       else bench[s.i] = pid;
     }
@@ -159,4 +162,49 @@ export const swapSpots = (W: World, club: Club, a: Spot, b: Spot): string | null
   put(b, pa);
   club.bench = bench.filter((x): x is number => x != null).slice(0, BENCH_SIZE);
   return null;
+};
+
+/** Problema na escalação do usuário que impede o jogo. */
+export interface LineupIssue {
+  pid: number;
+  where: 'xi' | 'bench';
+  why: 'lesionado' | 'suspenso';
+}
+
+/** Lesionados e suspensos que estão no time ou no banco (o usuário precisa trocar à mão). */
+export const lineupIssues = (W: World, club: Club): LineupIssue[] => {
+  const out: LineupIssue[] = [];
+  const add = (id: number | null, where: LineupIssue['where']) => {
+    const p = id != null ? W.pmap[id] : null;
+    if (p && !available(p)) out.push({ pid: p.id, where, why: p.inj > 0 ? 'lesionado' : 'suspenso' });
+  };
+  (club.lineup || []).forEach((id) => add(id, 'xi'));
+  (club.bench || []).forEach((id) => add(id, 'bench'));
+  return out;
+};
+
+/**
+ * Arruma só a estrutura da escalação do usuário: jogadores que saíram do clube (ou subiram/desceram da base)
+ * dão lugar ao melhor disponível. Lesionados e suspensos ficam onde estão: quem troca é o usuário.
+ */
+export const tidyLineup = (W: World, club: Club): Club => {
+  if (!club.lineup || club.lineup.length !== 11) return autoLineup(W, club);
+  const sq = new Set(squad(W, club.id).map((p) => p.id));
+  let gap = false;
+  club.lineup = club.lineup.map((id) => (id && sq.has(id) ? id : ((gap = true), null)));
+  club.bench = (club.bench || []).filter((id) => sq.has(id) && !club.lineup!.includes(id));
+  const used = () => new Set([...club.lineup!, ...club.bench!]);
+  const free = () =>
+    squad(W, club.id)
+      .filter((p) => available(p) && !used().has(p.id))
+      .sort((a, b) => ovr(b) - ovr(a));
+  if (gap) {
+    const slots = FORMATIONS[club.tac.f];
+    for (let i = 0; i < 11; i++)
+      if (!club.lineup[i]) {
+        const best = free().sort((a, b) => fitScore(b, slots[i][0]) - fitScore(a, slots[i][0]))[0];
+        if (best) club.lineup[i] = best.id;
+      }
+  }
+  return club;
 };

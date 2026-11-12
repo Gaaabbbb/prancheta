@@ -38,6 +38,27 @@ export function LiveTacticsPanel({
           Voltar ao jogo
         </button>
       </div>
+      {(m.W.tacs || []).length > 0 && (
+        <div className="stlist" style={{ marginBottom: 12 }}>
+          <span className="muted" style={{ alignSelf: 'center', fontSize: 12 }}>
+            Táticas salvas:
+          </span>
+          {m.W.tacs!.map((t) => (
+            <button
+              key={t.id}
+              className="stchip"
+              title="Aplica a formação e as instruções desta tática (os jogadores em campo continuam os mesmos)"
+              onClick={() => {
+                setTac({ ...t.tac });
+                toast(`Tática "${t.name}" aplicada.`);
+              }}
+            >
+              <b>{t.name}</b>
+              <span>{t.tac.f}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div style={{ marginBottom: 16 }}>
         <TacticControls tac={s.tac} onChange={setTac} lineLabel="Linha" />
       </div>

@@ -3,10 +3,11 @@ import type { PageId } from '@/store/uiStore';
 /** Itens do menu lateral. Para adicionar uma página, inclua aqui e em ui/pages/index.ts. */
 export const NAV: (readonly [PageId, string] | '-')[] = [
   ['home', 'Início'],
+  ['calendar', 'Calendário'],
   ['squad', 'Elenco'],
+  ['market', 'Mercado'],
   ['youth', 'Base'],
   ['tactics', 'Tática'],
-  ['calendar', 'Calendário'],
   ['fixtures', 'Jogos'],
   ['tables', 'Competições'],
   ['clubs', 'Clubes'],

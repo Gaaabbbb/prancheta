@@ -5,7 +5,10 @@
 import {
   buildSeason,
   endSeason,
+  lineupIssues,
+  tidyLineup,
   ensureSponsors,
+  ensureMarket,
   EXP_TXT,
   news,
   playDay,
@@ -35,6 +38,7 @@ export const startCareer = (W: World, clubId: number, coach: string): void => {
   rng.seed(Date.now() >>> 0);
   buildSeason(W);
   ensureSponsors(W);
+  ensureMarket(W);
   news(
     W,
     'Bem-vindo ao ' + W.clubs[clubId].n,
@@ -66,13 +70,25 @@ export const continueGame = (): void => {
   else toast(n === 1 ? 'Rodada simulada.' : n + ' rodadas simuladas.');
 };
 
+/** Lesionados e suspensos têm que ser trocados à mão antes do jogo. */
+const lineupReady = (W: World): boolean => {
+  const me = W.clubs[W.user!];
+  tidyLineup(W, me);
+  const issues = lineupIssues(W, me);
+  if (!issues.length) return true;
+  toast(issues.map((i) => W.pmap[i.pid].n + ' (' + i.why + ')').join(', ') + ': troque antes do jogo.', 4000);
+  ui().closeModal();
+  ui().go('tactics');
+  return false;
+};
+
 const userSideOf = (W: World, uf: FixtureRef) => (uf.f.h === W.user ? 0 : 1);
 
 /** Resultado rápido: simula a partida do usuário sem animação. */
 export const quickMatch = (): void => {
   const W = world();
   const uf = currentFixture();
-  if (!uf) return;
+  if (!uf || !lineupReady(W)) return;
   ui().closeModal();
   const m = prepareMatch(W, uf.comp, uf.f, { userSide: userSideOf(W, uf) });
   m.runToEnd();
@@ -83,7 +99,7 @@ export const quickMatch = (): void => {
 export const liveMatch = (): void => {
   const W = world();
   const uf = currentFixture();
-  if (!uf) return;
+  if (!uf || !lineupReady(W)) return;
   ui().closeModal();
   const m = prepareMatch(W, uf.comp, uf.f, { userSide: userSideOf(W, uf) });
   useLive.getState().start(uf, m);

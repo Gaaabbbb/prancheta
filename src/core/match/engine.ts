@@ -6,6 +6,8 @@
 import { A, FAM, type Pos } from '../constants/attributes';
 import { FORMATIONS, MENT } from '../constants/formations';
 import { clamp } from '../math';
+import { RULES } from '../rules';
+import { formFactor } from '../player/performance';
 import { ovr, ovrRole } from '../player/ratings';
 import { chance, pick, rand, rf, ri, wpick } from '../rng';
 import type { Club, Player, SideStats, Tactic, World } from '../types';
@@ -153,7 +155,13 @@ export class Side {
   /** Atributo efetivo (condição, moral e familiaridade com a função). */
   eff(o: OnField, i: number): number {
     const pl = o.pl;
-    return pl.at[i] * (0.72 + (0.28 * pl.f) / 100) * (0.94 + pl.mo * 0.0012) * FAM[pl.p + o.role];
+    return (
+      pl.at[i] *
+      (RULES.fitBase + (RULES.fitImpact * pl.f) / 100) *
+      (0.94 + pl.mo * 0.0012) *
+      formFactor(pl) *
+      FAM[pl.p + o.role]
+    );
   }
 
   calc(home: boolean): void {
@@ -220,6 +228,15 @@ export class Side {
     if (this.rat[pid] !== undefined) this.rat[pid] += d;
   }
 }
+
+/** Sorteia quem se lesiona, com peso maior para os mais cansados. */
+const pickTired = (cand: OnField[], k: number): OnField => {
+  const w = cand.map((x) => 1 + k * ((100 - x.pl.f) / 100));
+  let r = rand() * w.reduce((t, v) => t + v, 0),
+    i = 0;
+  while (i < cand.length - 1 && r >= w[i]) r -= w[i++];
+  return cand[i];
+};
 
 export class Match {
   W: World;
@@ -401,7 +418,7 @@ export class Match {
     // falta / lesão
     const foulP = 0.115 * (0.8 + ot.pres * 0.2) * (this.zone >= 2 ? 1.25 : 0.8);
     if (chance(foulP)) return this.foul(s, o);
-    if (chance(0.0006 * 2)) return this.injury(chance(0.5) ? s : o);
+    if (chance(0.0006 * 2 * this.injuryRisk() * RULES.injuryRate)) return this.injury(chance(0.5) ? s : o);
     switch (this.zone) {
       case 0: {
         if (chance(0.18 - t.temp * 0.05)) {
@@ -658,8 +675,8 @@ export class Match {
     }
     if (chance(0.45) || this.zone >= 2) this.emit('foul', s.idx, { p: p.pl, d: d.pl }, 0);
     const r = rand();
-    if (r < 0.003) this.card(o, d, 2);
-    else if (r < 0.003 + 0.14 * (0.85 + o.tac.pres * 0.15)) this.card(o, d, 1);
+    if (r < 0.003 * RULES.cardRate) this.card(o, d, 2);
+    else if (r < 0.003 * RULES.cardRate + 0.14 * (0.85 + o.tac.pres * 0.15) * RULES.cardRate) this.card(o, d, 1);
     if (this.zone >= 2 && chance(this.zone === 3 ? 0.5 : 0.22)) {
       const taker = s.on.slice().sort((a, b) => b.pl.at[A.pas] + b.pl.at[A.fin] - (a.pl.at[A.pas] + a.pl.at[A.fin]))[0];
       this.pending = () => {
@@ -712,7 +729,8 @@ export class Match {
   injury(side: Side): void {
     const cand = side.on.filter((x) => !side.out[x.pl.id]);
     if (!cand.length) return;
-    const o = pick(cand);
+    // jogadores cansados se machucam mais (com tiredInjury = 0, todos têm o mesmo peso, como no original)
+    const o = RULES.tiredInjury ? pickTired(cand, RULES.tiredInjury) : pick(cand);
     o.pl._injNow = true;
     side.out[o.pl.id] = 'inj';
     this.emit('inj', side.idx, { p: o.pl }, 2);
@@ -795,7 +813,8 @@ export class Match {
       const rep = this.bestSub(side, role);
       if (
         rep &&
-        ovrRole(rep, role) * (0.75 + (0.25 * rep.f) / 100) > ovrRole(o.pl, role) * (0.75 + (0.25 * o.pl.f) / 100) - 4
+        ovrRole(rep, role) * (RULES.aiFitBase + (RULES.aiFit * rep.f) / 100) >
+          ovrRole(o.pl, role) * (RULES.aiFitBase + (RULES.aiFit * o.pl.f) / 100) - 4
       ) {
         this.doSub(side, o.pl, rep, role);
         done++;
@@ -803,12 +822,28 @@ export class Match {
     }
   }
 
+  /** Multiplicador da chance de lesão pelo cansaço médio em campo (1 = original). */
+  injuryRisk(): number {
+    if (!RULES.tiredInjury) return 1;
+    let t = 0,
+      n = 0;
+    for (const s of this.sides)
+      for (const o of s.on) {
+        t += (100 - o.pl.f) / 100;
+        n++;
+      }
+    return 1 + (RULES.tiredInjury * 0.6 * t) / Math.max(1, n);
+  }
+
   fatigue(): void {
     for (const s of this.sides) {
       const pf = 1 + s.tac.pres * 0.15 + (s.tac.temp - 1) * 0.05;
       for (const o of s.on) {
         const res = o.pl.at[A.res];
-        o.pl.f = Math.max(10, o.pl.f - 0.105 * (1.35 - (res / 20) * 0.7) * pf * (o.role === 'GOL' ? 0.3 : 1));
+        o.pl.f = Math.max(
+          10,
+          o.pl.f - 0.105 * (1.35 - (res / 20) * 0.7) * pf * (o.role === 'GOL' ? 0.3 : 1) * RULES.fatigue,
+        );
       }
       if (Math.floor(this.min) % 10 === 0) s.dirty = true;
     }

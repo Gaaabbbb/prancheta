@@ -3,7 +3,7 @@ import { clamp } from '../math';
 import { rand } from '../rng';
 import type { Club, Competition, Fixture, World } from '../types';
 import { squad } from '../world/squad';
-import { addMoney, finDay, isPayday, monthlyWages, PAYDAYS, remainingPaydays } from './ledger';
+import { addMoney, finDay, monthlyWages, paydayMonths, PAYDAYS, remainingPaydays, wageBills } from './ledger';
 import { ensureSponsors, sponsorAnnual, sponsorPay } from './sponsors';
 
 /** Taxa de ocupação base do estádio (sem o sorteio do dia). */
@@ -52,13 +52,13 @@ export const sponsorYear = (W: World, c: Club, wages?: number | null): number =>
  */
 export const dailyMoney = (W: World): void => {
   if (W.user != null) ensureSponsors(W);
-  if (!isPayday(W)) return;
-  const wages: Record<number, number> = {};
-  for (const p of W.players) if (p.c >= 0 && !p.y) wages[p.c] = (wages[p.c] || 0) + p.sal;
+  const months = paydayMonths(W);
+  if (!months) return;
+  const wages = wageBills(W);
   for (const c of W.clubs) {
-    if (c.id === W.user && W.sp) sponsorPay(W);
-    else addMoney(W, c, 'pat', sponsorYear(W, c, wages[c.id] || 0) / PAYDAYS);
-    addMoney(W, c, 'sal', -(wages[c.id] || 0));
+    if (c.id === W.user && W.sp) sponsorPay(W, months);
+    else addMoney(W, c, 'pat', (sponsorYear(W, c, wages[c.id] || 0) / PAYDAYS) * months);
+    addMoney(W, c, 'sal', -(wages[c.id] || 0) * months);
   }
 };
 
@@ -102,6 +102,7 @@ export const closeFinances = (W: World): void => {
     bon: f.bon || 0,
     sal: f.sal || 0,
     mul: f.mul || 0,
+    tra: f.tra || 0,
     bal: c.bal,
   });
   W.finLog = [];

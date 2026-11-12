@@ -3,7 +3,18 @@ import { create } from 'zustand';
 import type { Div, NewsItem } from '@/core';
 
 export type PageId =
-  'home' | 'squad' | 'youth' | 'tactics' | 'calendar' | 'fixtures' | 'tables' | 'clubs' | 'finance' | 'editor' | 'game';
+  | 'home'
+  | 'squad'
+  | 'market'
+  | 'youth'
+  | 'tactics'
+  | 'calendar'
+  | 'fixtures'
+  | 'tables'
+  | 'clubs'
+  | 'finance'
+  | 'editor'
+  | 'game';
 
 export type SortKey =
   | 'pos'
@@ -25,6 +36,9 @@ export type SortKey =
   | 'sal'
   | 'ct';
 
+/** Abas da página Mercado. */
+export type MarketTab = 'search' | 'free' | 'watch' | 'offers' | 'mine' | 'log';
+
 /** Abas da página Finanças. */
 export type FinTab = 'sum' | 'spon' | 'ledger';
 
@@ -40,6 +54,7 @@ export type ModalSpec =
   | { kind: 'seasonEnd' }
   | { kind: 'importSave' }
   | { kind: 'news'; item: NewsItem }
+  | { kind: 'deal'; pid: number; mode: 'buy' | 'loan' | 'free' | 'renew' }
   | { kind: 'confirm'; title: string; body: ReactNode; ok: string; onOk: () => void }
   | { kind: 'info'; title: string; body: ReactNode; wide?: boolean };
 
@@ -57,6 +72,7 @@ interface UiState {
   /** velocidade preferida da partida ao vivo */
   liveSpeed: number;
   finTab: FinTab;
+  marketTab: MarketTab;
   modal: ModalSpec | null;
   toast: { msg: string; ms: number; id: number } | null;
 
@@ -80,6 +96,7 @@ export const useUi = create<UiState>((setState, getState) => ({
   edPool: 'pro',
   liveSpeed: 1,
   finTab: 'sum',
+  marketTab: 'search',
   modal: null,
   toast: null,
 
