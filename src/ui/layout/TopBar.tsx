@@ -1,92 +1,67 @@
-import { DIV_NAME, fmtDate, dateOf, isDays, nextUserFixture, userStanding, WEEKDAY_SHORT, type World } from '@/core';
-import { advanceOneDay, continueGame } from '@/app/gameFlow';
+import { DIV_NAME, dateOf, isDays, userStanding, WEEKDAY_SHORT, type World } from '@/core';
+import { continueGame } from '@/app/gameFlow';
+import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { money } from '../format';
+import { useOffers, useUnread } from './counts';
+import { Badge } from './Nav';
+import { MENU } from './navItems';
 
+/**
+ * Cabeçalho fixo: data de hoje, o clube (botão que leva ao Início), os menus e o botão Avançar, que corre os dias até o
+ * próximo jogo ou até uma decisão importante (proposta, janela, contrato).
+ */
 export function TopBar({ W }: { W: World }) {
+  const page = useUi((s) => s.page);
+  const go = useUi((s) => s.go);
+  const unread = useUnread();
+  const offers = useOffers();
   const me = W.clubs[W.user!];
   const s = userStanding(W);
-  const nf = nextUserFixture(W);
-  let next;
-  if (W.seasonDone)
-    next = (
-      <>
-        <b>Temporada encerrada</b>
-        <br />
-        Veja o resumo e comece {W.year + 1}
-      </>
-    );
-  else if (nf) {
-    const opp = W.clubs[nf.f.h === W.user ? nf.f.a : nf.f.h];
-    const inDays = nf.f.d - (W.day + 1);
-    const when = !isDays(W)
-      ? fmtDate(dateOf(W, nf.f.d))
-      : inDays <= 0
-        ? 'hoje'
-        : inDays === 1
-          ? 'amanhã'
-          : `${fmtDate(dateOf(W, nf.f.d))} (em ${inDays} dias)`;
-    next = (
-      <>
-        Próximo jogo: <b>{opp.n}</b> ({nf.f.h === W.user ? 'casa' : 'fora'})
-        <br />
-        {when}, {nf.comp.name}
-        {nf.comp.stages[nf.f.st].name !== 'Pontos corridos' ? ' · ' + nf.comp.stages[nf.f.st].name : ''}
-      </>
-    );
-  } else
-    next = (
-      <>
-        <b>Sem jogos restantes</b>
-        <br />
-        Simule até o fim da temporada
-      </>
-    );
+  const today = dateOf(W, isDays(W) ? W.day + 1 : Math.max(1, W.day));
   return (
     <header id="top">
-      <div className="club">
-        <Crest club={me} size={34} />
-        <div>
-          <h1>{me.n}</h1>
-          <div className="status">
+      <div className="today" title="Data de hoje">
+        <span>{WEEKDAY_SHORT[today.getDay()]}</span>
+        <b className="num">{today.getDate()}</b>
+        <span>{today.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}</span>
+      </div>
+      <button className={`club ${page === 'home' ? 'on' : ''}`} onClick={() => go('home')} title="Ir para o Início">
+        <Crest club={me} size={40} />
+        <span className="cinfo">
+          <span className="cname">{me.n}</span>
+          <span className="status">
             {DIV_NAME[me.div]}
             {s && (
               <>
-                {' '}
-                &nbsp; <b>{s.pos}º</b> {s.stage.groups.length > 1 ? 'no grupo ' + (s.gi + 1) : ''} &nbsp; {s.row.pts}{' '}
-                pts
+                {' · '}
+                <b>{s.pos}º</b>
+                {s.stage.groups.length > 1 ? ' no grupo' : ''}
               </>
-            )}{' '}
-            &nbsp; Saldo <b>{money(me.bal)}</b>
-          </div>
-        </div>
-      </div>
-      <div className="spacer" />
-      {isDays(W) && !W.seasonDone && (
-        <div className="today" title="Data de hoje">
-          <span>{WEEKDAY_SHORT[dateOf(W, W.day + 1).getDay()]}</span>
-          <b className="num">{dateOf(W, W.day + 1).getDate()}</b>
-          <span>
-            {dateOf(W, W.day + 1)
-              .toLocaleDateString('pt-BR', { month: 'short' })
-              .replace('.', '')}
+            )}
+            {' · '}Saldo <b className={me.bal < 0 ? 'neg' : ''}>{money(me.bal)}</b>
           </span>
-        </div>
-      )}
-      <div className="next">{next}</div>
-      {isDays(W) && !W.seasonDone && (
-        <button className="btn big" onClick={advanceOneDay} title="Passa só um dia (se hoje tem jogo, abre o pré-jogo)">
-          +1 dia
-        </button>
-      )}
+        </span>
+        <Badge n={unread} />
+      </button>
+      <nav className="menu" aria-label="Menu">
+        {MENU.map((n, i) =>
+          n === '-' ? (
+            <span key={i} className="msep" aria-hidden="true" />
+          ) : (
+            <button key={n[0]} className={page === n[0] ? 'on' : ''} onClick={() => go(n[0])}>
+              {n[1]}
+              {n[0] === 'market' && <Badge n={offers} what="propostas" />}
+            </button>
+          ),
+        )}
+      </nav>
       <button
-        className="btn pri big"
+        className="btn advance"
         onClick={continueGame}
-        title={
-          isDays(W) ? 'Avança até o próximo jogo ou até uma decisão importante (proposta, janela, contrato)' : undefined
-        }
+        title="Avança os dias até o próximo jogo ou até uma decisão importante (proposta, janela, contrato)"
       >
-        {W.seasonDone ? 'Fechar temporada' : 'Avançar'}
+        {W.seasonDone ? 'Fechar temporada' : 'Avançar'} <span aria-hidden="true">▶</span>
       </button>
     </header>
   );

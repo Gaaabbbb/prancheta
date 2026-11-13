@@ -1,116 +1,191 @@
-/* Extraído do Prancheta.html original. */
-/* shell */
+/* shell: cabeçalho fixo em cima e a página embaixo */
 #app {
   display: grid;
-  grid-template-columns: 200px 1fr;
-  grid-template-rows: 64px 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
 }
 #top {
-  grid-column: 1/3;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 18px;
-  background: var(--ink2);
-  border-bottom: 1px solid var(--line2);
-}
-#top .club {
   display: flex;
   align-items: center;
   gap: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(180deg, #0c1626, var(--ink2));
+  border-bottom: 1px solid var(--line2);
+  box-shadow: 0 4px 16px #0006;
+  z-index: 10;
+}
+/* data */
+#top .today {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  width: 52px;
+  padding: 5px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff06;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+#top .today b {
+  font-family: var(--fd);
+  font-size: 22px;
+  color: var(--chalk);
+  margin: 2px 0;
+}
+/* clube: botão para o Início */
+#top .club {
+  all: unset;
+  box-sizing: border-box;
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 330px;
+  padding: 5px 14px 5px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: #ffffff08;
+  cursor: pointer;
+}
+#top .club:hover {
+  background: #ffffff12;
+}
+#top .club.on {
+  border-color: var(--yellow);
+  background: #ffd23f12;
+}
+#top .club:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+#top .club .cinfo {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
-#top .club h1 {
-  font-size: 26px;
-  line-height: 1;
+#top .club .cname {
+  font-family: var(--fd);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.05;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 #top .status {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 #top .status b {
   color: var(--chalk);
   font-weight: 600;
 }
-#top .spacer {
+#top .status b.neg {
+  color: #ff9a9d;
+}
+#top .club .badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  margin: 0;
+}
+/* menus */
+#top .menu {
   flex: 1;
-}
-#top .today {
+  min-width: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  line-height: 1;
-  padding: 4px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  color: var(--muted);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
-#top .today b {
-  font-family: var(--fd);
-  font-size: 22px;
-  color: var(--chalk);
-  margin: 1px 0;
+#top .menu::-webkit-scrollbar {
+  display: none;
 }
-#top .next {
-  text-align: right;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.25;
-}
-#top .next b {
-  color: var(--chalk);
-  font-weight: 600;
-}
-#nav {
-  background: var(--ink2);
-  border-right: 1px solid var(--line2);
-  padding: 10px 0;
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-}
-#nav button {
+#top .menu button {
   all: unset;
+  position: relative;
   cursor: pointer;
-  display: block;
-  padding: 9px 18px;
+  flex: none;
+  padding: 8px 10px;
+  border-radius: 8px;
   font-family: var(--fd);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--muted);
-  border-left: 3px solid transparent;
+  white-space: nowrap;
 }
-#nav button:hover {
+#top .menu button:hover {
   color: var(--chalk);
-  background: #ffffff08;
+  background: #ffffff0a;
 }
-#nav button.on {
+#top .menu button.on {
   color: var(--chalk);
-  border-left-color: var(--yellow);
-  background: #ffd23f0d;
+  background: #ffd23f14;
+  box-shadow: inset 0 -2px 0 var(--yellow);
 }
-#nav button:focus-visible {
+#top .menu button:focus-visible {
   outline: 2px solid var(--yellow);
   outline-offset: -2px;
 }
-#nav .sep {
-  height: 1px;
-  background: var(--line2);
-  margin: 8px 14px;
+#top .menu .badge {
+  margin-left: 4px;
 }
-#nav .foot {
-  margin-top: auto;
-  padding: 10px 18px;
-  font-size: 12px;
-  color: var(--dim);
+#top .menu .msep {
+  flex: none;
+  width: 1px;
+  height: 22px;
+  margin: 0 6px;
+  background: var(--line);
+}
+/* avançar: o botão que chama atenção */
+#top .advance {
+  flex: none;
+  padding: 11px 20px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffd23f, #f59e42);
+  color: #1a1400;
+  font-family: var(--fd);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  box-shadow:
+    0 4px 14px #f59e4255,
+    inset 0 -2px 0 #0002;
+}
+#top .advance:hover {
+  filter: brightness(1.07);
+}
+#top .advance:active {
+  transform: translateY(1px);
 }
 #main {
   overflow: auto;
-  padding: 20px 24px 40px;
+  padding: 18px 22px 40px;
+}
+/* telas médias: menus menores e em até duas linhas, todos à vista */
+@media (max-width: 1280px) and (min-width: 821px) {
+  #top .menu {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  #top .menu button {
+    padding: 4px 7px;
+    font-size: 14px;
+  }
+  #top .club {
+    max-width: 260px;
+  }
+  #top .club .cname {
+    font-size: 19px;
+  }
 }

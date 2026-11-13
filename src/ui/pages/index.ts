@@ -14,7 +14,7 @@ import { Tactics } from './Tactics';
 import { Youth } from './Youth';
 import type { PageProps } from './types';
 
-/** Registro de páginas do menu. Para criar uma página: componente aqui + item em layout/Nav.tsx. */
+/** Registro de páginas do menu. Para criar uma página: componente aqui + item em layout/navItems.ts. */
 export const PAGES: Record<PageId, ComponentType<PageProps>> = {
   home: Home,
   squad: Squad,

@@ -1,23 +1,23 @@
 import type { PageId } from '@/store/uiStore';
 
-/** Itens do menu lateral. Para adicionar uma página, inclua aqui e em ui/pages/index.ts. */
-export const NAV: (readonly [PageId, string] | '-')[] = [
-  ['home', 'Início'],
+/** Menus do cabeçalho, na ordem. Para adicionar uma página, inclua aqui e em ui/pages/index.ts. */
+export const MENU: (readonly [PageId, string] | '-')[] = [
   ['calendar', 'Calendário'],
-  ['squad', 'Elenco'],
-  ['market', 'Mercado'],
-  ['youth', 'Base'],
   ['tactics', 'Tática'],
-  ['fixtures', 'Jogos'],
-  ['tables', 'Competições'],
-  ['clubs', 'Clubes'],
+  ['squad', 'Elenco'],
+  ['youth', 'Base'],
+  ['market', 'Mercado'],
   ['finance', 'Finanças'],
+  ['tables', 'Competições'],
+  ['fixtures', 'Jogos'],
+  ['clubs', 'Clubes'],
   '-',
   ['editor', 'Editor'],
   ['game', 'Jogo e saves'],
 ];
 
+/** Lista completa (o "Mais" do celular): o Início e os menus do cabeçalho. */
+export const NAV: (readonly [PageId, string] | '-')[] = [['home', 'Início'], ...MENU];
+
 /** Páginas da barra de baixo no celular (as outras ficam em "Mais"). */
 export const NAV_MOBILE: PageId[] = ['home', 'tactics', 'fixtures', 'market'];
-
-export const APP_VERSION = '1.0';

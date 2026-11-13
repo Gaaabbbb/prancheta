@@ -176,8 +176,7 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     dia, conta lesões em dias (4 dias = 1 jogo), paga salários e patrocínio no 1º dia de cada mês (fevereiro a
     novembro) e roda patrocínio e mercado com chances diárias equivalentes às de antes. As ligas usam as datas do
     `WEEK_PLAN`, sem rodada no meio da semana em semana de copa; jogo de liga que bate com copa é adiado
-    (`resolveConflicts`). **Continuar** corre os dias até o próximo jogo ou até chegar uma notícia que pede atenção; há
-    também **+1 dia**. Com as regras antigas (paridade) e nos saves que estavam no meio da temporada, segue por rodadas.
+    (`resolveConflicts`). **Avançar** corre os dias até o próximo jogo ou até uma decisão importante. Com as regras antigas (paridade) e nos saves que estavam no meio da temporada, segue por rodadas.
   - **Clubes sul-americanos**: 158 clubes e 4.575 jogadores de 9 países (`src/data/sula-db.json`, gerado da planilha
     com `node scripts/sulaDb.mjs "planilha.xlsx"`). Divisão `SUL` e `Club.country`; não podem ser comandados, não têm
     base, compram, vendem e podem ser contratados. Cada país tem uma liga simulada nos bastidores (só placar, por
@@ -236,6 +235,13 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   - **Mercado:** os clubes sul-americanos têm o nível medido pela força real do elenco (`clubLevel`), então também
     mandam propostas pelos seus jogadores e compram no mercado.
   - **Jogos:** coluna Campeonato antes da Fase.
+  - **Cabeçalho e Início:** o menu lateral saiu. No alto fica um cabeçalho fixo com a data, o clube (escudo, nome,
+    divisão, posição e saldo; clicar leva ao Início), os menus (Calendário, Tática, Elenco, Base, Mercado, Finanças,
+    Competições, Jogos, Clubes | Editor, Jogo e saves) e o botão **Avançar**. O Início tem a caixa de entrada à
+    esquerda; no meio, o próximo jogo em destaque (escudos, data, local, posição, últimos resultados e força de cada
+    time, dias de descanso) e o calendário do mês; à direita, a classificação de cada competição em disputa (com filtro,
+    zonas e o seu time destacado; no mata-mata, os seus confrontos) e os próximos 5 jogos. No celular, os menus seguem
+    na barra de baixo e o Início fica em uma coluna.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

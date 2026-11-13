@@ -17,47 +17,69 @@
     height: 100vh;
     height: 100dvh;
   }
-  #nav {
-    display: none;
-  }
+  /* cabeçalho no celular: data, clube e Avançar (os menus ficam na barra de baixo) */
   #top {
-    flex-wrap: wrap;
-    gap: 6px 8px;
-    padding: calc(6px + env(safe-area-inset-top)) 12px 8px;
-  }
-  /* 1ª linha: escudo, nome e data; 2ª linha: próximo jogo e botões */
-  #top .club {
-    flex: 1 1 calc(100% - 64px);
+    flex-wrap: nowrap;
     gap: 8px;
+    padding: calc(6px + env(safe-area-inset-top)) 10px 8px;
   }
-  #top .club h1 {
-    font-size: 19px;
-  }
-  #top .status {
-    font-size: 11px;
-    white-space: normal;
-  }
-  #top .spacer {
+  #top .menu {
     display: none;
   }
   #top .today {
-    padding: 2px 7px;
+    width: 42px;
+    padding: 3px 0;
     font-size: 9px;
   }
   #top .today b {
     font-size: 17px;
   }
-  #top .next {
-    /* base maior que o espaço que sobra na 1ª linha: vai para a 2ª, ao lado dos botões */
-    flex: 1 1 140px;
+  #top .club {
+    flex: 1 1 auto;
     min-width: 0;
-    text-align: left;
-    font-size: 11px;
-    overflow: hidden;
+    max-width: none;
+    padding: 4px 8px;
   }
-  #top .btn.big {
-    font-size: 15px;
-    padding: 7px 12px;
+  #top .club .cname {
+    font-size: 18px;
+  }
+  #top .status {
+    font-size: 11px;
+    white-space: normal;
+  }
+  #top .advance {
+    padding: 9px 12px;
+    font-size: 16px;
+  }
+  /* Início em uma coluna: próximo jogo, próximos jogos, classificação, calendário e caixa de entrada */
+  .home3 {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hcol {
+    display: contents;
+  }
+  .hnext {
+    order: 1;
+  }
+  .hup {
+    order: 2;
+  }
+  .htab {
+    order: 3;
+  }
+  .hcal {
+    order: 4;
+  }
+  .hinbox {
+    order: 5;
+  }
+  .hteam b {
+    font-size: 17px;
+  }
+  .mcal-c {
+    min-height: 40px;
   }
   #main {
     flex: 1;

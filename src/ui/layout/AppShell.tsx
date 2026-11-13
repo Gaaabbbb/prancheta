@@ -1,7 +1,7 @@
 import { useWorld } from '@/store/gameStore';
 import { useUi } from '@/store/uiStore';
 import { PAGES } from '../pages';
-import { MobileNav, Nav } from './Nav';
+import { MobileNav } from './Nav';
 import { TopBar } from './TopBar';
 
 export function AppShell() {
@@ -11,7 +11,6 @@ export function AppShell() {
   return (
     <div id="app">
       <TopBar W={W} />
-      <Nav year={W.year} />
       <main id="main">
         <Page W={W} />
       </main>

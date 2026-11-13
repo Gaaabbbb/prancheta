@@ -1,188 +1,308 @@
+import { useState } from 'react';
 import {
-  available,
-  EXP_TXT,
-  fmtDate,
+  compList,
   dateOf,
+  fmtDate,
+  isDays,
+  leagueName,
   nextUserFixture,
-  squad,
+  table,
   teamStrength,
   userStanding,
-  leagueName,
+  WEEKDAY_SHORT,
+  type Competition,
+  type Fixture,
+  type KOStage,
+  type LeagueStage,
+  type World,
 } from '@/core';
-import { goToMatch } from '@/app/gameFlow';
+import { continueGame } from '@/app/gameFlow';
 import { useUi } from '@/store/uiStore';
+import { compColor } from '../compStyle';
 import { Crest } from '../components/Crest';
-import { StatusTags, StrengthStars } from '../components/Badges';
-import { MiniTable } from '../components/Standings';
+import { FormStrip, StrengthStars } from '../components/Badges';
 import { Inbox } from '../components/Inbox';
-import { rating } from '../format';
+import { VenueIcon } from '../components/Icons';
+import { MiniCalendar } from '../components/MiniCalendar';
+import { zoneOf } from '../zones';
 import type { PageProps } from './types';
 
-export function Home({ W }: PageProps) {
-  const go = useUi((s) => s.go);
-  const openModal = useUi((s) => s.openModal);
-  const me = W.clubs[W.user!];
-  const nf = nextUserFixture(W);
-  const st = userStanding(W);
-  const b = W.board || { exp: 1, conf: 60 };
-  const confCol = b.conf > 65 ? 'var(--ok)' : b.conf > 40 ? 'var(--yellow)' : 'var(--red)';
-  const sq = squad(W, W.user!);
-  const tops = sq
-    .filter((p) => p.st.g > 0)
-    .sort((a, b) => b.st.g - a.st.g)
-    .slice(0, 5);
-  const best = sq
-    .filter((p) => p.st.j >= 3)
-    .sort((a, b) => b.st.nt / b.st.j - a.st.nt / a.st.j)
-    .slice(0, 5);
-  const out = sq.filter((p) => !available(p));
-  const playerLink = (id: number, name: string) => (
-    <a
-      href="#"
-      onClick={(e) => {
-        e.preventDefault();
-        openModal({ kind: 'player', id });
-      }}
-    >
-      {name}
-    </a>
-  );
+const isMine = (W: World, f: Fixture) => f.h === W.user || f.a === W.user;
 
-  let nextMatch = <p className="muted">Nenhum jogo restante nesta temporada.</p>;
-  if (nf) {
-    const h = W.clubs[nf.f.h],
-      a = W.clubs[nf.f.a];
-    const oppId = nf.f.h === W.user ? nf.f.a : nf.f.h;
-    let oppPos = '';
-    if (st) {
-      const r = st.table.findIndex((x) => x.c === oppId);
-      if (r >= 0) oppPos = r + 1 + 'º, ' + st.table[r].pts + ' pts';
-    }
-    nextMatch = (
-      <>
-        <div className="nextmatch">
-          <div className="tm">
-            <Crest club={h} size={54} />
-            <span>{h.n}</span>
-          </div>
-          <div className="vs">
-            {fmtDate(dateOf(W, nf.f.d))}
-            <br />
-            <b style={{ fontSize: 24, color: 'var(--chalk)' }}>x</b>
-            <br />
-            {nf.comp.stages[nf.f.st].name}
-            {nf.f.leg ? ', ' + nf.f.leg + 'º jogo' : ''}
-          </div>
-          <div className="tm">
-            <Crest club={a} size={54} />
-            <span>{a.n}</span>
-          </div>
+/** Fase de pontos mais recente da competição em que o clube está (fase e grupo). */
+const leagueSpot = (comp: Competition, club: number): { si: number; gi: number } | null => {
+  for (let si = comp.stages.length - 1; si >= 0; si--) {
+    const st = comp.stages[si];
+    if (st.type !== 'league') continue;
+    const gi = st.groups.findIndex((g) => g.includes(club));
+    if (gi >= 0) return { si, gi };
+  }
+  return null;
+};
+
+/** Posição e campanha do clube na competição (fase de pontos) ou, se não houver, na liga dele. */
+const standingOf = (W: World, comp: Competition, club: number) => {
+  let c: Competition | undefined = comp;
+  let sp = leagueSpot(comp, club);
+  if (!sp) {
+    c = W.comps[W.clubs[club].div];
+    sp = c ? leagueSpot(c, club) : null;
+  }
+  if (!sp || !c) return null;
+  const t = table(W, c, sp.si, sp.gi);
+  const i = t.findIndex((r) => r.c === club);
+  return i < 0 ? null : { pos: i + 1, row: t[i], comp: c };
+};
+
+const todayDay = (W: World) => (isDays(W) ? W.day + 1 : W.day);
+
+const when = (W: World, d: number) => {
+  const n = d - todayDay(W);
+  return n <= 0 ? 'hoje' : n === 1 ? 'amanhã' : `em ${n} dias`;
+};
+
+/** Próximo jogo em destaque: escudos, data, local, campanha e força dos dois times. */
+function NextMatch({ W }: { W: World }) {
+  const nf = nextUserFixture(W);
+  if (!nf)
+    return (
+      <div className="panel hnext">
+        <h3>Próximo jogo</h3>
+        <p className="muted">{W.seasonDone ? 'Temporada encerrada.' : 'Nenhum jogo restante nesta temporada.'}</p>
+        <button className="btn advance big" onClick={continueGame}>
+          {W.seasonDone ? 'Fechar temporada' : 'Avançar'} ▶
+        </button>
+      </div>
+    );
+  const { f, comp } = nf;
+  const h = W.clubs[f.h];
+  const st = comp.stages[f.st];
+  const dt = dateOf(W, f.d);
+  const col = compColor(comp.id);
+  // descanso desde o último jogo do clube
+  let last = -1;
+  for (const c of Object.values(W.comps)) for (const x of c.fx) if (x.pl && isMine(W, x) && x.d > last) last = x.d;
+  const rest = last >= 0 && isDays(W) ? f.d - last : null;
+  const side = (id: number) => {
+    const c = W.clubs[id];
+    const s = standingOf(W, comp, id);
+    return (
+      <div className={`hteam ${id === W.user ? 'mine' : ''}`}>
+        <Crest club={c} size={64} />
+        <b>{c.n}</b>
+        <span className="muted">
+          {s ? `${s.pos}º${s.comp === comp ? '' : ' na ' + s.comp.name} · ${s.row.pts} pts` : leagueName(c)}
+        </span>
+        {s && s.row.form.length > 0 ? (
+          <FormStrip form={s.row.form} />
+        ) : (
+          <span className="muted hnoform">sem jogos</span>
+        )}
+        <StrengthStars s={teamStrength(W, c)} />
+      </div>
+    );
+  };
+  return (
+    <div className="panel hnext">
+      <div className="hnext-top">
+        <span className="ctag" style={{ background: col + '2e', color: col }}>
+          {comp.name}
+        </span>
+        <span className="muted">
+          {st.name}
+          {f.leg ? ` · jogo de ${f.leg === 1 ? 'ida' : 'volta'}` : ''}
+        </span>
+      </div>
+      <div className="hnext-mid">
+        {side(f.h)}
+        <div className="hvs">
+          <span className="hday">
+            {WEEKDAY_SHORT[dt.getDay()]}, {fmtDate(dt)}
+          </span>
+          <b>x</b>
+          <span className="hwhen">{when(W, f.d)}</span>
         </div>
-        <p className="muted" style={{ textAlign: 'center', margin: '4px 0 0' }}>
-          {h.std} &nbsp; Adversário: {oppPos || leagueName(W.clubs[oppId])} &nbsp; força{' '}
-          <StrengthStars s={teamStrength(W, W.clubs[oppId])} /> contra <StrengthStars s={teamStrength(W, me)} /> do seu
-          time
-        </p>
+        {side(f.a)}
+      </div>
+      <div className="hnext-info">
+        <span>
+          <VenueIcon home={f.h === W.user} neutral={f.neu} size={14} />{' '}
+          {f.neu ? 'Campo neutro' : `${h.std}${h.uf ? ' · ' + h.uf : ''}`}
+        </span>
+        {rest != null && rest > 0 && <span className="muted">{rest} dias de descanso</span>}
+      </div>
+      <button className="btn advance big" onClick={continueGame}>
+        Avançar ▶
+      </button>
+    </div>
+  );
+}
+
+/** Classificação das competições em disputa, com filtro; destaque para o seu time e as zonas. */
+function Standings({ W }: { W: World }) {
+  const go = useUi((s) => s.go);
+  const comps = compList(W).filter((c) => c.fx.some((f) => isMine(W, f)) || leagueSpot(c, W.user!));
+  const [cid, setCid] = useState<string | undefined>(() => userStanding(W)?.comp.id);
+  const comp = comps.find((c) => c.id === cid) || comps[0];
+  if (!comp) return null;
+  const sp = leagueSpot(comp, W.user!);
+  let body;
+  if (sp) {
+    const t = table(W, comp, sp.si, sp.gi);
+    const st = comp.stages[sp.si] as LeagueStage;
+    body = (
+      <>
+        {st.groups.length > 1 && (
+          <p className="muted hsub">
+            {st.name} · Grupo {comp.id === 'LIB' || comp.id === 'SULA' ? String.fromCharCode(65 + sp.gi) : sp.gi + 1}
+          </p>
+        )}
+        <table className="t htable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Clube</th>
+              <th className="r">J</th>
+              <th className="r">SG</th>
+              <th className="r">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {t.map((r, i) => (
+              <tr key={r.c} className={r.c === W.user ? 'me' : ''}>
+                <td className="num">
+                  <span className={`zone ${zoneOf(W, comp, sp.si, i + 1, t.length)}`} />
+                  {i + 1}
+                </td>
+                <td className="nm">
+                  <Crest club={W.clubs[r.c]} size={16} /> {W.clubs[r.c].n}
+                </td>
+                <td className="r num">{r.j}</td>
+                <td className="r num">{r.gp - r.gc}</td>
+                <td className="r num">
+                  <b>{r.pts}</b>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </>
     );
-  }
-
-  return (
-    <div className="grid g21">
-      <div className="grid">
-        <div className="panel">
-          <h3>Próximo jogo</h3>
-          {nextMatch}
-          {nf && (
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginTop: 12 }}>
-              <button className="btn" onClick={() => go('tactics')}>
-                Ajustar escalação
-              </button>
-              <button className="btn pri" onClick={goToMatch}>
-                Ir para o jogo
-              </button>
+  } else {
+    // mata-mata: os confrontos do clube
+    const ties = comp.stages
+      .filter((st): st is KOStage => st.type === 'ko')
+      .flatMap((st) =>
+        st.ties
+          .filter((t) => t.a === W.user || t.b === W.user)
+          .map((t) => ({ st, t, fx: [...new Set(t.f)].map((i) => comp.fx[i]).filter(Boolean) })),
+      );
+    body = ties.length ? (
+      <div className="hties">
+        {ties.map(({ st, t, fx }) => {
+          const opp = W.clubs[t.a === W.user ? t.b : t.a];
+          return (
+            <div key={st.name} className={`htie ${t.w == null ? '' : t.w === W.user ? 'won' : 'lost'}`}>
+              <span className="muted">{st.name}</span>
+              <span className="nm">
+                <Crest club={opp} size={18} /> {opp.n}
+              </span>
+              <span className="num">
+                {fx.map((f) => (f.pl ? `${f.hg}-${f.ag}` : '–')).join(' · ')}
+                {t.w != null && (t.w === W.user ? ' ✓' : ' ✕')}
+              </span>
             </div>
-          )}
+          );
+        })}
+      </div>
+    ) : (
+      <p className="muted">O sorteio ainda não definiu seus jogos.</p>
+    );
+  }
+  return (
+    <div className="panel htab">
+      <h3>
+        <span>Classificação</span>
+        <small>
+          <a
+            href="#"
+            onClick={(e) => {
+              e.preventDefault();
+              go('tables');
+            }}
+          >
+            ver tudo
+          </a>
+        </small>
+      </h3>
+      {comps.length > 1 && (
+        <div className="seg hseg">
+          {comps.map((c) => (
+            <button key={c.id} className={c.id === comp.id ? 'on' : ''} onClick={() => setCid(c.id)}>
+              {c.name}
+            </button>
+          ))}
         </div>
+      )}
+      <div className="htab-body">{body}</div>
+    </div>
+  );
+}
+
+/** Os próximos 5 jogos do clube. */
+function Upcoming({ W }: { W: World }) {
+  const openModal = useUi((s) => s.openModal);
+  const list = compList(W)
+    .flatMap((comp) => comp.fx.filter((f) => !f.pl && isMine(W, f)).map((f) => ({ f, comp })))
+    .sort((x, y) => x.f.d - y.f.d)
+    .slice(0, 5);
+  return (
+    <div className="panel hup">
+      <h3>Próximos jogos</h3>
+      {list.length === 0 && <p className="muted">Sem jogos marcados.</p>}
+      {list.map(({ f, comp }) => {
+        const dt = dateOf(W, f.d);
+        const col = compColor(comp.id);
+        const h = W.clubs[f.h],
+          a = W.clubs[f.a];
+        const opp = f.h === W.user ? a : h;
+        return (
+          <button key={comp.id + f.id} className="hup-row" onClick={() => openModal({ kind: 'club', id: opp.id })}>
+            <span className="hup-d">
+              <b>{WEEKDAY_SHORT[dt.getDay()]}</b> {fmtDate(dt)}
+            </span>
+            <span className="ctag" style={{ background: col + '2e', color: col }}>
+              {comp.name}
+            </span>
+            <span className="hup-m">
+              <span className={`hs ${f.h === W.user ? 'me' : ''}`}>{h.s}</span>
+              <Crest club={h} size={18} />
+              <i>x</i>
+              <Crest club={a} size={18} />
+              <span className={`hs ${f.a === W.user ? 'me' : ''}`}>{a.s}</span>
+            </span>
+            <VenueIcon home={f.h === W.user} neutral={f.neu} size={14} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Início: caixa de entrada à esquerda, próximo jogo e calendário no meio, classificação e próximos jogos à direita. */
+export function Home({ W }: PageProps) {
+  return (
+    <div className="home3">
+      <div className="hinbox">
         <Inbox W={W} />
       </div>
-      <div className="grid" style={{ alignContent: 'start' }}>
-        <div className="panel">
-          <h3>Diretoria</h3>
-          <p style={{ margin: '0 0 8px' }}>
-            Meta: <b>{EXP_TXT[b.exp]}</b>
-          </p>
-          <div className="meter">
-            <i style={{ width: `${b.conf}%`, background: confCol }} />
-          </div>
-          <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
-            Confiança {Math.round(b.conf)}%
-          </p>
-        </div>
-        {st && (
-          <div className="panel">
-            <h3>
-              Classificação{' '}
-              <small>
-                <a
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go('tables');
-                  }}
-                >
-                  ver tudo
-                </a>
-              </small>
-            </h3>
-            <MiniTable W={W} comp={st.comp} si={st.si} gi={st.gi} />
-          </div>
-        )}
-        <div className="panel">
-          <h3>Destaques do elenco</h3>
-          {tops.length ? (
-            <>
-              <p className="muted" style={{ margin: '0 0 4px', fontSize: 12 }}>
-                Artilheiros
-              </p>
-              {tops.map((p) => (
-                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  {playerLink(p.id, p.n)}
-                  <b className="num">{p.st.g}</b>
-                </div>
-              ))}
-            </>
-          ) : (
-            <p className="muted" style={{ margin: 0 }}>
-              A temporada ainda não começou.
-            </p>
-          )}
-          {best.length > 0 && (
-            <>
-              <p className="muted" style={{ margin: '10px 0 4px', fontSize: 12 }}>
-                Melhores notas
-              </p>
-              {best.map((p) => (
-                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  {playerLink(p.id, p.n)}
-                  <b className="num">{rating(p)}</b>
-                </div>
-              ))}
-            </>
-          )}
-          {out.length > 0 && (
-            <>
-              <p className="muted" style={{ margin: '10px 0 4px', fontSize: 12 }}>
-                Desfalques
-              </p>
-              {out.map((p) => (
-                <div key={p.id}>
-                  {p.n} <StatusTags p={p} />
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+      <div className="hcol hmid">
+        <NextMatch W={W} />
+        <MiniCalendar W={W} />
+      </div>
+      <div className="hcol hright">
+        <Standings W={W} />
+        <Upcoming W={W} />
       </div>
     </div>
   );
