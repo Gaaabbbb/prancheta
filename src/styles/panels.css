@@ -7,9 +7,6 @@
 .g2 {
   grid-template-columns: 1fr 1fr;
 }
-.g3 {
-  grid-template-columns: repeat(3, 1fr);
-}
 .g21 {
   grid-template-columns: 2fr 1fr;
 }

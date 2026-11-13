@@ -5,7 +5,6 @@ import type { Club, FinDay, World } from '../types';
 
 /** Categorias do extrato: bilheteria, patrocínio, bônus (saves antigos), salários, multas, transferências, premiação. */
 export type FinKey = 'bil' | 'pat' | 'bon' | 'sal' | 'mul' | 'tra' | 'pre';
-export const FIN_KEYS: FinKey[] = ['bil', 'pat', 'bon', 'sal', 'mul', 'tra', 'pre'];
 
 /** Salários e patrocínios são pagos 10 vezes por temporada (de fevereiro a novembro). */
 export const PAYDAYS = 10;

@@ -34,15 +34,6 @@ export const FormStrip = ({ form }: { form: string[] }) => (
 
 const fiveStars = (n: number) => '★'.repeat(n) + '☆'.repeat(5 - n);
 
-export const RepStars = ({ rep }: { rep: number }) => {
-  const n = rep >= 88 ? 5 : rep >= 75 ? 4 : rep >= 58 ? 3 : rep >= 42 ? 2 : 1;
-  return (
-    <span className="stars" title={`Reputação ${rep}`}>
-      {fiveStars(n)}
-    </span>
-  );
-};
-
 export const FacilityStars = ({ club }: { club: Club }) => {
   const f = youthFac(club);
   const n = f >= 1.15 ? 5 : f >= 1.08 ? 4 : f >= 1.0 ? 3 : f >= 0.95 ? 2 : 1;

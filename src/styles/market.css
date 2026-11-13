@@ -22,11 +22,6 @@
 .mfilters input[type='number'] {
   width: 56px;
 }
-.mfilters .chk {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
 .star {
   all: unset;
   cursor: pointer;
@@ -132,16 +127,6 @@ td.nowrap {
   justify-content: flex-end;
   margin-top: 10px;
 }
-
-.tag.ktag.top {
-  background: #ffd23f22;
-  color: var(--yellow);
-}
-.tag.ktag {
-  background: #f59e4222;
-  color: var(--orange);
-}
-
 .keynote {
   margin: 0 0 12px;
   padding: 8px 10px;

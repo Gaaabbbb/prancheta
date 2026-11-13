@@ -144,8 +144,6 @@ export const keyRole = (W: World, p: Player): KeyRole | null => {
   return rank < 7 ? 'key' : null;
 };
 
-export const KEY_ROLE_NAME: Record<KeyRole, string> = { star: 'Destaque', key: 'Titular importante' };
-
 /** Estrela que o clube não aceita negociar nesta janela (sorteio fixo por janela). */
 export const untouchable = (W: World, p: Player): boolean =>
   keyRole(W, p) === 'star' && fixed01(W, p.id, 'inegociavel' + windowId(W)) < 0.45;

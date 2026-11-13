@@ -6,9 +6,7 @@ import {
   deleteTactic,
   loadDefaultDb,
   MAX_TACTICS,
-  perfRating,
   saveTactic,
-  squad,
   updateTactic,
   validateLineup,
 } from '../../src/core';
@@ -43,15 +41,5 @@ describe('táticas salvas', async () => {
   it('tem limite de táticas', () => {
     while ((W.tacs || []).length < MAX_TACTICS) saveTactic(W, 'x');
     expect(saveTactic(W, 'demais')).toBeNull();
-  });
-
-  it('o desempenho previsto cai com cansaço e moral baixa', () => {
-    const p = squad(W, 0)[0];
-    p.f = 100;
-    p.mo = 50;
-    const fresh = perfRating(p);
-    p.f = 50;
-    p.mo = 20;
-    expect(perfRating(p)).toBeLessThan(fresh);
   });
 });

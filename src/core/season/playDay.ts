@@ -200,12 +200,12 @@ const playFixtures = (W: World, list: { comp: Competition; f: Fixture }[], userM
   }
 };
 
-/** Competição terminou? Avança fases (as copas e ligas de fora têm regras próprias, registradas à parte). */
-export const compAdvancers: Record<string, (W: World, comp: Competition) => void> = {};
+/** Avança as fases: Séries A–D, copas e ligas de fora (cada uma com suas regras). */
 const advanceAny = (W: World, comp: Competition) =>
-  (isForeignLeague(comp.id)
-    ? advanceForeignLeague
-    : CUP_ADVANCE[comp.id] || CONMEBOL_ADVANCE[comp.id] || compAdvancers[comp.id] || advanceComp)(W, comp);
+  (isForeignLeague(comp.id) ? advanceForeignLeague : CUP_ADVANCE[comp.id] || CONMEBOL_ADVANCE[comp.id] || advanceComp)(
+    W,
+    comp,
+  );
 
 /**
  * Calendário por dias: um dia inteiro. Joga os jogos do dia (de todas as competições), recupera a condição por um dia

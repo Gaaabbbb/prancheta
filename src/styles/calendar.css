@@ -93,21 +93,6 @@
   gap: 4px;
   margin: 2px 0 3px;
 }
-.cg-where {
-  font-family: var(--fd);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 0 5px;
-  border-radius: 3px;
-  background: #ffd23f22;
-  color: var(--yellow);
-}
-.cg-where.a {
-  background: #6fa8ff22;
-  color: var(--blue);
-}
 .cg-res {
   display: inline-block;
   width: 16px;

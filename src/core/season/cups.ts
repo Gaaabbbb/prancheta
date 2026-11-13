@@ -3,7 +3,7 @@ import { addMoney } from '../finance/ledger';
 import { news } from '../news';
 import { shuffle } from '../rng';
 import type { Competition, Fixture, KOStage, World } from '../types';
-import { dateOf, deadlineTxt } from './calendar';
+import { deadlineTxt } from './calendar';
 import { CDB_2026, cupDays } from './cupDates';
 import { addKOStage, addSingleStage } from './fixtures';
 import { isForeignLeague } from './foreignLeagues';
@@ -252,6 +252,3 @@ export const advanceCopaDoBrasil = (W: World, comp: Competition): void => {
 export const CUP_ADVANCE: Record<string, (W: World, comp: Competition) => void> = {
   CDB: advanceCopaDoBrasil,
 };
-
-/** Data de um jogo para mensagens. */
-export const fxDate = (W: World, f: Fixture): Date => dateOf(W, f.d);

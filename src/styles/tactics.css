@@ -63,18 +63,6 @@
   border-style: dashed;
   color: #fff8;
 }
-.tok .fit {
-  height: 3px;
-  width: 38px;
-  margin: 2px auto 0;
-  background: #0005;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.tok .fit i {
-  display: block;
-  height: 100%;
-}
 .ctl {
   display: grid;
   grid-template-columns: 110px 1fr;
@@ -247,19 +235,4 @@
   background: #0e1828cc;
   border-radius: 3px;
   padding: 0 3px;
-}
-.tok .sh {
-  position: relative;
-}
-.tok .sh .pd {
-  position: absolute;
-  right: -8px;
-  top: -6px;
-  font-size: 10px;
-}
-.tok .sh .pd.dn {
-  color: #ff9a9d;
-}
-.tok .sh .pd.up {
-  color: var(--ok);
 }

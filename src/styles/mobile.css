@@ -240,17 +240,12 @@
     min-height: 56px;
     padding: 2px;
   }
-  .cal .comptag,
   .cal .cg-comp,
   .cal .cg-sc .dim,
   .cal .cg-next,
   .cal .cal-win,
   .cal .cal-pay {
     display: none;
-  }
-  .cal .cg-where {
-    font-size: 9px;
-    padding: 0 2px;
   }
   .cal .cg-res {
     width: 13px;

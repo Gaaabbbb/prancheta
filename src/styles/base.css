@@ -52,6 +52,3 @@ a {
 .dim {
   color: var(--dim);
 }
-.hide {
-  display: none !important;
-}
