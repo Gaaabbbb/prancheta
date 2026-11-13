@@ -222,10 +222,12 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     por partida), o que força as substituições. Ao vivo, o jogo **para no intervalo** e quando um jogador seu **se
     machuca** (ele fica escolhido para a troca e o jogo segue quando o reserva entra). Em **Pular para o fim** e no
     **Resultado rápido**, a IA faz as trocas do seu time.
-  - **Tela de jogo:** seu banco fica sempre à esquerda com a **tática à vista** embaixo (formação, instruções e táticas
-    salvas). O campo é menor e as fichas maiores (crescem com o campo), com uma barra de fôlego vertical ao lado de cada
-    camisa (verde, amarelo, vermelho) e o fôlego dos reservas em número. As linhas da formação ficam espaçadas por
-    igual, e os lances aparecem numa caixa translúcida no meio do campo.
+  - **Tela de jogo** (`src/ui/match/`): no alto, o escudo do seu clube, o placar e o último lance. Embaixo, uma grade
+    de painéis: o campo só com o seu time (goleiro embaixo), as **Reservas** e o **Adversário** (quem está em campo,
+    com nota, e o banco); na linha de baixo, **Tática** sempre à vista, **Estatísticas / Lances** e os controles
+    (pausar, velocidade, pular para o fim). Cada jogador é uma ficha com a camisa nas cores do time e o número
+    (números clássicos por função, `numbers.ts`) e um cartão com função, nota, nome e a barra de fôlego. No celular, os
+    painéis ficam em coluna e os controles presos embaixo.
   - **Avançar** (no lugar de Continuar) só para em decisões: propostas pelos seus jogadores, janela abrindo, contratos
     terminando, propostas de patrocínio e avisos da diretoria. **Ir para o jogo** (Início) vai direto ao pré-jogo.
     Propostas recebidas não abrem mais sozinhas: chegam na caixa de entrada e o menu Mercado mostra quantas há.

@@ -5,7 +5,8 @@ import { useLive } from '@/store/liveStore';
 import { toast, useUi } from '@/store/uiStore';
 import { useWorld } from '@/store/gameStore';
 import { Crest } from '../components/Crest';
-import { BenchList } from './BenchList';
+import { Opponent, Reserves } from './Rosters';
+import { shirtNumbers } from './numbers';
 import { teamColors } from './colors';
 import { TacticDock } from './TacticDock';
 import { LiveEndPanel } from './LiveEndPanel';
@@ -43,7 +44,7 @@ export function LiveMatch() {
   const placarRef = useRef<HTMLDivElement>(null);
 
   const [paused, setPaused] = useState(false);
-  const [panel, setPanel] = useState<'none' | 'log' | 'end'>('none');
+  const [panel, setPanel] = useState<'none' | 'end'>('none');
   /** parada obrigatória: intervalo ou lesão de um jogador do usuário */
   const [stop, setStop] = useState<{ kind: 'ht' } | { kind: 'inj'; pid: number } | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -52,6 +53,8 @@ export function LiveMatch() {
   const [ghost, setGhost] = useState<{ x: number; y: number; label: string } | null>(null);
   const [, setTick] = useState(0);
   const [cols] = useState(() => teamColors(m));
+  const [nums] = useState(() => shirtNumbers(m));
+  const [tab, setTab] = useState<'stats' | 'log'>('stats');
 
   // valores lidos dentro do loop
   const loop = useRef({ paused: false, speed, hold: 0, acc: 0, last: 0, endShown: false, feedKey: 0 });
@@ -295,9 +298,25 @@ export function LiveMatch() {
     </>
   ) : null;
 
+  const last = feed[0];
+  const me = m.sides[m.userSide].club;
+  const stats: [string, number, number, string?, string?][] = [
+    ['Posse de bola', x.pt, y.pt, Math.round((x.pt / tot) * 100) + '%', Math.round((y.pt / tot) * 100) + '%'],
+    ['Finalizações', x.sh, y.sh],
+    ['No gol', x.sot, y.sot],
+    ['Gols esperados (xG)', x.xg, y.xg, x.xg.toFixed(2), y.xg.toFixed(2)],
+    ['Escanteios', x.cor, y.cor],
+    ['Faltas', x.fou, y.fou],
+    ['Cartões', x.yc + x.rc, y.yc + y.rc, x.yc + (x.rc ? '/' + x.rc + 'V' : ''), y.yc + (y.rc ? '/' + y.rc + 'V' : '')],
+    ['Impedimentos', x.off, y.off],
+  ];
+
   return (
     <div id="match" style={{ ['--hc' as string]: cols[0].f, ['--ac' as string]: cols[1].f }}>
       <div className="placar" ref={placarRef}>
+        <div className="mycrest" title={me.n}>
+          <Crest club={me} size={54} />
+        </div>
         {ko && (
           <div className="agg">
             Ida: {ko[0]} x {ko[1]}
@@ -305,7 +324,7 @@ export function LiveMatch() {
         )}
         <div className="tm h">
           <span>{h.n}</span>
-          <Crest club={h} size={46} />
+          <Crest club={h} size={40} />
         </div>
         <div className="led num" aria-live="polite">
           <span>{m.sides[0].goals}</span>
@@ -313,7 +332,7 @@ export function LiveMatch() {
           <span>{m.sides[1].goals}</span>
         </div>
         <div className="tm">
-          <Crest club={a} size={46} />
+          <Crest club={a} size={40} />
           <span>{a.n}</span>
         </div>
         <div className="clock num">{clock}</div>
@@ -322,74 +341,86 @@ export function LiveMatch() {
       {banner ? (
         <div className={`mstopbar ${stop?.kind}`}>{banner}</div>
       ) : (
-        <div className="mstrip">
-          {statItem('Posse', x.pt, y.pt, Math.round((x.pt / tot) * 100) + '%', Math.round((y.pt / tot) * 100) + '%')}
-          {statItem('Finalizações', x.sh, y.sh)}
-          {statItem('No gol', x.sot, y.sot)}
-          {statItem('xG', x.xg, y.xg, x.xg.toFixed(2), y.xg.toFixed(2))}
-          {statItem('Escanteios', x.cor, y.cor)}
-          {statItem('Faltas', x.fou, y.fou)}
-          {statItem(
-            'Cartões',
-            x.yc + x.rc,
-            y.yc + y.rc,
-            x.yc + (x.rc ? '/' + x.rc + 'V' : ''),
-            y.yc + (y.rc ? '/' + y.rc + 'V' : ''),
+        <div className={`mticker ${last?.e.type === 'goal' ? 'goal' : ''}`} aria-live="polite">
+          {last ? (
+            <>
+              <b className="num">{last.e.m}'</b>
+              {last.e.side === 0 || last.e.side === 1 ? (
+                <i className="dot" style={{ background: cols[last.e.side].f }} />
+              ) : null}
+              <span>{last.e.txt}</span>
+            </>
+          ) : (
+            <span className="muted">A partida vai começar.</span>
           )}
         </div>
       )}
 
-      <div className="mgrid">
-        <BenchList m={m} s={user} col={cols[m.userSide]} sel={sel} onDown={onDown} />
+      <div className="mmain">
+        <MatchPitch m={m} col={cols[m.userSide]} nums={nums} sel={sel} onDown={onDown} goalFlash={goalFlash} />
+        <Reserves m={m} col={cols[m.userSide]} nums={nums} sel={sel} onDown={onDown} />
+        <Opponent m={m} col={cols[1 - m.userSide]} nums={nums} />
         <TacticDock m={m} />
-        <MatchPitch m={m} cols={cols} sel={sel} feed={feed} onDown={onDown} goalFlash={goalFlash} />
-        <BenchList m={m} s={m.sides[1 - m.userSide]} col={cols[1 - m.userSide]} sel={sel} onDown={onDown} />
-      </div>
-
-      <div className="mctl">
-        <button className={`btn ${stop ? 'pri' : ''}`} onClick={togglePause} disabled={m.ended}>
-          {paused || stop ? 'Continuar' : 'Pausar'}
-        </button>
-        <div className="seg" aria-label="Velocidade">
-          {SPEEDS.map((s, i) => (
-            <button key={i} className={i === speed ? 'on' : ''} onClick={() => setUi({ liveSpeed: i })}>
-              {s[0]}x
-            </button>
-          ))}
-        </div>
-        <span className="mhint">{hint}</span>
-        <button className="btn" onClick={() => setPanel(panel === 'log' ? 'none' : 'log')}>
-          Lances
-        </button>
-        <button className="btn" onClick={skip} disabled={m.ended}>
-          Pular para o fim
-        </button>
+        <section className="mpanel mstats">
+          <header>
+            <div className="tabs2">
+              <button className={tab === 'stats' ? 'on' : ''} onClick={() => setTab('stats')}>
+                Estatísticas
+              </button>
+              <button className={tab === 'log' ? 'on' : ''} onClick={() => setTab('log')}>
+                Lances
+              </button>
+            </div>
+          </header>
+          {tab === 'stats' ? (
+            <div className="mstatlist">
+              <div className="mstat-h">
+                <span>{h.s}</span>
+                <span>{a.s}</span>
+              </div>
+              {stats.map(([label, va, vb, fa, fb]) => statItem(label, va, vb, fa, fb))}
+            </div>
+          ) : (
+            <div className="feed">
+              {feed.map(({ key, e }) => (
+                <div
+                  key={key}
+                  className={`ev i${e.imp}${e.type === 'goal' ? ' goal' : ''}${e.type === 'yel' ? ' card-y' : ''}${e.type === 'red' ? ' card-r' : ''}`}
+                >
+                  <span className="m">{e.m}'</span>
+                  <span>{e.txt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className="mpanel mctl">
+          <header>
+            <h3>Partida</h3>
+          </header>
+          <button className={`btn big ${stop || paused ? 'pri' : ''}`} onClick={togglePause} disabled={m.ended}>
+            {paused || stop ? '▶ Continuar' : '❚❚ Pausar'}
+          </button>
+          <div className="mspeed">
+            <span className="muted">Velocidade</span>
+            <div className="seg" aria-label="Velocidade">
+              {SPEEDS.map((sp, i) => (
+                <button key={i} className={i === speed ? 'on' : ''} onClick={() => setUi({ liveSpeed: i })}>
+                  {sp[0]}x
+                </button>
+              ))}
+            </div>
+          </div>
+          <button className="btn big" onClick={skip} disabled={m.ended}>
+            Pular para o fim ⏭
+          </button>
+          {hint && <p className="mhint">{hint}</p>}
+        </section>
       </div>
 
       {ghost && (
         <div className="dragghost" style={{ left: ghost.x, top: ghost.y }}>
           {ghost.label}
-        </div>
-      )}
-      {panel === 'log' && (
-        <div className="side-panel logpanel">
-          <div className="mh" style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <h2 style={{ flex: 1 }}>Lances</h2>
-            <button className="btn pri" onClick={() => setPanel('none')}>
-              Fechar
-            </button>
-          </div>
-          <div className="feed">
-            {feed.map(({ key, e }) => (
-              <div
-                key={key}
-                className={`ev i${e.imp}${e.type === 'goal' ? ' goal' : ''}${e.type === 'yel' ? ' card-y' : ''}${e.type === 'red' ? ' card-r' : ''}`}
-              >
-                <span className="m">{e.m}'</span>
-                <span>{e.txt}</span>
-              </div>
-            ))}
-          </div>
         </div>
       )}
       {panel === 'end' && <LiveEndPanel W={W} m={m} onClose={close} />}

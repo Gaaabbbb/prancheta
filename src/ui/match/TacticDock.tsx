@@ -12,9 +12,9 @@ export function TacticDock({ m }: { m: Match }) {
     force((x) => x + 1);
   };
   return (
-    <div className="mtac">
-      <div className="mtac-h">
-        <b>Tática</b>
+    <section className="mpanel mtac">
+      <header>
+        <h3>Tática</h3>
         {(m.W.tacs || []).length > 0 && (
           <div className="mtac-saved">
             {m.W.tacs!.map((t) => (
@@ -34,8 +34,8 @@ export function TacticDock({ m }: { m: Match }) {
             ))}
           </div>
         )}
-      </div>
+      </header>
       <TacticControls tac={s.tac} onChange={setTac} lineLabel="Linha" />
-    </div>
+    </section>
   );
 }
