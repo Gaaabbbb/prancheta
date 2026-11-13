@@ -370,6 +370,8 @@ export interface World {
   /** vagas da Libertadores e da Sul-Americana do ano (definidas na virada) */
   qual?: Qualifiers;
   coach?: string;
+  /** vaga do save desta carreira */
+  slot?: string;
   board?: Board;
   fin?: Record<string, number>;
   /** extrato diário da temporada atual */

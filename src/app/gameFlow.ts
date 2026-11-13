@@ -37,6 +37,7 @@ const world = (): World => {
 export const startCareer = (W: World, clubId: number, coach: string): void => {
   W.user = clubId;
   W.coach = coach.trim() || 'Técnico';
+  W.slot = 'c' + Date.now().toString(36);
   rng.seed(Date.now() >>> 0);
   buildSeason(W);
   ensureSponsors(W);

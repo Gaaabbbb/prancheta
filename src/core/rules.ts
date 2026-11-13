@@ -58,6 +58,8 @@ export interface Rules {
    *   aposentadoria anunciada seis meses antes
    */
   career: 'legacy' | 'curve';
+  /** fração do cansaço do jogo que passa logo depois da partida (0 = nada, como no original) */
+  postMatchRecovery: number;
 }
 
 export const LEGACY_RULES: Readonly<Rules> = {
@@ -81,11 +83,12 @@ export const LEGACY_RULES: Readonly<Rules> = {
   sponsorModel: 'rep',
   calendar: 'rounds',
   career: 'legacy',
+  postMatchRecovery: 0,
 };
 
 export const CURRENT_RULES: Readonly<Rules> = {
   youthGrowth: 0.5,
-  fatigue: 1.6,
+  fatigue: 2.2,
   recoveryMode: 'rest',
   recovery: 7.5,
   fitBase: 0.67,
@@ -104,6 +107,7 @@ export const CURRENT_RULES: Readonly<Rules> = {
   sponsorModel: 'div',
   calendar: 'days',
   career: 'curve',
+  postMatchRecovery: 0.38,
 };
 
 /** Regras em vigor (mutável de propósito, para os testes trocarem). */

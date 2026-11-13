@@ -582,7 +582,7 @@
 }
 .pcard {
   position: relative;
-  width: calc(var(--tk) * 1.95);
+  width: var(--cw, calc(var(--tk) * 1.95));
   max-width: 96px;
   border-radius: 6px;
   overflow: hidden;

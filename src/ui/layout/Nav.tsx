@@ -3,9 +3,10 @@ import { useUi, type PageId } from '@/store/uiStore';
 import { useOffers, useUnread } from './counts';
 import { NAV, NAV_MOBILE } from './navItems';
 
-export const Badge = ({ n, what = 'mensagens não lidas' }: { n: number; what?: string }) =>
+/** Contador. `alert` (vermelho, pulsando) é para o que pede ação; sem ele, amarelo (mensagens não lidas). */
+export const Badge = ({ n, what = 'mensagens não lidas', alert }: { n: number; what?: string; alert?: boolean }) =>
   n > 0 ? (
-    <span className="badge" aria-label={`${n} ${what}`}>
+    <span className={`badge ${alert ? 'alert' : 'soft'}`} aria-label={`${n} ${what}`}>
       {n > 99 ? '99+' : n}
     </span>
   ) : null;
@@ -24,7 +25,7 @@ export function MobileNav() {
     go(id);
   };
   const badge = (id: PageId) =>
-    id === 'home' ? <Badge n={unread} /> : id === 'market' ? <Badge n={offers} what="propostas" /> : null;
+    id === 'home' ? <Badge n={unread} /> : id === 'market' ? <Badge n={offers} what="propostas" alert /> : null;
   return (
     <>
       <nav id="mnav" aria-label="Menu">

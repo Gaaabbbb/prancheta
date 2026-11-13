@@ -118,14 +118,17 @@ export function Saves({ W }: PageProps) {
               onClick={() =>
                 openModal({
                   kind: 'confirm',
-                  title: 'Começar um novo jogo?',
-                  body: 'A carreira atual será substituída no próximo salvamento. Baixe o save antes se quiser guardá-la.',
-                  ok: 'Começar do zero',
-                  onOk: abandonCareer,
+                  title: 'Voltar para a abertura?',
+                  body: 'A carreira atual fica salva neste navegador e pode ser aberta depois em Jogo salvo. Na abertura dá para começar um novo jogo ou abrir outro save.',
+                  ok: 'Salvar e sair',
+                  onOk: async () => {
+                    await save();
+                    abandonCareer();
+                  },
                 })
               }
             >
-              Começar um novo jogo
+              Sair para a abertura
             </button>
           </div>
         </div>

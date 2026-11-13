@@ -89,21 +89,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-#nav .badge {
-  display: inline-block;
-  min-width: 18px;
-  margin-left: 8px;
-  padding: 0 5px;
-  border-radius: 9px;
-  background: var(--yellow);
-  color: #1a1400;
-  font-family: var(--fb);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 18px;
-  text-align: center;
-  vertical-align: 2px;
-}
+
 .meter {
   height: 10px;
   border-radius: 5px;
@@ -120,7 +106,11 @@
   display: grid;
   grid-template-columns: minmax(270px, 1fr) minmax(420px, 1.55fr) minmax(300px, 1.1fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
+  min-height: 100%;
+}
+#main:has(.home3) {
+  padding-bottom: 18px;
 }
 .hcol {
   display: flex;
@@ -129,13 +119,32 @@
   min-width: 0;
 }
 .hinbox {
-  position: sticky;
-  top: 0;
+  position: relative;
   min-width: 0;
+  min-height: 0;
 }
+/* a caixa de entrada ocupa a altura da coluna e rola por dentro */
 .hinbox .panel {
-  max-height: calc(100vh - 130px);
+  position: absolute;
+  inset: 0;
   overflow: auto;
+}
+/* calendário e classificação crescem até o fim da tela */
+.hcal {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+.hcal .mcal {
+  flex: 1;
+  grid-auto-rows: minmax(52px, 1fr);
+  grid-template-rows: auto;
+}
+.htab {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .ctag {
   display: inline-block;
@@ -341,7 +350,8 @@
   font-size: 12px;
 }
 .htab-body {
-  max-height: 46vh;
+  flex: 1 1 0;
+  min-height: 240px;
   overflow: auto;
 }
 .htable td,
@@ -414,16 +424,32 @@
 .hup-m .hs.me {
   color: var(--yellow);
 }
+.hup-row.played {
+  opacity: 0.8;
+}
+.hup-row.first-next {
+  border-top: 1px dashed var(--line);
+  margin-top: 4px;
+  padding-top: 9px;
+}
+.hsc {
+  min-width: 30px;
+  text-align: center;
+  color: var(--chalk);
+}
+.hup-row .form span {
+  margin: 0;
+}
 @media (max-width: 1180px) {
   .home3 {
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   }
   .hinbox {
-    position: static;
     grid-column: 1 / -1;
     order: 3;
   }
   .hinbox .panel {
-    max-height: none;
+    position: static;
+    max-height: 70vh;
   }
 }

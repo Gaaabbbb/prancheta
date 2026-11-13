@@ -1,68 +1,3 @@
-/* Extraído do Prancheta.html original. */
-/* prancheta (tática) */
-.board {
-  position: relative;
-  aspect-ratio: 68/80;
-  width: 100%;
-  max-width: calc((100vh - 170px) * 0.85);
-  background: repeating-linear-gradient(180deg, #2e7a4c 0 10%, #2a7146 10% 20%);
-  border-radius: 8px;
-  border: 2px solid #ffffff22;
-  overflow: hidden;
-  margin: 0 auto;
-}
-.board .ln {
-  position: absolute;
-  border: 2px solid #ffffff55;
-}
-.tok {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 92px;
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-}
-.tok .sh {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  margin: 0 auto 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--fd);
-  font-weight: 800;
-  font-size: 16px;
-  border: 3px solid;
-  box-shadow: 0 2px 6px #0006;
-}
-.tok .nm {
-  font-size: 12px;
-  font-weight: 600;
-  background: #0e1828cc;
-  border-radius: 3px;
-  padding: 1px 4px;
-  display: inline-block;
-  max-width: 92px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.tok .rl {
-  font-size: 10px;
-  color: #ffffffaa;
-  display: block;
-}
-.tok.sel .sh {
-  outline: 3px solid var(--yellow);
-  outline-offset: 2px;
-}
-.tok.empty .sh {
-  background: #00000055;
-  border-style: dashed;
-  color: #fff8;
-}
 .ctl {
   display: grid;
   grid-template-columns: 110px 1fr;
@@ -84,19 +19,8 @@
     grid-template-columns: 1fr;
   }
 }
-.tok[draggable='true'] {
-  cursor: grab;
-}
-.tok[draggable='true']:active {
-  cursor: grabbing;
-}
-.tok.over .sh {
-  outline: 3px dashed var(--yellow);
-  outline-offset: 3px;
-}
 .benchbox {
   margin: 12px auto 0;
-  max-width: calc((100vh - 170px) * 0.85);
   background: var(--panel);
   border: 1px solid var(--line2);
   border-radius: var(--r);
@@ -118,26 +42,9 @@
 }
 .bench {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  gap: 10px 6px;
-}
-.tok.bt {
-  position: static;
-  transform: none;
-  width: auto;
-  padding: 4px 0;
-  border-radius: var(--r);
-}
-.tok.bt:hover {
-  background: #ffffff08;
-}
-.tok.bt .nm {
-  max-width: 100%;
-}
-.tok.bt .sh {
-  width: 34px;
-  height: 34px;
-  font-size: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px 8px;
+  --tk: 34px;
 }
 .t tr.drow.over td {
   background: #ffd23f22;
@@ -151,23 +58,6 @@
 }
 .benchbox .sp {
   flex: 1;
-}
-.tok.out .sh {
-  outline: 3px solid var(--red);
-  outline-offset: 2px;
-  filter: grayscale(0.6);
-}
-.tok .xtag {
-  display: inline-block;
-  margin-top: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #fff;
-  background: var(--red);
-  border-radius: 3px;
-  padding: 0 4px;
 }
 
 /* táticas salvas */
@@ -220,19 +110,36 @@
   min-width: 140px;
 }
 
-/* condição, moral e nota em cada jogador */
-.tok .st3 {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 1px;
+/* campo da Tática: o mesmo da partida (camisa + cartão) */
+.tacpitch {
+  height: min(72vh, 680px);
+}
+.ptok.bt {
+  position: static;
+  transform: none;
+  justify-self: center;
+}
+.ptok.over .pcard {
+  border-color: var(--yellow);
+  box-shadow: 0 0 0 2px var(--yellow);
+}
+.ptok[draggable='true'] {
+  cursor: grab;
+}
+.ptok[draggable='true']:active {
+  cursor: grabbing;
+}
+.ptok.hurt .pcard {
+  border-color: var(--red);
+}
+.ptok .xtag {
+  margin-top: 2px;
   font-size: 10px;
   font-weight: 700;
-  font-style: normal;
-}
-.tok .st3 i {
-  font-style: normal;
-  background: #0e1828cc;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--red);
   border-radius: 3px;
-  padding: 0 3px;
+  padding: 0 4px;
 }

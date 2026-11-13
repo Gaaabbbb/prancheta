@@ -135,6 +135,8 @@ export class Side {
   /** amarelos por jogador */ yel: Record<number, number> = {};
   /** motivo da saída: 'red' | 'inj' | 'sub' */ out: Record<number, string> = {};
   played = new Set<number>();
+  /** condição de cada jogador ao entrar em campo (para a recuperação logo depois do jogo) */
+  f0: Record<number, number> = {};
   dirty = true;
   u!: Units;
 
@@ -153,6 +155,7 @@ export class Side {
     this.on.forEach((o) => {
       this.rat[o.pl.id] = 6.0;
       this.played.add(o.pl.id);
+      this.f0[o.pl.id] = o.pl.f;
     });
   }
 
@@ -798,6 +801,7 @@ export class Match {
     side.bench = side.bench.filter((p) => p.id !== inPl.id);
     side.subs++;
     side.played.add(inPl.id);
+    side.f0[inPl.id] = inPl.f;
     side.rat[inPl.id] = 6.0;
     side.dirty = true;
     if (!side.out[outPl.id]) side.out[outPl.id] = 'sub';

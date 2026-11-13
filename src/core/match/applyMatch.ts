@@ -28,6 +28,9 @@ export const applyMatch = (W: World, m: Match) => {
         }
       }
       if (s.out[pid] === 'red') pl.sus = Math.max(pl.sus, s.yel[pid] >= 2 ? 1 : 2);
+      // parte do cansaço do jogo passa logo depois (o desgaste em campo é maior que o que fica para o próximo jogo)
+      if (RULES.postMatchRecovery && s.f0[pid] != null && pl.f < s.f0[pid])
+        pl.f += (s.f0[pid] - pl.f) * RULES.postMatchRecovery;
       if (pl._injNow) {
         pl.inj = chance(RULES.longInjury) ? ri(6, 16) : ri(1, 4);
         delete pl._injNow;

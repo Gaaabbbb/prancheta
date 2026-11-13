@@ -3,7 +3,8 @@ import { MAX_SUBS, ovr, type Match, type Player, type Side } from '@/core';
 import { Crest } from '../components/Crest';
 import { Ovr, PosTag } from '../components/Badges';
 import { fitCol, type TeamColors } from './colors';
-import { Shirt, type Pick } from './MatchPitch';
+import { type Pick } from './MatchPitch';
+import { Shirt } from '../pitch/Pitch';
 
 const OUT_TXT: Record<string, string> = { sub: 'substituído', inj: 'lesionado', red: 'expulso' };
 

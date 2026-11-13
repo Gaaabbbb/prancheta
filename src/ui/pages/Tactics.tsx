@@ -24,7 +24,10 @@ import { Ovr, PosTag, StatusTags, FitBar, MoraleBar } from '../components/Badges
 import { SavedTactics } from '../components/SavedTactics';
 import { sortPlayers } from '../sortPlayers';
 import { TacticControls } from '../components/TacticControls';
-import { fitColor, isLight } from '../format';
+import { colorDist, fitColor, isLight } from '../format';
+import { placeFormation } from '../pitch/layout';
+import { assignNumbers, shortName } from '../pitch/numbers';
+import { PitchFrame, PlayerToken } from '../pitch/Pitch';
 import type { PageProps } from './types';
 
 const spotKey = (s: Spot) => (s.z === 'res' ? 'r' + s.pid : s.z + s.i);
@@ -119,9 +122,9 @@ export function Tactics({ W }: PageProps) {
     1,
   );
   const benchHasGk = bench.some((id) => W.pmap[id]?.p === 'GOL');
-  const shirt = { background: me.c1, borderColor: me.c2, color: isLight(me.c1) ? '#111' : '#fff' };
+  // camisa nas cores do clube (detalhe preto ou branco se as duas cores forem parecidas)
+  const kit = { f: me.c1, s: colorDist(me.c1, me.c2) < 80 ? (isLight(me.c1) ? '#0b0f18' : '#ffffff') : me.c2 };
 
-  const moraleColor = (m: number) => (m >= 65 ? 'var(--ok)' : m >= 40 ? 'var(--chalk)' : '#ff9a9d');
   const ratingTxt = (p: Player) => {
     const r = avgRating(p);
     return r == null ? '–' : r.toFixed(1);
@@ -131,26 +134,26 @@ export function Tactics({ W }: PageProps) {
     `${p.n} (${role}) · OVR ${ovrRole(p, role)}\n` +
     `Condição ${Math.round(p.f)}% · Moral ${Math.round(p.mo)} · Nota ${ratingTxt(p)}`;
 
-  const token = (p: Player, role: Pos) => {
+  const nums = assignNumbers(
+    slots.map((sl, i) => ({ id: lineup[i] ?? -1 - i, role: sl[0] })),
+    bench,
+  );
+  const tokenProps = (p: Player, role: Pos, spot: Spot) => {
     const o = ovrRole(p, role);
-    return (
-      <>
-        <div className="sh" style={shirt}>
-          {o}
-        </div>
-        <span className="nm">{p.n}</span>
-        <span className="rl">
-          {role}
-          {p.p !== role ? ' (' + p.p + ')' : ''}
-        </span>
-        <span className="st3">
-          <i style={{ color: fitColor(p.f) }}>C{Math.round(p.f)}</i>
-          <i style={{ color: moraleColor(p.mo) }}>M{Math.round(p.mo)}</i>
-          <i>N{ratingTxt(p)}</i>
-        </span>
-        {!available(p) && <span className="xtag">{p.inj > 0 ? `lesionado (${p.inj})` : 'suspenso'}</span>}
-      </>
-    );
+    return {
+      col: kit,
+      num: nums.get(p.id) ?? '',
+      role: p.p !== role ? role + '*' : role,
+      value: o,
+      valueCls: o >= ovr(p) ? 'hi' : o < ovr(p) - 4 ? 'lo' : '',
+      name: shortName(p.n),
+      fit: p.f,
+      fitColor: fitColor(p.f),
+      sel: sameSpot(sel, spot),
+      dim: !available(p),
+      title: tip(p, role),
+      tag: !available(p) ? <span className="xtag">{p.inj > 0 ? `lesionado (${p.inj})` : 'suspenso'}</span> : undefined,
+    };
   };
 
   return (
@@ -159,8 +162,8 @@ export function Tactics({ W }: PageProps) {
         <h2>Tática</h2>
         <span className="muted">
           Arraste jogadores entre o campo, o banco e a lista de reservas, ou toque em um e depois em outro para
-          trocá-los (no celular, use o toque). No círculo, o OVR na função. Embaixo: C = condição, M = moral, N = nota
-          média. Jogador cansado rende menos em campo.
+          trocá-los. No cartão: a função e o OVR nela (* = fora da posição de origem) e a barra de condição. Passe o
+          mouse para ver moral e nota.
         </span>
       </div>
       {issues.length > 0 && (
@@ -172,46 +175,35 @@ export function Tactics({ W }: PageProps) {
       )}
       <div className="grid tacgrid">
         <div>
-          <div className="board">
-            <div className="ln" style={{ left: '4%', right: '4%', top: '3%', bottom: '3%' }} />
-            <div className="ln" style={{ left: '4%', right: '4%', top: '50%', height: 0, borderWidth: '2px 0 0' }} />
-            <div
-              className="ln"
-              style={{
-                left: '50%',
-                top: '50%',
-                width: '22%',
-                aspectRatio: 1,
-                borderRadius: '50%',
-                transform: 'translate(-50%,-50%)',
-              }}
-            />
-            <div className="ln" style={{ left: '24%', right: '24%', top: '3%', height: '13%', borderTop: 0 }} />
-            <div className="ln" style={{ left: '24%', right: '24%', bottom: '3%', height: '13%', borderBottom: 0 }} />
-            {slots.map((s, i) => {
-              const spot: Spot = { z: 'xi', i };
-              const p = W.pmap[lineup[i]!];
-              const pos = { top: `${7 + (1 - s[1] / 0.85) * 80}%`, left: `${6 + s[2] * 88}%` };
-              if (!p)
+          <PitchFrame className="tacpitch">
+            {(w) => {
+              const pos = placeFormation(slots, w);
+              return slots.map((sl, i) => {
+                const spot: Spot = { z: 'xi', i };
+                const p = W.pmap[lineup[i]!];
+                const at = { top: pos[i].top + '%', left: pos[i].left + '%' };
+                if (!p)
+                  return (
+                    <div key={i} className={`ptok empty ${cls(spot)}`} style={at} {...dnd(spot)}>
+                      <span className="eshirt">{sl[0]}</span>
+                      <span className="pcard">
+                        <span className="pn">vaga</span>
+                      </span>
+                    </div>
+                  );
                 return (
-                  <div key={i} className={`tok empty ${cls(spot)}`} style={pos} {...dnd(spot)}>
-                    <div className="sh">?</div>
-                    <span className="nm">{s[0]}</span>
-                  </div>
+                  <PlayerToken
+                    key={i}
+                    {...tokenProps(p, sl[0], spot)}
+                    width={pos[i].w}
+                    className={over === spotKey(spot) ? 'over' : ''}
+                    style={at}
+                    {...dnd(spot)}
+                  />
                 );
-              return (
-                <div
-                  key={i}
-                  className={`tok ${cls(spot)} ${available(p) ? '' : 'out'}`}
-                  style={pos}
-                  title={tip(p, s[0])}
-                  {...dnd(spot)}
-                >
-                  {token(p, s[0])}
-                </div>
-              );
-            })}
-          </div>
+              });
+            }}
+          </PitchFrame>
           <div className="benchbox">
             <div className="bh">
               <b>Banco</b>
@@ -230,20 +222,20 @@ export function Tactics({ W }: PageProps) {
                 const p = W.pmap[bench[i]];
                 if (!p)
                   return (
-                    <div key={i} className={`tok bt empty ${cls(spot)}`} {...dnd(spot)}>
-                      <div className="sh">+</div>
-                      <span className="nm">vaga</span>
+                    <div key={i} className={`ptok bt empty ${cls(spot)}`} {...dnd(spot)}>
+                      <span className="eshirt">+</span>
+                      <span className="pcard">
+                        <span className="pn">vaga</span>
+                      </span>
                     </div>
                   );
                 return (
-                  <div
+                  <PlayerToken
                     key={i}
-                    className={`tok bt ${cls(spot)} ${available(p) ? '' : 'out'}`}
-                    title={tip(p, p.p)}
+                    {...tokenProps(p, p.p, spot)}
+                    className={`bt ${over === spotKey(spot) ? 'over' : ''}`}
                     {...dnd(spot)}
-                  >
-                    {token(p, p.p)}
-                  </div>
+                  />
                 );
               })}
             </div>

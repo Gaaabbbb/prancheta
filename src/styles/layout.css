@@ -137,7 +137,8 @@
   outline-offset: -2px;
 }
 #top .menu .badge {
-  margin-left: 4px;
+  margin-left: 5px;
+  vertical-align: 2px;
 }
 #top .menu .msep {
   flex: none;
@@ -187,5 +188,52 @@
   }
   #top .club .cname {
     font-size: 19px;
+  }
+}
+
+/* contadores: vermelho para o que pede ação (propostas), amarelo para mensagens não lidas */
+.badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--red);
+  color: #fff;
+  font-family: var(--fb);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--ink2);
+}
+.badge.alert {
+  animation: badge-pulse 1.8s ease-out infinite;
+}
+.badge.soft {
+  background: var(--yellow);
+  color: #1a1400;
+}
+@keyframes badge-pulse {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--ink2),
+      0 0 0 2px #e5484daa;
+  }
+  70% {
+    box-shadow:
+      0 0 0 2px var(--ink2),
+      0 0 0 9px #e5484d00;
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px var(--ink2),
+      0 0 0 2px #e5484d00;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .badge.alert {
+    animation: none;
   }
 }

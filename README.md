@@ -242,6 +242,22 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     time, dias de descanso) e o calendário do mês; à direita, a classificação de cada competição em disputa (com filtro,
     zonas e o seu time destacado; no mata-mata, os seus confrontos) e os próximos 5 jogos. No celular, os menus seguem
     na barra de baixo e o Início fica em uma coluna.
+- **Abertura e acabamento (v0.7)**:
+  - **Abertura** (`src/ui/pages/Start.tsx`): PRANCHETA grande no centro e duas opções. **Novo jogo** leva à escolha do
+    clube e do nome; **Jogo salvo** lista as carreiras deste navegador (abrir ou excluir). Cada carreira tem a sua vaga
+    de save (`W.slot`, `src/persistence/storage.ts`); o save antigo continua na vaga `career`.
+  - **Campo sem fichas encostadas** (`src/ui/pitch/layout.ts`): jogadores da mesma linha são afastados até os cartões
+    caberem lado a lado (se não couber, os cartões encolhem). O mesmo campo, com camisa e cartão, agora também é o da
+    página **Tática** (OVR na função no cartão; `*` quando o jogador está fora da posição de origem).
+  - **Início:** calendário e classificação vão até o fim da tela; o painel **Jogos** mostra os 2 últimos resultados e os
+    3 próximos jogos.
+  - **Avisos:** propostas esperando resposta aparecem como bolinha vermelha pulsando ao lado de Mercado; mensagens não
+    lidas, em amarelo no clube.
+  - **Fôlego:** o desgaste em campo ficou bem maior (`fatigue` 2,2: um titular sai de ~85% para ~40% no fim do jogo),
+    mas 38% desse cansaço passa logo depois da partida (`postMatchRecovery`), então o fôlego no começo dos jogos segue
+    parecido. Na prática, as trocas no segundo tempo passam a fazer diferença.
+  - **Mercado:** os clubes brasileiros voltam a ser a maioria dos interessados nos seus jogadores; os sul-americanos
+    aparecem de vez em quando (e não entram na janela complementar, que é só do mercado nacional).
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

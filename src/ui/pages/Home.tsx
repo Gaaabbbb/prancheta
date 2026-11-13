@@ -249,25 +249,42 @@ function Standings({ W }: { W: World }) {
   );
 }
 
-/** Os próximos 5 jogos do clube. */
-function Upcoming({ W }: { W: World }) {
+/** Jogos do clube: os 2 últimos (com resultado) e os 3 próximos. */
+function Games({ W }: { W: World }) {
   const openModal = useUi((s) => s.openModal);
-  const list = compList(W)
-    .flatMap((comp) => comp.fx.filter((f) => !f.pl && isMine(W, f)).map((f) => ({ f, comp })))
-    .sort((x, y) => x.f.d - y.f.d)
-    .slice(0, 5);
+  const all = compList(W)
+    .flatMap((comp) => comp.fx.filter((f) => isMine(W, f)).map((f) => ({ f, comp })))
+    .sort((x, y) => x.f.d - y.f.d);
+  const past = all.filter((x) => x.f.pl).slice(-2);
+  const next = all.filter((x) => !x.f.pl).slice(0, 5 - past.length);
+  const list = [...past, ...next];
   return (
     <div className="panel hup">
-      <h3>Próximos jogos</h3>
+      <h3>Jogos</h3>
       {list.length === 0 && <p className="muted">Sem jogos marcados.</p>}
-      {list.map(({ f, comp }) => {
+      {list.map(({ f, comp }, i) => {
         const dt = dateOf(W, f.d);
         const col = compColor(comp.id);
         const h = W.clubs[f.h],
           a = W.clubs[f.a];
-        const opp = f.h === W.user ? a : h;
+        const home = f.h === W.user;
+        let res: 'V' | 'E' | 'D' | null = null;
+        if (f.pl) {
+          const gf = (home ? f.hg : f.ag)!,
+            ga = (home ? f.ag : f.hg)!;
+          res = gf > ga ? 'V' : gf < ga ? 'D' : f.hp != null ? ((home ? f.hp > f.ap! : f.ap! > f.hp) ? 'V' : 'D') : 'E';
+        }
         return (
-          <button key={comp.id + f.id} className="hup-row" onClick={() => openModal({ kind: 'club', id: opp.id })}>
+          <button
+            key={comp.id + f.id}
+            className={`hup-row ${f.pl ? 'played' : ''} ${i === past.length && past.length ? 'first-next' : ''}`}
+            onClick={() =>
+              f.pl
+                ? openModal({ kind: 'report', comp: comp.id, fid: f.id })
+                : openModal({ kind: 'club', id: home ? a.id : h.id })
+            }
+            title={f.pl ? 'Ver o relatório do jogo' : 'Ver o adversário'}
+          >
             <span className="hup-d">
               <b>{WEEKDAY_SHORT[dt.getDay()]}</b> {fmtDate(dt)}
             </span>
@@ -275,13 +292,25 @@ function Upcoming({ W }: { W: World }) {
               {comp.name}
             </span>
             <span className="hup-m">
-              <span className={`hs ${f.h === W.user ? 'me' : ''}`}>{h.s}</span>
+              <span className={`hs ${home ? 'me' : ''}`}>{h.s}</span>
               <Crest club={h} size={18} />
-              <i>x</i>
+              {f.pl ? (
+                <b className="hsc num">
+                  {f.hg}-{f.ag}
+                </b>
+              ) : (
+                <i>x</i>
+              )}
               <Crest club={a} size={18} />
-              <span className={`hs ${f.a === W.user ? 'me' : ''}`}>{a.s}</span>
+              <span className={`hs ${!home ? 'me' : ''}`}>{a.s}</span>
             </span>
-            <VenueIcon home={f.h === W.user} neutral={f.neu} size={14} />
+            {res ? (
+              <span className="form">
+                <span className={'f' + res}>{res}</span>
+              </span>
+            ) : (
+              <VenueIcon home={home} neutral={f.neu} size={14} />
+            )}
           </button>
         );
       })}
@@ -289,7 +318,7 @@ function Upcoming({ W }: { W: World }) {
   );
 }
 
-/** Início: caixa de entrada à esquerda, próximo jogo e calendário no meio, classificação e próximos jogos à direita. */
+/** Início: caixa de entrada à esquerda, próximo jogo e calendário no meio, classificação e jogos à direita. */
 export function Home({ W }: PageProps) {
   return (
     <div className="home3">
@@ -302,7 +331,7 @@ export function Home({ W }: PageProps) {
       </div>
       <div className="hcol hright">
         <Standings W={W} />
-        <Upcoming W={W} />
+        <Games W={W} />
       </div>
     </div>
   );

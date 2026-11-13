@@ -51,7 +51,7 @@ export function TopBar({ W }: { W: World }) {
           ) : (
             <button key={n[0]} className={page === n[0] ? 'on' : ''} onClick={() => go(n[0])}>
               {n[1]}
-              {n[0] === 'market' && <Badge n={offers} what="propostas" />}
+              {n[0] === 'market' && <Badge n={offers} what="propostas" alert />}
             </button>
           ),
         )}

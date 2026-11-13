@@ -14,9 +14,7 @@ import {
   type World,
 } from '@/core';
 import { startCareer } from '@/app/gameFlow';
-import { useGame } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
-import { bestSave, type SaveRecord } from '@/persistence/storage';
 import { pickFile } from '@/persistence/saveFile';
 import { readDb } from '@/spreadsheet/readDb';
 import { Crest } from '../components/Crest';
@@ -35,24 +33,21 @@ interface SheetInfo {
   warn: string[];
 }
 
-export function NewGame() {
+/** Novo jogo: escolha do clube e do nome do técnico (`onBack` volta para a abertura). */
+export function NewGame({ onBack }: { onBack?: () => void }) {
   const openModal = useUi((s) => s.openModal);
-  const loadSave = useGame((s) => s.loadSave);
   const [preview, setPreview] = useState<World | null>(null);
   const [div, setDiv] = useState<Div>('A');
   const [club, setClub] = useState<number | null>(null);
   const [coach, setCoach] = useState('');
   const [sort, setSort] = useState<'str' | 'az'>('str');
-  const [saved, setSaved] = useState<SaveRecord | null>(null);
   const [sheet, setSheet] = useState<SheetInfo | null>(null);
-  const [loadingSave, setLoadingSave] = useState(false);
 
   const buildPreview = (db: Database) => setPreview(createWorld(PREVIEW_SEED, db));
 
   useEffect(() => {
     let alive = true;
     loadDefaultDb().then((db) => alive && buildPreview(db));
-    bestSave().then((s) => alive && setSaved(s));
     return () => {
       alive = false;
     };
@@ -113,18 +108,6 @@ export function NewGame() {
     buildPreview(await loadDefaultDb());
   };
 
-  const continueSave = async () => {
-    if (!saved) return;
-    setLoadingSave(true);
-    try {
-      await loadSave(saved.data);
-      useUi.getState().go('home');
-    } catch {
-      toast('Não consegui abrir esse save.');
-      setLoadingSave(false);
-    }
-  };
-
   const PW = preview;
   const clubs = PW ? PW.clubs.filter((c) => c.div === div) : [];
   const str = PW ? sortClubs(PW, clubs, sort) : {};
@@ -179,26 +162,14 @@ export function NewGame() {
   return (
     <div className="start">
       <div className="l">
-        <div className="logo">
-          Prancheta<small>Manager de futebol brasileiro, da Série D à elite</small>
-        </div>
-        {saved && (
-          <div className="panel">
-            <h3>Jogo salvo</h3>
-            <p className="muted" style={{ margin: '0 0 10px' }}>
-              {saved.meta.club}, temporada {saved.meta.year},{' '}
-              {saved.meta.cal === 'days'
-                ? new Date(saved.meta.year, 0, 2 + saved.meta.day).toLocaleDateString('pt-BR', {
-                    day: 'numeric',
-                    month: 'long',
-                  })
-                : `rodada ${saved.meta.day} de 40`}
-            </p>
-            <button className="btn pri" onClick={continueSave} disabled={loadingSave}>
-              Continuar carreira
-            </button>
-          </div>
+        {onBack && (
+          <button className="btn ghost sm" onClick={onBack} style={{ alignSelf: 'flex-start' }}>
+            ‹ Voltar
+          </button>
         )}
+        <div className="logo">
+          Novo jogo<small>Escolha o clube e diga seu nome de técnico</small>
+        </div>
         <div>
           <label className="muted" htmlFor="coach">
             Seu nome de técnico

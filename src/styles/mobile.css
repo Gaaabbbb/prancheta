@@ -75,6 +75,13 @@
   .hinbox {
     order: 5;
   }
+  .hinbox .panel {
+    position: static;
+    max-height: none;
+  }
+  .htab-body {
+    min-height: 0;
+  }
   .hteam b {
     font-size: 17px;
   }
@@ -285,41 +292,12 @@
     margin-left: 6px;
   }
 
-  /* tática: fichas menores para caber 4–5 por linha */
+  /* tática: campo na largura da tela, instruções embaixo */
   .tacgrid {
     grid-template-columns: 1fr;
   }
-  .board,
-  .benchbox {
-    max-width: 100%;
-  }
-  /* campo mais alto no celular: as fichas (com C/M/N) não se encostam */
-  .board {
-    aspect-ratio: 68 / 108;
-  }
-  .tok {
-    width: 70px;
-  }
-  .tok .sh {
-    width: 32px;
-    height: 32px;
-    font-size: 14px;
-    border-width: 2px;
-  }
-  .tok .nm {
-    max-width: 70px;
-    font-size: 10px;
-    padding: 0 3px;
-  }
-  .tok .rl {
-    font-size: 9px;
-  }
-  .tok .st3 {
-    gap: 2px;
-    font-size: 8px;
-  }
-  .tok .st3 i {
-    padding: 0 2px;
+  .tacpitch {
+    height: min(118vw, 72vh);
   }
   .ctl {
     grid-template-columns: 92px 1fr;

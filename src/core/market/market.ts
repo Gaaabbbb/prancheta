@@ -792,7 +792,19 @@ const aiOffersToUser = (W: World) => {
       (c) =>
         c.id !== me.id && c.rep >= minRep && Math.abs(clubLevel(c) - o) <= 7 && squad(W, c.id).length < MAX_SQUAD - 1,
     );
-    return list.length ? pickOne(mk, list) : null;
+    if (!list.length) return null;
+    // clubes brasileiros são a maioria dos interessados; os de fora entram de vez em quando
+    // (na janela complementar, só o mercado nacional)
+    const intl = windowState(W).win?.id !== 2;
+    const weight = (c: Club) => (c.div === 'SUL' ? (intl ? 0.4 : 0) : 3);
+    const tot = list.reduce((t, c) => t + weight(c), 0);
+    if (tot <= 0) return null;
+    let r = rnd(mk) * tot;
+    for (const c of list) {
+      r -= weight(c);
+      if (r <= 0) return c;
+    }
+    return list[list.length - 1];
   };
   const push = (o: Omit<IncomingOffer, 'id' | 'exp'>) => {
     const ws = windowState(W);
