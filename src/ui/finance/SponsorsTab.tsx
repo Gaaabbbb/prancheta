@@ -2,7 +2,6 @@ import {
   acceptOffer,
   DIV_NAME,
   ensureSponsors,
-  haggleOffer,
   rejectOffer,
   seekSponsors,
   seekWait,
@@ -93,22 +92,6 @@ export function SponsorsTab({ W }: { W: World }) {
       ok: 'Assinar',
       onOk: () => act((W) => acceptOffer(W, o.id), `Contrato assinado com a ${def.n}.`),
     });
-  };
-
-  const haggle = (o: SponsorOffer) => {
-    let r: ReturnType<typeof haggleOffer> = null;
-    mutate((W) => {
-      r = haggleOffer(W, o.id);
-    });
-    const n = sponsorDef(o.sid).n;
-    toast(
-      r === 'up'
-        ? `A ${n} aceitou melhorar a proposta.`
-        : r === 'gone'
-          ? `A ${n} não gostou e retirou a proposta.`
-          : `A ${n} manteve a proposta como estava.`,
-    );
-    save();
   };
 
   const terminate = (c: SponsorContract) => {
@@ -257,7 +240,13 @@ export function SponsorsTab({ W }: { W: World }) {
                   <dt>Valor por ano</dt>
                   <dd className="num">
                     <b>{money(o.val)}</b>
-                    {replace && <span className="up"> +{Math.round((o.val / cur!.val - 1) * 100)}% que o atual</span>}
+                    {replace && (
+                      <span className={o.val >= cur!.val ? 'up' : 'down'}>
+                        {' '}
+                        {o.val >= cur!.val ? '+' : ''}
+                        {Math.round((o.val / cur!.val - 1) * 100)}% que o atual
+                      </span>
+                    )}
                   </dd>
                   <dt>Contrato</dt>
                   <dd>{years(o)}</dd>
@@ -284,11 +273,10 @@ export function SponsorsTab({ W }: { W: World }) {
                   </button>
                   <button
                     className="btn sm"
-                    disabled={o.haggled}
-                    onClick={() => haggle(o)}
-                    title={o.haggled ? 'Você já pediu mais a esta marca' : 'Pode melhorar, manter ou a marca desistir'}
+                    onClick={() => openModal({ kind: 'sponsorOffer', id: o.id })}
+                    title="Pedir mais em rodadas: a marca pode melhorar, manter ou desistir"
                   >
-                    Pedir mais
+                    Negociar
                   </button>
                   <button className="btn ghost sm" onClick={() => act((W) => rejectOffer(W, o.id))}>
                     Recusar

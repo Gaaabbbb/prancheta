@@ -8,6 +8,7 @@ import { MovePlayerModal } from './MovePlayerModal';
 import { NewsModal } from './NewsModal';
 import { DealModal } from './DealModal';
 import { OfferModal } from './OfferModal';
+import { SponsorOfferModal } from './SponsorOfferModal';
 import { PlayerModal } from './PlayerModal';
 import { PrematchModal } from './PrematchModal';
 import { ReportModal } from './ReportModal';
@@ -43,6 +44,8 @@ export function ModalHost() {
       return <DealModal key={m.pid + m.mode} pid={m.pid} mode={m.mode} />;
     case 'offer':
       return <OfferModal key={m.id} id={m.id} />;
+    case 'sponsorOffer':
+      return <SponsorOfferModal key={m.id} id={m.id} />;
     case 'news':
       return <NewsModal item={m.item} />;
     case 'importSave':

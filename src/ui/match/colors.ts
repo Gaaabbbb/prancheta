@@ -21,3 +21,6 @@ export const teamColors = (m: Match): [TeamColors, TeamColors] => {
   for (const c of col) if (colorDist(c.f, c.s) < 80) c.s = colorDist(c.f, '#ffffff') < 200 ? '#0b0f18' : '#ffffff';
   return col;
 };
+
+/** Cor do fôlego: verde, amarelo (cansando) ou vermelho (esgotado). */
+export const fitCol = (f: number): string => (f > 70 ? 'var(--ok)' : f > 50 ? 'var(--yellow)' : 'var(--red)');

@@ -336,15 +336,20 @@
   }
   .mgrid {
     grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      'pitch pitch'
+      'ub ob'
+      'ut ut';
     gap: 12px 10px;
     padding: 10px;
   }
   .mgrid .vpitch-wrap {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    height: min(78vh, 150vw);
+    width: auto;
+    min-width: 0;
+    height: min(74vh, 140vw);
   }
-  .bench {
+  .mbench {
     overflow: visible;
   }
   .brow {
@@ -352,19 +357,7 @@
     padding: 8px 4px;
   }
   .brow .fb {
-    display: none;
-  }
-  .vtok {
-    width: 56px;
-  }
-  .vtok .sh {
-    width: 30px;
-    height: 30px;
-    font-size: 11px;
-  }
-  .vtok .nm {
-    max-width: 62px;
-    font-size: 10px;
+    grid-column: 1 / -1;
   }
   .vn {
     font-size: 12px;

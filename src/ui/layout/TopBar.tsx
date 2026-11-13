@@ -82,9 +82,11 @@ export function TopBar({ W }: { W: World }) {
       <button
         className="btn pri big"
         onClick={continueGame}
-        title={isDays(W) ? 'Avança até o próximo jogo ou até chegar algo que pede sua atenção' : undefined}
+        title={
+          isDays(W) ? 'Avança até o próximo jogo ou até uma decisão importante (proposta, janela, contrato)' : undefined
+        }
       >
-        {W.seasonDone ? 'Fechar temporada' : 'Continuar'}
+        {W.seasonDone ? 'Fechar temporada' : 'Avançar'}
       </button>
     </header>
   );

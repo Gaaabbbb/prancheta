@@ -39,6 +39,7 @@ export type ModalSpec =
   | { kind: 'news'; item: NewsItem }
   | { kind: 'deal'; pid: number; mode: 'buy' | 'loan' | 'free' | 'renew' }
   | { kind: 'offer'; id: number }
+  | { kind: 'sponsorOffer'; id: number }
   | { kind: 'confirm'; title: string; body: ReactNode; ok: string; onOk: () => void }
   | { kind: 'info'; title: string; body: ReactNode; wide?: boolean };
 

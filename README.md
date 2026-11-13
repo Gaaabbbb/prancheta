@@ -217,6 +217,23 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     **Pular para o fim** continuam. No celular, o campo ocupa a largura e os bancos ficam embaixo.
   - **Fim do dia**: depois do jogo, o pop-up mostra a rodada inteira da competição, os outros jogos do dia (por
     competição) e a classificação completa, com o seu time destacado.
+- **Ajustes de jogo (v0.6)**:
+  - **Partida:** os jogadores cansam bem mais durante o jogo (`fatigue` 1,6: um titular perde uns 33 pontos de fôlego
+    por partida), o que força as substituições. Ao vivo, o jogo **para no intervalo** e quando um jogador seu **se
+    machuca** (ele fica escolhido para a troca e o jogo segue quando o reserva entra). Em **Pular para o fim** e no
+    **Resultado rápido**, a IA faz as trocas do seu time.
+  - **Tela de jogo:** seu banco fica sempre à esquerda com a **tática à vista** embaixo (formação, instruções e táticas
+    salvas). O campo é menor e as fichas maiores (crescem com o campo), com uma barra de fôlego vertical ao lado de cada
+    camisa (verde, amarelo, vermelho) e o fôlego dos reservas em número. As linhas da formação ficam espaçadas por
+    igual, e os lances aparecem numa caixa translúcida no meio do campo.
+  - **Avançar** (no lugar de Continuar) só para em decisões: propostas pelos seus jogadores, janela abrindo, contratos
+    terminando, propostas de patrocínio e avisos da diretoria. **Ir para o jogo** (Início) vai direto ao pré-jogo.
+    Propostas recebidas não abrem mais sozinhas: chegam na caixa de entrada e o menu Mercado mostra quantas há.
+  - **Patrocínio:** marca querendo tirar o patrocinador atual ficou rara (e nunca no começo do contrato) e nem sempre
+    paga mais; os contratos iniciais duram mais. Pedir mais abre uma negociação em rodadas, como no mercado.
+  - **Mercado:** os clubes sul-americanos têm o nível medido pela força real do elenco (`clubLevel`), então também
+    mandam propostas pelos seus jogadores e compram no mercado.
+  - **Jogos:** coluna Campeonato antes da Fase.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

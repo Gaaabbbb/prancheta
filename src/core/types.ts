@@ -298,6 +298,7 @@ export interface SponsorOffer extends SponsorContract {
   /** parte da multa do contrato atual que o novo patrocinador paga (0..1) */ cover: number;
   /** já pediu mais dinheiro */ haggled?: boolean;
   /** renovação com o patrocinador atual */ renewal?: boolean;
+  /** rodadas de negociação */ talk?: Talk;
 }
 
 export interface SponsorState {

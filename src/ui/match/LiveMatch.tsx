@@ -7,7 +7,7 @@ import { useWorld } from '@/store/gameStore';
 import { Crest } from '../components/Crest';
 import { BenchList } from './BenchList';
 import { teamColors } from './colors';
-import { LiveTacticsPanel } from './LiveTacticsPanel';
+import { TacticDock } from './TacticDock';
 import { LiveEndPanel } from './LiveEndPanel';
 import { MatchPitch, type FeedItem, type Pick } from './MatchPitch';
 import { SPEEDS } from './speeds';
@@ -43,7 +43,9 @@ export function LiveMatch() {
   const placarRef = useRef<HTMLDivElement>(null);
 
   const [paused, setPaused] = useState(false);
-  const [panel, setPanel] = useState<'none' | 'tac' | 'log' | 'end'>('none');
+  const [panel, setPanel] = useState<'none' | 'log' | 'end'>('none');
+  /** parada obrigatória: intervalo ou lesão de um jogador do usuário */
+  const [stop, setStop] = useState<{ kind: 'ht' } | { kind: 'inj'; pid: number } | null>(null);
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [goalFlash, setGoalFlash] = useState(0);
   const [sel, setSel] = useState<Pick | null>(null);
@@ -54,30 +56,44 @@ export function LiveMatch() {
   // valores lidos dentro do loop
   const loop = useRef({ paused: false, speed, hold: 0, acc: 0, last: 0, endShown: false, feedKey: 0 });
   useEffect(() => {
-    loop.current.paused = paused || panel === 'tac' || panel === 'end';
+    loop.current.paused = paused || !!stop || panel === 'end';
     loop.current.speed = speed;
-  }, [paused, panel, speed]);
+  }, [paused, stop, panel, speed]);
 
   /** Eventos do motor: narração e placar. */
-  const handleEvents = useCallback((evs: MatchEvent[], tickMs: number) => {
-    const items: FeedItem[] = [];
-    for (const e of evs) {
-      if (e.type === 'goal') {
-        loop.current.hold = Math.max(1400, tickMs * 3);
-        setGoalFlash((g) => g + 1);
-        const pl = placarRef.current;
-        if (pl) {
-          pl.classList.remove('flash');
-          void pl.offsetWidth;
-          pl.classList.add('flash');
+  const handleEvents = useCallback(
+    (evs: MatchEvent[], tickMs: number) => {
+      const items: FeedItem[] = [];
+      for (const e of evs) {
+        if (e.type === 'goal') {
+          loop.current.hold = Math.max(1400, tickMs * 3);
+          setGoalFlash((g) => g + 1);
+          const pl = placarRef.current;
+          if (pl) {
+            pl.classList.remove('flash');
+            void pl.offsetWidth;
+            pl.classList.add('flash');
+          }
         }
+        // intervalo: o jogo para para o usuário mexer na tática e nas trocas
+        if (e.type === 'ht' && m.manual) {
+          loop.current.paused = true;
+          setStop({ kind: 'ht' });
+        }
+        // lesão no time do usuário: o jogo para e o lesionado já fica escolhido para a troca
+        if (e.type === 'inj' && m.manual && e.side === m.userSide && e.pid != null) {
+          loop.current.paused = true;
+          setStop({ kind: 'inj', pid: e.pid });
+          setSel({ kind: 'on', side: m.userSide, id: e.pid });
+        }
+        // lances sem importância aparecem só às vezes, para a narração não correr demais
+        if (e.txt && (e.imp >= 1 || Math.random() < 0.55)) items.push({ key: loop.current.feedKey++, e });
       }
-      // lances sem importância aparecem só às vezes, para a narração não correr demais
-      if (e.txt && (e.imp >= 1 || Math.random() < 0.55)) items.push({ key: loop.current.feedKey++, e });
-    }
-    if (items.length) setFeed((f) => [...items.reverse(), ...f].slice(0, MAX_FEED));
-    setTick((t) => t + 1);
-  }, []);
+      if (items.length) setFeed((f) => [...items.reverse(), ...f].slice(0, MAX_FEED));
+      setTick((t) => t + 1);
+    },
+    [m],
+  );
 
   // relógio da partida
   useEffect(() => {
@@ -92,7 +108,7 @@ export function LiveMatch() {
         else {
           L.acc += dt;
           let guard = 0;
-          while (L.acc >= tickMs && !m.ended && guard++ < 6) {
+          while (L.acc >= tickMs && !m.ended && !L.paused && guard++ < 6) {
             L.acc -= tickMs;
             handleEvents(m.step(), tickMs);
             if (L.hold > 0) {
@@ -113,23 +129,28 @@ export function LiveMatch() {
     return () => cancelAnimationFrame(raf);
   }, [m, handleEvents]);
 
+  /** Pausar/continuar. Numa parada obrigatória, continuar segue o jogo. */
+  const togglePause = () => {
+    if (stop) {
+      setStop(null);
+      setPaused(false);
+      return;
+    }
+    setPaused((p) => !p);
+  };
+
   // espaço pausa; Esc desfaz a seleção
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (
-        e.code === 'Space' &&
-        panel !== 'tac' &&
-        panel !== 'end' &&
-        (document.activeElement as HTMLElement)?.tagName !== 'INPUT'
-      ) {
+      if (e.code === 'Space' && panel !== 'end' && (document.activeElement as HTMLElement)?.tagName !== 'INPUT') {
         e.preventDefault();
-        setPaused((p) => !p);
+        togglePause();
       }
       if (e.key === 'Escape') setSel(null);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [panel]);
+  });
 
   const user = m.sides[m.userSide];
 
@@ -149,6 +170,11 @@ export function LiveMatch() {
       }
       if (m.doSub(user, outP, inP)) {
         handleEvents([m.events[m.events.length - 1]], 300);
+        // trocou o lesionado: o jogo segue
+        if (stop?.kind === 'inj' && stop.pid === outP.id) {
+          setStop(null);
+          setPaused(false);
+        }
         return true;
       }
     }
@@ -204,7 +230,10 @@ export function LiveMatch() {
   const skip = () => {
     if (m.ended) return;
     setPaused(false);
+    setStop(null);
     setSel(null);
+    // daqui em diante as trocas do usuário ficam com a IA (inclusive a de quem está machucado)
+    m.handOver();
     while (!m.ended)
       handleEvents(
         m.step().filter((e) => e.imp >= 2),
@@ -222,16 +251,49 @@ export function LiveMatch() {
   const ko = m.ko && m.ko.leg === 2 ? m.ko.agg : null;
   const clock = m.ended
     ? 'Fim'
-    : Math.min(Math.floor(m.min) + 1, m.half === 1 ? 45 : 90) + (m.min > (m.half === 1 ? 45 : 90) ? '+' : '') + "'";
+    : stop?.kind === 'ht'
+      ? 'Intervalo'
+      : Math.min(Math.floor(m.min) + 1, m.half === 1 ? 45 : 90) + (m.min > (m.half === 1 ? 45 : 90) ? '+' : '') + "'";
   const [x, y] = m.sides.map((s) => s.s);
   const tot = x.pt + y.pt || 1;
   const hint = !sel
-    ? null
+    ? stop?.kind === 'ht'
+      ? 'Intervalo: arraste reservas para o campo ou mude a tática.'
+      : null
     : sel.kind === 'bench'
       ? `Toque em quem sai para ${m.W.pmap[sel.id]?.n} entrar.`
       : sel.kind === 'slot'
         ? 'Toque no jogador que vai ocupar a vaga.'
         : `${m.W.pmap[sel.id]?.n}: toque em outro jogador para trocar de posição ou num reserva para substituir.`;
+
+  const injP = stop?.kind === 'inj' ? m.W.pmap[stop.pid] : null;
+  const banner = stop ? (
+    <>
+      {stop.kind === 'ht' ? (
+        <>
+          <b>Intervalo</b>
+          <span>
+            {h.n} {m.sides[0].goals} x {m.sides[1].goals} {a.n}. Ajuste a tática e faça as trocas.
+          </span>
+          <button className="btn pri" onClick={togglePause}>
+            Começar o 2º tempo
+          </button>
+        </>
+      ) : (
+        <>
+          <b>✚ {injP?.n} se machucou</b>
+          <span>
+            {user.subs < MAX_SUBS
+              ? 'Escolha no banco quem entra no lugar dele.'
+              : 'Sem trocas restantes: ele segue em campo sem render.'}
+          </span>
+          <button className="btn" onClick={togglePause}>
+            {user.subs < MAX_SUBS ? 'Seguir sem trocar' : 'Continuar'}
+          </button>
+        </>
+      )}
+    </>
+  ) : null;
 
   return (
     <div id="match" style={{ ['--hc' as string]: cols[0].f, ['--ac' as string]: cols[1].f }}>
@@ -257,31 +319,36 @@ export function LiveMatch() {
         <div className="clock num">{clock}</div>
       </div>
 
-      <div className="mstrip">
-        {statItem('Posse', x.pt, y.pt, Math.round((x.pt / tot) * 100) + '%', Math.round((y.pt / tot) * 100) + '%')}
-        {statItem('Finalizações', x.sh, y.sh)}
-        {statItem('No gol', x.sot, y.sot)}
-        {statItem('xG', x.xg, y.xg, x.xg.toFixed(2), y.xg.toFixed(2))}
-        {statItem('Escanteios', x.cor, y.cor)}
-        {statItem('Faltas', x.fou, y.fou)}
-        {statItem(
-          'Cartões',
-          x.yc + x.rc,
-          y.yc + y.rc,
-          x.yc + (x.rc ? '/' + x.rc + 'V' : ''),
-          y.yc + (y.rc ? '/' + y.rc + 'V' : ''),
-        )}
-      </div>
+      {banner ? (
+        <div className={`mstopbar ${stop?.kind}`}>{banner}</div>
+      ) : (
+        <div className="mstrip">
+          {statItem('Posse', x.pt, y.pt, Math.round((x.pt / tot) * 100) + '%', Math.round((y.pt / tot) * 100) + '%')}
+          {statItem('Finalizações', x.sh, y.sh)}
+          {statItem('No gol', x.sot, y.sot)}
+          {statItem('xG', x.xg, y.xg, x.xg.toFixed(2), y.xg.toFixed(2))}
+          {statItem('Escanteios', x.cor, y.cor)}
+          {statItem('Faltas', x.fou, y.fou)}
+          {statItem(
+            'Cartões',
+            x.yc + x.rc,
+            y.yc + y.rc,
+            x.yc + (x.rc ? '/' + x.rc + 'V' : ''),
+            y.yc + (y.rc ? '/' + y.rc + 'V' : ''),
+          )}
+        </div>
+      )}
 
       <div className="mgrid">
-        <BenchList m={m} s={m.sides[0]} col={cols[0]} sel={sel} onDown={onDown} />
+        <BenchList m={m} s={user} col={cols[m.userSide]} sel={sel} onDown={onDown} />
+        <TacticDock m={m} />
         <MatchPitch m={m} cols={cols} sel={sel} feed={feed} onDown={onDown} goalFlash={goalFlash} />
-        <BenchList m={m} s={m.sides[1]} col={cols[1]} sel={sel} onDown={onDown} />
+        <BenchList m={m} s={m.sides[1 - m.userSide]} col={cols[1 - m.userSide]} sel={sel} onDown={onDown} />
       </div>
 
       <div className="mctl">
-        <button className="btn" onClick={() => setPaused((p) => !p)}>
-          {paused ? 'Continuar' : 'Pausar'}
+        <button className={`btn ${stop ? 'pri' : ''}`} onClick={togglePause} disabled={m.ended}>
+          {paused || stop ? 'Continuar' : 'Pausar'}
         </button>
         <div className="seg" aria-label="Velocidade">
           {SPEEDS.map((s, i) => (
@@ -293,9 +360,6 @@ export function LiveMatch() {
         <span className="mhint">{hint}</span>
         <button className="btn" onClick={() => setPanel(panel === 'log' ? 'none' : 'log')}>
           Lances
-        </button>
-        <button className="btn" onClick={() => setPanel('tac')} disabled={m.ended}>
-          Tática
         </button>
         <button className="btn" onClick={skip} disabled={m.ended}>
           Pular para o fim
@@ -328,7 +392,6 @@ export function LiveMatch() {
           </div>
         </div>
       )}
-      {panel === 'tac' && <LiveTacticsPanel m={m} onClose={() => setPanel('none')} />}
       {panel === 'end' && <LiveEndPanel W={W} m={m} onClose={close} />}
     </div>
   );

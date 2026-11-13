@@ -13,6 +13,9 @@ export const clubLevel = (c: Club): number => {
       return 63 + (c.rep - 60) * 0.22;
     case 'C':
       return 56 + (c.rep - 46) * 0.22;
+    case 'SUL':
+      // sul-americanos: medido pela força real dos elencos da planilha (média dos 13 melhores − 5)
+      return 61 + (c.rep - 62) * 0.38;
     default:
       return 48 + (c.rep - 32) * 0.25;
   }

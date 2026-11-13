@@ -6,7 +6,7 @@
   background: var(--ink);
   z-index: 40;
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 .placar {
   display: grid;
@@ -113,61 +113,83 @@
   opacity: 0.8;
 }
 
-/* banco | campo | banco */
+/* seu banco + tática | campo | banco do adversário */
 .mgrid {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) minmax(0, 1.5fr) minmax(200px, 1fr);
-  gap: 16px;
+  grid-template-columns: minmax(250px, 1fr) auto minmax(220px, 1fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'ub pitch ob'
+    'ut pitch ob';
+  gap: 12px 18px;
   padding: 12px 18px;
   min-height: 0;
 }
-.bench {
+.mbench.ub {
+  grid-area: ub;
+}
+.mbench.ob {
+  grid-area: ob;
+}
+.mtac {
+  grid-area: ut;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line2);
+  border-radius: var(--r);
+  background: #ffffff05;
+}
+.vpitch-wrap {
+  grid-area: pitch;
+}
+.mbench {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: auto;
 }
-.bench-h {
+.mbench-h {
   display: flex;
   align-items: center;
   gap: 8px;
   font-family: var(--fd);
   font-size: 18px;
 }
-.bench-h b {
+.mbench-h b {
   flex: 1;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bench-h .kit {
+.mbench-h .kit {
   width: 14px;
   height: 14px;
   border-radius: 50%;
   border: 2px solid;
 }
-.bench-sub {
+.mbench-sub {
   font-size: 12px;
-  margin: 2px 0 8px;
+  margin: 2px 0 6px;
 }
 .brow {
   display: grid;
-  grid-template-columns: 38px 1fr 34px 44px;
+  grid-template-columns: 38px 1fr 32px 74px;
   gap: 8px;
   align-items: center;
-  padding: 6px;
+  padding: 5px 6px;
   border-radius: 5px;
   font-size: 13px;
   border: 1px solid transparent;
   user-select: none;
   -webkit-user-select: none;
 }
-.bench.mine .brow:not(.dis) {
+.mbench.mine .brow:not(.dis) {
   cursor: grab;
   background: #ffffff06;
 }
-.bench.mine .brow:not(.dis):hover {
+.mbench.mine .brow:not(.dis):hover {
   background: #ffffff0f;
 }
 .brow.sel {
@@ -177,7 +199,7 @@
 .brow.dis {
   opacity: 0.55;
 }
-.bench.mine .brow.dis {
+.mbench.mine .brow.dis {
   opacity: 0.4;
 }
 .brow .nm {
@@ -185,7 +207,32 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.bench-log {
+.brow .fb {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.brow .fb small {
+  width: 22px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+}
+/* barra de fôlego: trilho escuro e preenchimento colorido */
+.stam {
+  flex: 1;
+  height: 7px;
+  border-radius: 4px;
+  background: #00000080;
+  box-shadow: inset 0 0 0 1px #ffffff1f;
+  overflow: hidden;
+}
+.stam i {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+.mbench-log {
   margin-top: 10px;
   padding-top: 8px;
   border-top: 1px solid var(--line2);
@@ -193,13 +240,37 @@
   display: grid;
   gap: 3px;
 }
-
-/* campo vertical */
-.vpitch-wrap {
-  min-height: 0;
-  min-width: 0;
+.mtac-h {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 8px;
+  font-family: var(--fd);
+  font-size: 16px;
+}
+.mtac-saved {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mtac .ctl {
+  grid-template-columns: 84px 1fr;
+  gap: 6px 8px;
+  font-size: 12px;
+}
+.mtac .seg button {
+  padding: 4px 7px;
+  font-size: 12px;
+}
+
+/* campo vertical (as fichas crescem com o campo: --tk) */
+.vpitch-wrap {
+  min-height: 0;
+  min-width: 300px;
+  width: min(44vw, 440px);
+  display: flex;
+  align-items: flex-start;
   justify-content: center;
 }
 .vpitch {
@@ -230,11 +301,11 @@
 .vtok {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 66px;
+  width: calc(var(--tk) * 2);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
+  gap: 2px;
   z-index: 2;
   user-select: none;
   -webkit-user-select: none;
@@ -244,32 +315,46 @@
   cursor: grab;
 }
 .vtok .sh {
-  width: 30px;
-  height: 30px;
+  position: relative;
+  width: var(--tk);
+  height: var(--tk);
   border-radius: 50%;
   border: 2px solid;
   display: grid;
   place-items: center;
   font-family: var(--fd);
   font-weight: 800;
-  font-size: 11px;
-  box-shadow: 0 2px 6px #0007;
+  font-size: var(--tf);
+  box-shadow: 0 2px 6px #0008;
 }
 .vtok.sel .sh {
   outline: 3px solid var(--yellow);
   outline-offset: 2px;
 }
 .vtok.hurt .sh {
-  opacity: 0.6;
+  filter: grayscale(0.6);
+}
+.vtok .hx {
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-style: normal;
+  font-size: 10px;
+  display: grid;
+  place-items: center;
 }
 .vtok .nm {
-  max-width: 76px;
+  max-width: calc(var(--tk) * 2.1);
   padding: 0 4px;
   border-radius: 3px;
-  background: #050a14b3;
-  font-size: 11px;
-  line-height: 14px;
-  padding-bottom: 1px;
+  background: #050a14c7;
+  font-size: var(--tf);
+  line-height: 1.25;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -289,13 +374,31 @@
 .vtok .nm .gl {
   font-size: 9px;
 }
+/* fôlego: pilha vertical ao lado da camisa, enche de baixo para cima */
+.vtok .ft {
+  position: absolute;
+  top: 1px;
+  right: -11px;
+  width: 7px;
+  height: calc(100% - 2px);
+  border-radius: 3px;
+  background: #000000b3;
+  box-shadow: 0 0 0 1px #ffffff40;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+}
+.vtok .ft i {
+  display: block;
+  width: 100%;
+}
 .vtok .rt {
   position: absolute;
-  top: -4px;
-  right: 6px;
+  top: -5px;
+  right: calc(50% + var(--tk) * 0.32);
   padding: 0 3px;
   border-radius: 3px;
-  background: #050a14d9;
+  background: #050a14e0;
   font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -318,16 +421,21 @@
 .vtok.empty.sel .sh {
   outline: 3px solid var(--yellow);
 }
-/* narração no meio do campo */
+/* lances numa caixa translúcida no meio do campo */
 .vnarr {
   position: absolute;
-  left: 4%;
-  right: 4%;
+  left: 5%;
+  right: 5%;
   top: 50%;
   transform: translateY(-50%);
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: #050a14a6;
+  border: 1px solid #ffffff1f;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 3px;
   pointer-events: none;
   z-index: 1;
@@ -336,12 +444,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: 100%;
-  padding: 4px 10px;
-  border-radius: 14px;
-  background: #050a14d9;
+  min-width: 0;
   font-size: 13px;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .vn > span:last-child {
   white-space: nowrap;
@@ -360,21 +465,40 @@
   flex: none;
 }
 .vn.goal {
-  background: var(--yellow);
-  color: #1a1400;
+  color: var(--yellow);
   font-weight: 800;
   font-size: 15px;
-}
-.vn.goal b {
-  color: #1a1400;
 }
 .vn.old {
   opacity: 0.6;
   font-size: 12px;
 }
-.vn.old.goal {
-  background: #050a14d9;
+/* parada: intervalo ou lesão (no lugar das estatísticas) */
+.mstopbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 18px 22px 10px;
+  background: #ffd23f14;
+  border-bottom: 1px solid var(--yellow);
+}
+.mstopbar.inj {
+  background: #e5484d1f;
+  border-color: var(--red);
+}
+.mstopbar b {
+  font-family: var(--fd);
+  font-size: 20px;
   color: var(--yellow);
+}
+.mstopbar.inj b {
+  color: #ff9a9d;
+}
+.mstopbar span {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
 }
 .dragghost {
   position: fixed;

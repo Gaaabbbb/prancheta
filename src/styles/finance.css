@@ -198,6 +198,10 @@
   color: var(--ok);
   font-size: 12px;
 }
+.spkv .down {
+  color: #ff9a9d;
+  font-size: 12px;
+}
 .spsat {
   font-size: 13px;
   margin-bottom: 12px;

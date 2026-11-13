@@ -7,7 +7,7 @@ import {
   endSeason,
   ensureSponsors,
   expandDb,
-  haggleOffer,
+  counterSponsor,
   paydayMonths,
   monthlyWages,
   stepDay,
@@ -76,8 +76,25 @@ describe('patrocínios', () => {
     const W = career(0);
     const before = rng.rngState.s;
     seekSponsors(W);
-    for (const o of W.sp!.offers.slice()) haggleOffer(W, o.id);
+    for (const o of W.sp!.offers.slice()) counterSponsor(W, o.id, o.val * 1.3);
     expect(rng.rngState.s).toBe(before);
+  });
+
+  it('patrocínio: pedir mais abre rodadas; a marca sobe até um limite ou desiste', () => {
+    const W = career(0);
+    W.sp!.master = null;
+    W.sp!.offers = [];
+    seekSponsors(W);
+    const o = W.sp!.offers[0];
+    const v0 = o.val;
+    const r1 = counterSponsor(W, o.id, v0 * 1.06);
+    expect(['deal', 'counter']).toContain(r1.r);
+    if (r1.r === 'counter') expect(o.val).toBeGreaterThanOrEqual(v0);
+    // pedido absurdo repetido: a marca perde a paciência
+    let r = counterSponsor(W, o.id, v0 * 3);
+    for (let i = 0; i < 5 && r.r === 'counter'; i++) r = counterSponsor(W, o.id, v0 * 3);
+    if (r1.r === 'counter') expect(r.r).toBe('gone');
+    expect(o.talk!.log.length).toBeGreaterThan(2);
   });
 
   it('rescindir paga a multa e libera o espaço; aceitar ocupa o espaço', () => {

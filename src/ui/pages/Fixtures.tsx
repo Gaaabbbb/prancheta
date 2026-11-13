@@ -55,7 +55,7 @@ export function Fixtures({ W }: PageProps) {
             <tr>
               <th>Rodada</th>
               <th>Data</th>
-              {comps.length > 1 && <th>Competição</th>}
+              <th>Campeonato</th>
               <th>Fase</th>
               <th>Local</th>
               <th>Adversário</th>
@@ -103,16 +103,14 @@ export function Fixtures({ W }: PageProps) {
                   <td className="num muted">
                     {WEEKDAY_SHORT[dateOf(W, f.d).getDay()]}, {fmtDate(dateOf(W, f.d))}
                   </td>
-                  {comps.length > 1 && (
-                    <td>
-                      <span
-                        className="comptag"
-                        style={{ background: compColor(comp.id) + '2e', color: compColor(comp.id) }}
-                      >
-                        {comp.name}
-                      </span>
-                    </td>
-                  )}
+                  <td>
+                    <span
+                      className="comptag"
+                      style={{ background: compColor(comp.id) + '2e', color: compColor(comp.id) }}
+                    >
+                      {comp.name}
+                    </span>
+                  </td>
                   <td>{comp.stages[f.st].name}</td>
                   <td className="cg-ven">
                     <VenueIcon home={home} neutral={f.neu} /> {f.neu ? 'Neutro' : home ? 'Casa' : 'Fora'}

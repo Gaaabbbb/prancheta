@@ -7,9 +7,12 @@ import { APP_VERSION, NAV, NAV_MOBILE } from './navItems';
 /** Contador de mensagens não lidas (o seletor roda a cada mudança de rev). */
 const useUnread = () => useGame((s) => (s.world && s.rev >= 0 ? unreadNews(s.world) : 0));
 
-const Badge = ({ n }: { n: number }) =>
+/** Propostas recebidas pelos jogadores do usuário, esperando resposta no Mercado. */
+const useOffers = () => useGame((s) => (s.world && s.rev >= 0 ? s.world.mk?.offers.length || 0 : 0));
+
+const Badge = ({ n, what = 'mensagens não lidas' }: { n: number; what?: string }) =>
   n > 0 ? (
-    <span className="badge" aria-label={`${n} mensagens não lidas`}>
+    <span className="badge" aria-label={`${n} ${what}`}>
       {n > 99 ? '99+' : n}
     </span>
   ) : null;
@@ -19,6 +22,7 @@ export function Nav({ year }: { year: number }) {
   const page = useUi((s) => s.page);
   const go = useUi((s) => s.go);
   const unread = useUnread();
+  const offers = useOffers();
   return (
     <nav id="nav" aria-label="Menu">
       {NAV.map((n, i) =>
@@ -28,6 +32,7 @@ export function Nav({ year }: { year: number }) {
           <button key={n[0]} className={page === n[0] ? 'on' : ''} onClick={() => go(n[0])}>
             {n[1]}
             {n[0] === 'home' && <Badge n={unread} />}
+            {n[0] === 'market' && <Badge n={offers} what="propostas" />}
           </button>
         ),
       )}
@@ -45,6 +50,7 @@ export function MobileNav() {
   const page = useUi((s) => s.page);
   const go = useUi((s) => s.go);
   const unread = useUnread();
+  const offers = useOffers();
   const [more, setMore] = useState(false);
   const main = NAV_MOBILE.map((id) => NAV.find((n) => n !== '-' && n[0] === id) as readonly [PageId, string]);
   const inMore = !NAV_MOBILE.includes(page);
@@ -59,6 +65,7 @@ export function MobileNav() {
           <button key={id} className={page === id ? 'on' : ''} onClick={() => open(id)}>
             {label}
             {id === 'home' && <Badge n={unread} />}
+            {id === 'market' && <Badge n={offers} what="propostas" />}
           </button>
         ))}
         <button className={inMore || more ? 'on' : ''} onClick={() => setMore(!more)} aria-expanded={more}>
@@ -75,6 +82,7 @@ export function MobileNav() {
                 <button key={n[0]} role="menuitem" className={page === n[0] ? 'on' : ''} onClick={() => open(n[0])}>
                   {n[1]}
                   {n[0] === 'home' && <Badge n={unread} />}
+                  {n[0] === 'market' && <Badge n={offers} what="propostas" />}
                 </button>
               ),
             )}

@@ -85,7 +85,7 @@ export const LEGACY_RULES: Readonly<Rules> = {
 
 export const CURRENT_RULES: Readonly<Rules> = {
   youthGrowth: 0.5,
-  fatigue: 1.2,
+  fatigue: 1.6,
   recoveryMode: 'rest',
   recovery: 7.5,
   fitBase: 0.67,

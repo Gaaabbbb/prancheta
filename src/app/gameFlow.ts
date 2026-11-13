@@ -58,29 +58,52 @@ export const currentFixture = (): FixtureRef | undefined => {
   return userFixture(W, W.day + 1);
 };
 
-/** Notícias que fazem o Continuar parar (o resto só aparece na caixa de entrada). */
-const STOP_KINDS = new Set(['mkt', 'spon', 'med', 'apt', 'disc', 'board', 'youth', 'season', 'info', 'cup']);
+/**
+ * Notícias que fazem o Avançar parar: só as que pedem uma decisão (propostas pelos seus jogadores, janela abrindo,
+ * contratos terminando, propostas de patrocínio e avisos da diretoria). O resto fica só na caixa de entrada.
+ */
+const isDecision = (it: NewsItem): boolean =>
+  it.k === 'board' ||
+  (it.k === 'mkt' && /^(Proposta por|Janela de transferências|Contratos terminando)/.test(it.t)) ||
+  (it.k === 'spon' && /(Proposta|quer ser|quer renovar|Propostas de patrocínio)/.test(it.t));
 
 /**
- * Calendário por dias: corre os dias até a véspera do próximo jogo do usuário ou até chegar uma notícia que pede
- * atenção. Devolve quantos dias passaram e a notícia que fez parar (se houver).
+ * Calendário por dias: corre os dias até a véspera do próximo jogo do usuário ou, se `stop`, até chegar uma notícia que
+ * pede uma decisão. Devolve quantos dias passaram e a notícia que fez parar (se houver).
  */
-const runDays = (W: World, max = 90): { n: number; stop: NewsItem | null } => {
+const runDays = (W: World, stop = true, max = 120): { n: number; stop: NewsItem | null } => {
   let n = 0;
   while (!W.seasonDone && !userFixture(W, W.day + 1) && n < max) {
     // as notícias novas entram no começo da lista (que tem tamanho máximo)
     const top = W.news[0];
     stepDay(W);
     n++;
+    if (!stop) continue;
     const at = top ? W.news.indexOf(top) : W.news.length;
     const fresh = W.news.slice(0, at < 0 ? W.news.length : at);
-    const hit = fresh.find((it) => STOP_KINDS.has(it.k));
+    const hit = fresh.find(isDecision);
     if (hit) return { n, stop: hit };
   }
   return { n, stop: null };
 };
 
-/** Botão "Continuar": abre o pré-jogo ou simula até o próximo jogo do usuário (ou um evento). */
+/** "Ir para o jogo": corre os dias até o próximo jogo (sem parar por notícias) e abre o pré-jogo. */
+export const goToMatch = (): void => {
+  const W = game().world;
+  if (!W) return;
+  ui().closeModal();
+  if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
+  if (!currentFixture()) {
+    if (isDays(W)) runDays(W, false);
+    else simulateUntilUserMatch(W, (d) => !!userFixture(W, d));
+    game().touch();
+    void game().save();
+  }
+  if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
+  if (currentFixture()) ui().openModal({ kind: 'prematch' });
+};
+
+/** Botão "Avançar": abre o pré-jogo ou simula até o próximo jogo do usuário (ou uma decisão a tomar). */
 export const continueGame = (): void => {
   const W = game().world;
   if (!W) return;
@@ -97,9 +120,6 @@ export const continueGame = (): void => {
       stop ? `${days}. Parou por: ${stop.t}` : currentFixture() ? `${days}. Hoje tem jogo.` : `${days} simulados.`,
       3500,
     );
-    // proposta por um jogador seu: abre a negociação na hora
-    const offer = stop && /^Proposta por/.test(stop.t) ? W.mk?.offers.find((o) => o.pid === stop.ref?.pid) : undefined;
-    if (offer) ui().openModal({ kind: 'offer', id: offer.id });
     return;
   }
   const n = simulateUntilUserMatch(W, (d) => !!userFixture(W, d));
@@ -141,7 +161,7 @@ export const quickMatch = (): void => {
   const uf = currentFixture();
   if (!uf || !lineupReady(W)) return;
   ui().closeModal();
-  const m = prepareMatch(W, uf.comp, uf.f, { userSide: userSideOf(W, uf) });
+  const m = prepareMatch(W, uf.comp, uf.f, { userSide: userSideOf(W, uf), autoUser: true });
   m.runToEnd();
   afterUserMatch(uf, m);
 };
@@ -153,6 +173,7 @@ export const liveMatch = (): void => {
   if (!uf || !lineupReady(W)) return;
   ui().closeModal();
   const m = prepareMatch(W, uf.comp, uf.f, { userSide: userSideOf(W, uf) });
+  m.manual = true;
   useLive.getState().start(uf, m);
 };
 

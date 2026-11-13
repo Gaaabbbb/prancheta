@@ -107,6 +107,8 @@ export interface MatchOptions {
   at?: Tactic;
   /** campo neutro: ninguém tem o fator casa (finais de jogo único) */
   neutral?: boolean;
+  /** resultado rápido: a IA também faz as trocas do time do usuário */
+  autoUser?: boolean;
 }
 
 interface NarrRefs {
@@ -261,6 +263,10 @@ export class Match {
   /** momento (positivo = mandante pressionando) */ mom = 0;
   momHist: number[] = [];
   pending: (() => void) | null = null;
+  /** partida ao vivo: o usuário faz as próprias trocas (lesionado do usuário não sai sozinho) */
+  manual = false;
+  /** a IA faz as trocas do usuário (resultado rápido) */
+  autoUser = false;
   started = false;
   lastTacMin: Record<number, number> = { 0: 0, 1: 0 };
   ballX = 52.5;
@@ -277,6 +283,7 @@ export class Match {
     this.quiet = !!opts.quiet;
     this.ko = opts.ko || null;
     this.neutral = !!opts.neutral;
+    this.autoUser = !!opts.autoUser;
     this.sides = [
       new Side(W, home, 0, opts.hl || home.lineup!, opts.hb || home.bench, opts.ht),
       new Side(W, away, 1, opts.al || away.lineup!, opts.ab || away.bench, opts.at),
@@ -391,7 +398,7 @@ export class Match {
     // IA do banco a cada ~5 min
     if (Math.floor(this.min) % 5 === 0 && Math.floor(this.min) !== this._lastAI) {
       this._lastAI = Math.floor(this.min);
-      for (const s of this.sides) if (s.idx !== this.userSide) this.aiManage(s);
+      for (const s of this.sides) if (s.idx !== this.userSide || this.autoUser) this.aiManage(s);
     }
     this.fatigue();
     if (this.pending) {
@@ -738,13 +745,35 @@ export class Match {
     o.pl._injNow = true;
     side.out[o.pl.id] = 'inj';
     this.emit('inj', side.idx, { p: o.pl }, 2);
-    // substitui automaticamente (também para o usuário — avisado na narração)
+    // ao vivo, o usuário escolhe quem entra: o jogo para e o lesionado fica em campo, sem render, até a troca
+    if (this.manual && side.idx === this.userSide) {
+      o.pl.f = Math.min(o.pl.f, 35);
+      side.dirty = true;
+      return;
+    }
+    // substitui automaticamente (IA e resultado rápido)
     const rep = this.bestSub(side, o.role);
     if (rep && side.subs < MAX_SUBS) this.doSub(side, o.pl, rep, o.role);
     else {
       o.pl.f = Math.min(o.pl.f, 35);
       side.dirty = true;
     }
+  }
+
+  /** Passa as trocas do usuário para a IA (ao pular para o fim da partida ao vivo), trocando quem está machucado. */
+  handOver(): void {
+    this.manual = false;
+    this.autoUser = true;
+    if (this.userSide >= 0) this.subInjured(this.sides[this.userSide]);
+  }
+
+  /** Troca automaticamente os lesionados que ainda estão em campo (ao pular para o fim da partida ao vivo). */
+  subInjured(side: Side): void {
+    for (const o of side.on.slice())
+      if (side.out[o.pl.id] === 'inj' && side.subs < MAX_SUBS) {
+        const rep = this.bestSub(side, o.role);
+        if (rep) this.doSub(side, o.pl, rep, o.role);
+      }
   }
 
   bestSub(side: Side, role: Pos): Player | null {

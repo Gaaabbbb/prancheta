@@ -9,7 +9,7 @@ import {
   userStanding,
   leagueName,
 } from '@/core';
-import { continueGame } from '@/app/gameFlow';
+import { goToMatch } from '@/app/gameFlow';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { StatusTags, StrengthStars } from '../components/Badges';
@@ -98,7 +98,7 @@ export function Home({ W }: PageProps) {
               <button className="btn" onClick={() => go('tactics')}>
                 Ajustar escalação
               </button>
-              <button className="btn pri" onClick={continueGame}>
+              <button className="btn pri" onClick={goToMatch}>
                 Ir para o jogo
               </button>
             </div>

@@ -1,5 +1,6 @@
 import { type Div } from '../constants/divisions';
-import { deadlineTxt, perTick, seasonLastDay, ticks } from '../season/calendar';
+import { deadlineTxt, perTick, seasonLastDay, seasonProgress, ticks } from '../season/calendar';
+import { haggleUp, newTalk, say, type Talk } from '../market/talks';
 import { clamp } from '../math';
 import { news } from '../news';
 import { hash } from '../rng';
@@ -88,15 +89,15 @@ const newOffer = (W: World, slot: SponsorSlot, replace: boolean, silent = false)
   const cur = sp[slot];
   let o: SponsorOffer;
   if (replace && cur) {
-    // quem quer tirar o atual paga mais e às vezes ajuda com a multa
+    // quem quer tirar o atual nem sempre paga mais (às vezes compensa com contrato longo ou ajuda na multa)
     const c = makeContract(W, def, slot, 1);
-    c.val = nice(Math.max(c.val, cur.val * (1.12 + rnd(sp) * 0.23) * STYLE_FACTOR[def.style]));
-    o = pushOffer(W, c, { cover: [0, 0.25, 0.5][rint(sp, 0, 2)] });
+    c.val = nice(cur.val * (0.88 + rnd(sp) * 0.37) * STYLE_FACTOR[def.style]);
+    o = pushOffer(W, c, { cover: [0, 0, 0.25, 0.5][rint(sp, 0, 3)] });
     if (!silent)
       news(
         W,
         `${def.n} quer ser o ${SLOT_NAME[slot].toLowerCase()}`,
-        `A ${def.n} oferece mais que o contrato atual com a ${sponsorDef(cur.sid).n}. Veja a proposta em Finanças, aba Patrocínio.`,
+        `A ${def.n} quer substituir a ${sponsorDef(cur.sid).n} e oferece ${brl(c.val)} por ano (o contrato atual paga ${brl(cur.val)}). Veja a proposta em Finanças, aba Patrocínio.`,
         'spon',
       );
   } else {
@@ -122,7 +123,8 @@ export const ensureSponsors = (W: World): void => {
     if (!list.length) continue;
     const def = list[Math.floor(rnd(W.sp) * list.length)];
     const k = makeContract(W, def, slot, 1);
-    k.to = W.year + (slot === 'master' ? 0 : 1);
+    // contratos iniciais longos: o clube não começa a carreira trocando de patrocinador
+    k.to = W.year + (slot === 'master' ? 2 : 1);
     W.sp[slot] = k;
   }
 };
@@ -201,23 +203,61 @@ export const rejectOffer = (W: World, id: number): void => {
   W.sp!.offers = W.sp!.offers.filter((x) => x.id !== id);
 };
 
-/** Pede mais dinheiro. Pode subir o valor, manter ou fazer a marca desistir. */
-export const haggleOffer = (W: World, id: number): 'up' | 'same' | 'gone' | null => {
+/**
+ * Conversa da proposta de patrocínio: a marca oferece `val` e aceita subir até um limite escondido (maior para clube de
+ * reputação alta). Marca exigente tem menos paciência.
+ */
+export const sponsorTalk = (W: World, o: SponsorOffer): Talk => {
+  if (!o.talk) {
+    const sp = W.sp!;
+    const def = sponsorDef(o.sid);
+    const rep = W.clubs[W.user!].rep;
+    const lim = nice(o.val * (1.03 + rnd(sp) * 0.12 + Math.max(0, rep - 50) / 600));
+    o.talk = newTalk(o.val, lim, def.style === 'desempenho' ? 2 : 3, 0.45);
+    say(o.talk, 'them', o.val, `A ${def.n} oferece ${brl(o.val)} por ano, até ${o.to}.`);
+  }
+  return o.talk;
+};
+
+export interface SponsorCounter {
+  r: 'deal' | 'counter' | 'gone';
+  msg: string;
+}
+
+/**
+ * Pede mais dinheiro numa proposta de patrocínio, em rodadas: a marca sobe, mantém, aceita o pedido (aí falta assinar)
+ * ou desiste quando a paciência acaba.
+ */
+export const counterSponsor = (W: World, id: number, want: number): SponsorCounter => {
   const sp = W.sp!;
   const o = sp.offers.find((x) => x.id === id);
-  if (!o || o.haggled) return null;
-  o.haggled = true;
-  const rep = W.clubs[W.user!].rep;
-  const r = rnd(sp);
-  if (r < 0.5 + (rep - 50) / 250) {
-    o.val = nice(o.val * (1.08 + rnd(sp) * 0.08));
-    return 'up';
+  if (!o) return { r: 'gone', msg: 'A proposta não existe mais.' };
+  const def = sponsorDef(o.sid);
+  const t = sponsorTalk(W, o);
+  want = nice(want);
+  say(t, 'me', want, `Você pediu ${brl(want)} por ano.`);
+  const before = t.ask;
+  const res = haggleUp(t, want, nice);
+  if (res.r === 'accept') {
+    o.val = res.v;
+    const msg = `A ${def.n} aceita pagar ${brl(res.v)} por ano. É só assinar.`;
+    say(t, 'them', res.v, msg);
+    return { r: 'deal', msg };
   }
-  if (rnd(sp) < 0.4) {
+  if (res.r === 'off') {
     sp.offers = sp.offers.filter((x) => x.id !== id);
-    return 'gone';
+    const msg = `A ${def.n} achou que não ia dar acordo e retirou a proposta.`;
+    say(t, 'them', 0, msg);
+    return { r: 'gone', msg };
   }
-  return 'same';
+  o.val = res.v;
+  const msg = res.insult
+    ? `A ${def.n} achou o pedido fora da realidade e mantém ${brl(res.v)}.`
+    : res.v > before
+      ? `A ${def.n} sobe para ${brl(res.v)} por ano.`
+      : `A ${def.n} não passa de ${brl(res.v)} por ano.`;
+  say(t, 'them', res.v, msg);
+  return { r: 'counter', msg };
 };
 
 /** O clube rompe o contrato e paga a multa. */
@@ -295,7 +335,10 @@ export const sponsorTick = (W: World): void => {
       );
       continue;
     }
-    if (!slotLocked(W, slot) && !sp.offers.some((o) => o.slot === slot) && rnd(sp) < perTick(W, 0.035))
+    // marca querendo tirar o patrocinador atual: esporádico (umas duas vezes a cada três temporadas por espaço) e
+    // nunca no primeiro terço da primeira temporada do contrato
+    const fresh = c.from === W.year && seasonProgress(W) < 0.35;
+    if (!fresh && !slotLocked(W, slot) && !sp.offers.some((o) => o.slot === slot) && rnd(sp) < perTick(W, 0.012))
       newOffer(W, slot, true);
   }
 };
