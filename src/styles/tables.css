@@ -153,6 +153,10 @@ table.t td.nm {
   background: #f59e4233;
   color: #ffc58a;
 }
+.tag.ret {
+  background: #a78bfa26;
+  color: #c4b5fd;
+}
 .tag.real {
   background: #ffffff10;
   color: var(--muted);

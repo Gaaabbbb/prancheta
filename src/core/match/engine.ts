@@ -776,6 +776,28 @@ export class Match {
     return true;
   }
 
+  /** Troca dois jogadores em campo de posição (função e lugar na formação). */
+  swapPos(side: Side, a: Player, b: Player): boolean {
+    const x = side.on.find((o) => o.pl.id === a.id),
+      y = side.on.find((o) => o.pl.id === b.id);
+    if (!x || !y || x === y) return false;
+    [x.role, y.role] = [y.role, x.role];
+    [x.slot, y.slot] = [y.slot, x.slot];
+    side.dirty = true;
+    return true;
+  }
+
+  /** Leva um jogador em campo para uma vaga vazia da formação (depois de uma expulsão, por exemplo). */
+  moveTo(side: Side, a: Player, slot: number): boolean {
+    const x = side.on.find((o) => o.pl.id === a.id);
+    const slots = FORMATIONS[side.tac.f];
+    if (!x || !slots[slot] || side.on.some((o) => o.slot === slot)) return false;
+    x.slot = slot;
+    x.role = slots[slot][0];
+    side.dirty = true;
+    return true;
+  }
+
   setTactic(sideIdx: number, tac: Partial<Tactic>): void {
     const side = this.sides[sideIdx];
     const oldF = side.tac.f;

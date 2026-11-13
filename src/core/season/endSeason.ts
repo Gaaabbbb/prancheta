@@ -5,7 +5,7 @@ import { marketSeasonEnd } from '../market/market';
 import { RULES } from '../rules';
 import { clamp } from '../math';
 import { news } from '../news';
-import { ageEvoRange, seasonPlayBonus } from '../player/evolution';
+import { ageEvoRange, careerSeasonEnd, retireChance, seasonPlayBonus } from '../player/evolution';
 import { ovr, shiftOvr } from '../player/ratings';
 import { calcValue, calcWage } from '../player/value';
 import { chance, gauss, ri } from '../rng';
@@ -124,11 +124,20 @@ export const endSeason = (W: World): SeasonReport => {
     );
   // jogadores: envelhecimento, evolução, aposentadoria
   const retired = new Set<number>();
+  const curve = RULES.career === 'curve';
+  // temporada em que ninguém chegou a avisar (save de antes da curva de carreira): decide agora
+  if (curve && W.retAnn !== W.year)
+    for (const p of W.players) if (p.c >= 0 && !p.y && p.ret == null && chance(retireChance(W, p))) p.ret = W.year;
   for (const p of W.players) {
     if (p.c < 0) continue;
     const young = p.a <= 21;
     p.a++;
-    if (young) {
+    if (curve) {
+      // curva de carreira: a evolução já aconteceu ao longo da temporada; aqui o potencial é revisto
+      // e saem os que avisaram seis meses antes que iam parar
+      careerSeasonEnd(p);
+      if (p.ret != null) retired.add(p.id);
+    } else if (young) {
       // a evolução dos jovens já acontece durante a temporada; aqui só o potencial oscila
       p.pt = clamp(p.pt + Math.round(gauss() * 1.6), ovr(p), 99);
       p.pk = Math.min(1, (p.pk || 0) + 0.15);

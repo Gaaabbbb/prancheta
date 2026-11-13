@@ -3,8 +3,6 @@ import {
   acceptIncoming,
   askingPrice,
   calcValue,
-  counterIncoming,
-  counterIncomingShare,
   COUNTRIES,
   DIV_NAME,
   FOREIGN,
@@ -539,8 +537,6 @@ function Offers({ W }: { W: World }) {
   const mutate = useGame((s) => s.mutate);
   const openModal = useUi((s) => s.openModal);
   const mk = W.mk!;
-  const [ask, setAsk] = useState<Record<number, number>>({});
-  const [askSh, setAskSh] = useState<Record<number, number>>({});
   const save = () => void useGame.getState().save();
   const agreed = Object.entries(mk.agreed).map(([pid, a]) => ({ p: W.pmap[+pid], a }));
   return (
@@ -560,8 +556,6 @@ function Offers({ W }: { W: World }) {
           {mk.offers.map((o) => {
             const p = W.pmap[o.pid];
             const club = W.clubs[o.from];
-            const counter = ask[o.id] ?? roundMoney(Math.max(o.fee * 1.2, mk.sell[o.pid] || 0));
-            const counterSh = askSh[o.id] ?? Math.min(1, Math.round((o.share + 0.2) * 20) / 20);
             return (
               <div key={o.id} className="offer">
                 <div className="sphead">
@@ -599,39 +593,17 @@ function Offers({ W }: { W: World }) {
                   <dt>Responder até</dt>
                   <dd>{o.exp - W.day <= 0 ? 'hoje' : unitTxt(W, o.exp - W.day)}</dd>
                 </dl>
-                {o.kind === 'loan' && !o.haggled && (
-                  <div className="feerow sm">
-                    <span className="muted">Pedir que paguem</span>
-                    <button
-                      className="btn sm"
-                      onClick={() => setAskSh({ ...askSh, [o.id]: Math.max(0, counterSh - 0.05) })}
-                    >
-                      −
-                    </button>
-                    <b className="num">{Math.round(counterSh * 100)}%</b>
-                    <button
-                      className="btn sm"
-                      onClick={() => setAskSh({ ...askSh, [o.id]: Math.min(1, counterSh + 0.05) })}
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-                {o.kind === 'buy' && !o.haggled && (
-                  <div className="feerow sm">
-                    <span className="muted">Pedir</span>
-                    <button className="btn sm" onClick={() => setAsk({ ...ask, [o.id]: roundMoney(counter * 0.9) })}>
-                      −
-                    </button>
-                    <b className="num">{money(counter)}</b>
-                    <button className="btn sm" onClick={() => setAsk({ ...ask, [o.id]: roundMoney(counter * 1.1) })}>
-                      +
-                    </button>
-                  </div>
+                {o.talk && o.talk.log.length > 1 && (
+                  <p className="muted" style={{ fontSize: 12, margin: '0 0 8px' }}>
+                    Em negociação: {o.talk.log[o.talk.log.length - 1].txt}
+                  </p>
                 )}
                 <div className="spbtns">
+                  <button className="btn pri sm" onClick={() => openModal({ kind: 'offer', id: o.id })}>
+                    Negociar
+                  </button>
                   <button
-                    className="btn pri sm"
+                    className="btn sm"
                     onClick={() =>
                       openModal({
                         kind: 'confirm',
@@ -654,45 +626,6 @@ function Offers({ W }: { W: World }) {
                   >
                     Aceitar
                   </button>
-                  {o.kind === 'loan' && !o.haggled && (
-                    <button
-                      className="btn sm"
-                      onClick={() => {
-                        let r: string = '';
-                        mutate((W) => {
-                          r = counterIncomingShare(W, o.id, counterSh);
-                        });
-                        const now = W.mk!.offers.find((x) => x.id === o.id);
-                        toast(
-                          r === 'gone' || !now
-                            ? `O ${club.n} desistiu do empréstimo.`
-                            : `O ${club.n} agora paga ${Math.round(now.share * 100)}% do salário.`,
-                        );
-                        save();
-                      }}
-                    >
-                      Pedir mais
-                    </button>
-                  )}
-                  {o.kind === 'buy' && !o.haggled && (
-                    <button
-                      className="btn sm"
-                      onClick={() => {
-                        let r: string = '';
-                        mutate((W) => {
-                          r = counterIncoming(W, o.id, counter);
-                        });
-                        toast(
-                          r === 'gone'
-                            ? `O ${club.n} desistiu da proposta.`
-                            : `O ${club.n} agora oferece ${money(W.mk!.offers.find((x) => x.id === o.id)?.fee || 0)}.`,
-                        );
-                        save();
-                      }}
-                    >
-                      Pedir mais
-                    </button>
-                  )}
                   <button
                     className="btn ghost sm"
                     onClick={() => {

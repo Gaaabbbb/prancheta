@@ -1,5 +1,6 @@
 import type { Pos } from './constants/attributes';
 import type { Div } from './constants/divisions';
+import type { Talk } from './market/talks';
 
 export type { Pos, Div };
 
@@ -32,7 +33,9 @@ export interface Player {
   /** posição */ p: Pos;
   /** idade */ a: number;
   /** atributos 1..20, na ordem de ATTR */ at: number[];
-  /** potencial */ pt: number;
+  /** potencial estimado (o que aparece no jogo) */ pt: number;
+  /** teto real, escondido (curva de carreira) */ pr?: number;
+  /** ano em que vai se aposentar (avisou o clube seis meses antes) */ ret?: number;
   /** moral */ mo: number;
   /** condição física 0..100 */ f: number;
   /** jogos lesionado */ inj: number;
@@ -238,6 +241,8 @@ export interface IncomingOffer {
   /** quanto o clube aceitaria pagar no máximo (escondido) */
   max: number;
   haggled?: boolean;
+  /** rodadas de negociação */
+  talk?: Talk;
 }
 
 /** Movimentação registrada no mercado. */
@@ -265,8 +270,10 @@ export interface MarketState {
   agreed: Record<number, { fee: number; kind: 'buy' | 'loan'; share: number }>;
   /** tentativas de negociação nesta janela (por jogador e etapa) */
   tries: Record<string, number>;
-  /** identificador da janela em que as tentativas valem */
+  /** identificador da janela em que as conversas valem */
   win: number;
+  /** conversas em andamento (jogador:etapa) */
+  talks?: Record<string, Talk>;
   log: TransferRecord[];
   /** lista de observação */
   watch: number[];
@@ -343,6 +350,8 @@ export interface Qualifiers {
 }
 
 export interface World {
+  /** ano em que os jogadores já avisaram quem vai se aposentar (curva de carreira) */
+  retAnn?: number;
   v: number;
   year: number;
   day: number;

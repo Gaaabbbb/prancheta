@@ -303,7 +303,11 @@
     grid-template-columns: 92px 1fr;
   }
 
-  /* partida ao vivo */
+  /* partida ao vivo: placar, estatísticas (rolam de lado), campo e os dois bancos embaixo */
+  #match {
+    display: block;
+    overflow-y: auto;
+  }
   .placar {
     gap: 8px;
     padding: calc(10px + env(safe-area-inset-top)) 10px 14px;
@@ -320,27 +324,67 @@
   .led .sep {
     font-size: 26px;
   }
-  .mbody {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
-    overflow: auto;
+  .mstrip {
+    display: flex;
+    overflow-x: auto;
+    gap: 14px;
+    padding: 16px 12px 8px;
+    scrollbar-width: none;
   }
-  .mleft {
-    padding: 12px 10px 6px;
+  .mstrip .sti {
+    flex: 0 0 96px;
   }
-  .mstats {
-    gap: 4px 12px;
+  .mgrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 10px;
+    padding: 10px;
+  }
+  .mgrid .vpitch-wrap {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    height: min(78vh, 150vw);
+  }
+  .bench {
+    overflow: visible;
+  }
+  .brow {
+    grid-template-columns: 34px 1fr 30px;
+    padding: 8px 4px;
+  }
+  .brow .fb {
+    display: none;
+  }
+  .vtok {
+    width: 56px;
+  }
+  .vtok .sh {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+  }
+  .vtok .nm {
+    max-width: 62px;
+    font-size: 10px;
+  }
+  .vn {
     font-size: 12px;
   }
   .mctl {
+    position: sticky;
+    bottom: 0;
     flex-wrap: wrap;
     gap: 6px;
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
   }
+  .mhint {
+    order: 10;
+    flex-basis: 100%;
+    white-space: normal;
+  }
+  .mhint:empty {
+    display: none;
+  }
   .side-panel {
     padding: 14px 12px;
-  }
-  .subrow {
-    grid-template-columns: 34px 1fr 40px 50px 34px;
   }
 }

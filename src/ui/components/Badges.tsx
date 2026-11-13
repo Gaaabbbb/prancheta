@@ -1,5 +1,5 @@
 import { POS_GROUP, youthFac, type Club, type Player, type Pos } from '@/core';
-import { evoDelta, fitColor, ovrCls, strVal } from '../format';
+import { fitColor, ovrCls, strVal } from '../format';
 
 export const Ovr = ({ v }: { v: number }) => <span className={`ovr ${ovrCls(v)}`}>{v}</span>;
 
@@ -73,15 +73,13 @@ export const StatusTags = ({ p }: { p: Player }) => (
         SUSP
       </span>
     )}
+    {p.ret != null && (
+      <span className="tag ret" title="Avisou que vai encerrar a carreira no fim da temporada">
+        aposenta
+      </span>
+    )}
   </>
 );
-
-export const Evo = ({ p }: { p: Player }) => {
-  const d = evoDelta(p);
-  if (d > 0) return <b style={{ color: 'var(--ok)' }}>+{d}</b>;
-  if (d < 0) return <span style={{ color: '#ff9a9d' }}>{d}</span>;
-  return <span className="dim">0</span>;
-};
 
 /** Botões segmentados (escolha única). */
 export function Seg<T extends string | number>({

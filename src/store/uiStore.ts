@@ -17,24 +17,7 @@ export type PageId =
   | 'game';
 
 export type SortKey =
-  | 'pos'
-  | 'n'
-  | 'a'
-  | 'ovr'
-  | 'pt'
-  | 'prog'
-  | 'f'
-  | 'mo'
-  | 'evo'
-  | 'j'
-  | 'g'
-  | 'as'
-  | 'ca'
-  | 'cv'
-  | 'nt'
-  | 'val'
-  | 'sal'
-  | 'ct';
+  'pos' | 'n' | 'a' | 'ovr' | 'pt' | 'f' | 'mo' | 'j' | 'g' | 'as' | 'ca' | 'cv' | 'nt' | 'val' | 'sal' | 'ct';
 
 /** Abas da página Mercado. */
 export type MarketTab = 'search' | 'sale' | 'loan' | 'free' | 'watch' | 'offers' | 'mine' | 'log';
@@ -55,6 +38,7 @@ export type ModalSpec =
   | { kind: 'importSave' }
   | { kind: 'news'; item: NewsItem }
   | { kind: 'deal'; pid: number; mode: 'buy' | 'loan' | 'free' | 'renew' }
+  | { kind: 'offer'; id: number }
   | { kind: 'confirm'; title: string; body: ReactNode; ok: string; onOk: () => void }
   | { kind: 'info'; title: string; body: ReactNode; wide?: boolean };
 

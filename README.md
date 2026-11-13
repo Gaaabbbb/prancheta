@@ -119,7 +119,7 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     competição (`src/ui/compStyle.ts`: Brasileirão verde, Copa do Brasil azul, Libertadores dourado, Sul-Americana
     laranja), ícone de casa ou avião, janela de transferências em roxo; grade mensal e lista com resultados e dias de
     pagamento.
-  - Elenco: coluna **Evolução** (`src/core/player/evolution.ts`) e cartões amarelos/vermelhos da temporada (CA/CV).
+  - Elenco: OVR e potencial (um número só) e cartões amarelos/vermelhos da temporada (CA/CV).
   - Tática: arrastar jogadores entre campo, banco e reservas; o banco é escolhido pelo usuário (`swapSpots`);
     até 8 táticas salvas com nome (`src/core/lineup/presets.ts`), que também podem ser aplicadas durante o jogo.
 - Regras novas de dinheiro (o saldo não influencia nada esportivo, então os testes de paridade deixam o saldo de fora):
@@ -149,7 +149,6 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     jogador da Tática.
   - **Lesões e cartões:** menos cartões por falta, menos lesões e menos lesões longas (`cardRate`, `injuryRate`,
     `longInjury`): em média um desfalque a cada quatro jogos.
-  - **Base:** evolução dos jovens pela metade (`youthGrowth`).
   - **Desfalques:** lesionados e suspensos não saem sozinhos da escalação do usuário (`tidyLineup` / `lineupIssues`).
     O jogo só começa depois da troca, e a caixa de entrada avisa quando o jogador volta a ficar disponível.
   - **Patrocínio:** cada espaço só pode ser trocado uma vez por temporada, salvo se a marca romper.
@@ -162,8 +161,8 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
   - Destaques (`keyRole`): os 3 melhores de cada elenco, o artilheiro e o dono da melhor nota custam bem mais, o clube
     quase não cede, às vezes não negocia naquela janela, e o jogador pede salário maior para sair. Titulares do 4º ao
     7º melhor também saem mais caros. A IA não tira destaques de outros clubes.
-  - Compra em duas etapas: valor com o clube (aceita, contraproposta ou recusa, até 3 tentativas por janela) e
-    salário/duração com o jogador, que pode recusar clube muito menor.
+  - Compra em duas etapas: valor com o clube e salário/duração com o jogador, que pode recusar clube muito menor.
+    As duas etapas são negociadas em rodadas (ver v0.5).
   - Empréstimos até o fim da temporada, com a parte do salário negociada (0 a 100%: o clube dono tem um mínimo e faz
     contraproposta; nas propostas recebidas dá para pedir que paguem mais); jogadores livres; renovação; dispensa
     com multa de metade do salário que falta; lista de observação com avisos.
@@ -193,6 +192,31 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     patrocínio foi recalibrado: sem mexer em nada, o clube típico de cada divisão termina a temporada com ~15% da folha
     anual de lucro (bem mais com uma boa campanha em copa).
   - Extrato mensal: várias linhas podem ficar abertas ao mesmo tempo.
+- **Carreira, negociação e partida (v0.5)**:
+  - **Curva de carreira** (`RULES.career = 'curve'`, `src/core/player/evolution.ts`): todo jogador evolui um pouco por
+    semana. Jovem cresce rápido e desacelera perto do auge (por volta dos 27 anos, com ±1 ano por jogador e +2 para
+    goleiros); quem joga cresce bem mais que reserva. Entre o auge e os 30 o OVR fica estável; depois cai, cada vez mais
+    rápido (−1 aos 30, −2,5 aos 33, −4 a partir dos 35). O potencial na tela é uma estimativa; o teto real (`pr`) fica
+    escondido e pode ser um pouco maior ou menor, e quem joga pouco ou se desenvolve devagar para antes dele. Em cinco
+    temporadas, cerca de 40% dos garotos chegam ao potencial que aparecia. Na virada, a estimativa se aproxima do teto,
+    e boas ou más temporadas mexem um ponto no teto. Na tela ficam só o OVR e o potencial (um número só).
+  - **Aposentadoria anunciada**: em 1º de junho (seis meses antes do fim da temporada), quem vai parar avisa o clube
+    (`p.ret`, etiqueta "aposenta" no elenco, notícia na caixa de entrada). Ele joga até o fim do ano, não renova e a IA
+    não o contrata; na virada, encerra a carreira.
+  - **Negociação em rodadas** (`src/core/market/talks.ts`): cada conversa tem a posição do outro lado, um limite
+    escondido e paciência (3 ou 4 rodadas). A cada proposta, o outro lado cede uma parte da diferença; proposta
+    ofensiva gasta duas rodadas e quase não o faz ceder; na última rodada, qualquer valor dentro do limite fecha. Vale
+    para compra, empréstimo, salário do jogador, renovação e para as propostas recebidas, que abrem num pop-up
+    (`OfferModal`) com a conversa inteira: aceitar, pedir mais ou recusar. Se o clube aceitar o seu pedido, a venda
+    fecha na hora. Quando o **Continuar** para por causa de uma proposta, o pop-up já abre.
+  - **Tela de jogo**: o campo animado saiu. No centro fica um campo vertical com as duas formações (mandante embaixo),
+    nota, gols, cartão e condição em cada ficha, e a narração no meio do campo. Os dois bancos ficam dos lados, em
+    lista, e as estatísticas numa faixa abaixo do placar. Para substituir, arraste um reserva até quem sai (ou toque
+    nos dois); para trocar dois jogadores de posição, arraste um sobre o outro; numa vaga vazia (depois de expulsão),
+    leve alguém até ela. Formação e instruções no botão **Tática**; os lances completos em **Lances**. Velocidade e
+    **Pular para o fim** continuam. No celular, o campo ocupa a largura e os bancos ficam embaixo.
+  - **Fim do dia**: depois do jogo, o pop-up mostra a rodada inteira da competição, os outros jogos do dia (por
+    competição) e a classificação completa, com o seu time destacado.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

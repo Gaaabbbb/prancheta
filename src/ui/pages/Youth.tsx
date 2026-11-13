@@ -1,9 +1,8 @@
 import { ovr, POS_GROUP, squad, youth, youthRecommend, type Pos, type World } from '@/core';
 import { youthActions } from '@/app/youthActions';
 import { useUi } from '@/store/uiStore';
-import { Evo, FacilityStars, Ovr, PosTag } from '../components/Badges';
+import { FacilityStars, Ovr, PosTag } from '../components/Badges';
 import { SortTh } from '../components/PlayerTable';
-import { EvoBar } from '../components/EvoBar';
 import { sortPlayers } from '../sortPlayers';
 import { potTxt } from '../format';
 import type { PageProps } from './types';
@@ -43,9 +42,7 @@ export function Youth({ W }: PageProps) {
                 <SortTh k="n" label="Nome" />
                 <SortTh k="a" label="Idade" cls="r" />
                 <SortTh k="ovr" label="OVR" cls="c" />
-                <SortTh k="evo" label="Evolução" cls="c" />
                 <SortTh k="pt" label="Potencial" cls="c" />
-                <SortTh k="prog" label="Próximo OVR" />
                 <th>Nível</th>
                 <th />
               </tr>
@@ -84,13 +81,7 @@ export function Youth({ W }: PageProps) {
                     <td className="c">
                       <Ovr v={o} />
                     </td>
-                    <td className="c num">
-                      <Evo p={p} />
-                    </td>
                     <td className="c num">{potTxt(p)}</td>
-                    <td>
-                      <EvoBar W={W} p={p} />
-                    </td>
                     <td>
                       {ref > 0 && o >= ref - 2 ? (
                         <span className="tag" style={{ background: '#4cc38a33', color: 'var(--ok)' }}>

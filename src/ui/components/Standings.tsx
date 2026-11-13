@@ -52,17 +52,34 @@ export function Legend({ div, year }: { div: Div; year: number }) {
   );
 }
 
-export function LeagueTable({ W, comp, si, gi }: { W: World; comp: Competition; si: number; gi: number }) {
+export function LeagueTable({
+  W,
+  comp,
+  si,
+  gi,
+  title: title0,
+  still,
+}: {
+  W: World;
+  comp: Competition;
+  si: number;
+  gi: number;
+  /** título no lugar do nome do grupo */
+  title?: string;
+  /** sem clique nas linhas (dentro de outro modal) */
+  still?: boolean;
+}) {
   const openModal = useUi((s) => s.openModal);
   const t = table(W, comp, si, gi);
   const st = comp.stages[si] as LeagueStage;
   const cup = comp.id === 'LIB' || comp.id === 'SULA';
   const title =
-    st.groups.length > 1
+    title0 ??
+    (st.groups.length > 1
       ? cup
         ? 'Grupo ' + String.fromCharCode(65 + gi)
         : (comp.id === 'D' || si === 0 ? 'Grupo ' : 'Quadrangular ') + (gi + 1)
-      : st.name;
+      : st.name);
   return (
     <div className="panel">
       <h3>{title}</h3>
@@ -86,8 +103,8 @@ export function LeagueTable({ W, comp, si, gi }: { W: World; comp: Competition; 
           {t.map((r, i) => (
             <tr
               key={r.c}
-              className={`click ${r.c === W.user ? 'me' : ''}`}
-              onClick={() => openModal({ kind: 'club', id: r.c })}
+              className={`${still ? '' : 'click'} ${r.c === W.user ? 'me' : ''}`}
+              onClick={still ? undefined : () => openModal({ kind: 'club', id: r.c })}
             >
               <td className="num">
                 <span className={`zone ${zoneOf(W, comp, si, i + 1, t.length)}`} />

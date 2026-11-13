@@ -12,13 +12,12 @@ import { clubLevel, makePlayer } from '../world/factory';
 import { dayOfYear, DAYS_START, deadlineTxt, isDays, perTick } from '../season/calendar';
 import { marketDate, marketDateAfter, windowId, windowOn, windowState } from './windows';
 import { dirty, removeFromLineups, squad } from '../world/squad';
+import { haggleUp, haggleDown, newTalk, say, type Talk, type TalkResult } from './talks';
 
 /** Mínimo de jogadores no elenco profissional para um clube aceitar vender. */
 export const MIN_SQUAD = 20;
 /** Máximo de jogadores no elenco profissional. */
 export const MAX_SQUAD = 40;
-/** Tentativas de negociação por jogador e etapa em cada janela. */
-export const MAX_TRIES = 3;
 const MAX_INCOMING = 4;
 
 // ---------------------------------------------------------------- utilitários
@@ -85,22 +84,34 @@ const seedFreeAgents = (W: World, n: number) => {
   dirty(W);
 };
 
-const tryKey = (pid: number, stage: string) => pid + ':' + stage;
-const spendTry = (W: World, pid: number, stage: string): number => {
+const talkKey = (pid: number, stage: string) => pid + ':' + stage;
+
+/** Conversa em andamento com o clube ou o jogador (as conversas valem por janela). */
+export const getTalk = (W: World, pid: number, stage: TalkStage): Talk | undefined => {
+  const mk = W.mk;
+  if (!mk || mk.win !== windowId(W)) return undefined;
+  return mk.talks?.[talkKey(pid, stage)];
+};
+
+/** Abre (ou continua) uma conversa. Quando a janela muda, as conversas antigas acabam. */
+const openTalk = (W: World, pid: number, stage: TalkStage, make: () => Talk): Talk => {
   const mk = W.mk!;
   const id = windowId(W);
-  if (mk.win !== id) {
+  if (mk.win !== id || !mk.talks) {
     mk.win = id;
+    mk.talks = {};
     mk.tries = {};
   }
-  return (mk.tries[tryKey(pid, stage)] = (mk.tries[tryKey(pid, stage)] || 0) + 1);
+  return (mk.talks[talkKey(pid, stage)] ??= make());
 };
-/** Tentativas que ainda restam com aquele jogador/etapa. */
-export const triesLeft = (W: World, pid: number, stage: string): number => {
-  const mk = W.mk;
-  if (!mk || mk.win !== windowId(W)) return MAX_TRIES;
-  return Math.max(0, MAX_TRIES - (mk.tries[tryKey(pid, stage)] || 0));
+
+const endTalk = (W: World, pid: number, stage: TalkStage) => {
+  if (W.mk?.talks) delete W.mk.talks[talkKey(pid, stage)];
 };
+
+export type TalkStage = 'club' | 'loan' | 'player' | 'renew';
+
+const pct = (v: number) => Math.round(v * 100) + '%';
 
 // ---------------------------------------------------------------- avaliação
 
@@ -212,6 +223,29 @@ export type ClubAnswer =
   | { r: 'counter'; fee: number; share?: number; msg: string }
   | { r: 'reject'; msg: string };
 
+/**
+ * Conversa com o clube pela compra: ele começa pedindo o preço cheio e desce até um limite escondido (destaques quase
+ * não descem). Paciência: 3 rodadas para estrelas, 4 para os outros.
+ */
+export const clubTalk = (W: World, p: Player): Talk =>
+  openTalk(W, p.id, 'club', () => {
+    const role = keyRole(W, p);
+    const ask = askingPrice(W, p);
+    const floor =
+      (role === 'star' ? 0.9 : role === 'key' ? 0.84 : 0.76) +
+      0.06 * (fixed01(W, p.id, 'limite') - 0.5) -
+      (yearsLeft(W, p) <= 0 ? 0.08 : 0) -
+      (W.clubs[p.c].bal < 0 ? 0.05 : 0);
+    const t = newTalk(
+      ask,
+      roundMoney(ask * floor),
+      role === 'star' ? 3 : 4,
+      role === 'star' ? 0.3 : role === 'key' ? 0.4 : 0.5,
+    );
+    say(t, 'them', ask, `O ${W.clubs[p.c].n} pede ${brl(ask)} por ${p.n}.`);
+    return t;
+  });
+
 /** Proposta de compra ao clube. Se aceitar, o acordo fica guardado e falta acertar com o jogador. */
 export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
   const mk = ensureMarket(W)!;
@@ -219,30 +253,35 @@ export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
   if (!windowState(W).open) return { r: 'reject', msg: 'A janela de transferências está fechada.' };
   const block = sellBlock(W, p);
   if (block) return { r: 'reject', msg: block };
+  const club = W.clubs[p.c].n;
   if (untouchable(W, p))
-    return { r: 'reject', msg: `${p.n} é inegociável para o ${W.clubs[p.c].n} nesta janela. Tente na próxima.` };
-  if (triesLeft(W, pid, 'club') <= 0)
-    return { r: 'reject', msg: `O ${W.clubs[p.c].n} encerrou as conversas nesta janela.` };
+    return { r: 'reject', msg: `${p.n} é inegociável para o ${club} nesta janela. Tente na próxima.` };
+  const t = clubTalk(W, p);
+  if (t.end === 'off') return { r: 'reject', msg: `O ${club} encerrou as conversas nesta janela.` };
   const me = W.clubs[W.user!];
   if (fee > me.bal) return { r: 'reject', msg: 'O clube não tem esse dinheiro em caixa.' };
-  const n = spendTry(W, pid, 'club');
-  const ask = askingPrice(W, p);
-  const club = W.clubs[p.c].n;
-  if (fee >= ask) {
-    mk.agreed[pid] = { fee, kind: 'buy', share: 1 };
-    return { r: 'accept', fee, msg: `O ${club} aceitou ${brl(fee)}. Agora acerte o contrato com o jogador.` };
+  fee = roundMoney(fee);
+  say(t, 'me', fee, `Você ofereceu ${brl(fee)}.`);
+  const before = t.ask;
+  const res = haggleDown(t, fee, roundMoney);
+  if (res.r === 'accept') {
+    mk.agreed[pid] = { fee: res.v, kind: 'buy', share: 1 };
+    const msg = `O ${club} aceitou ${brl(res.v)}. Agora acerte o contrato com o jogador.`;
+    say(t, 'them', res.v, msg);
+    return { r: 'accept', fee: res.v, msg };
   }
-  // destaques: o clube só conversa com propostas próximas do pedido e quase não cede
-  const role = keyRole(W, p);
-  const floor = role === 'star' ? 0.92 : role === 'key' ? 0.85 : 0.75;
-  const give = role === 'star' ? 0 : role === 'key' ? 0.02 : 0.04;
-  if (fee >= ask * floor && n < MAX_TRIES) {
-    // a cada nova rodada o clube cede um pouco
-    const counter = roundMoney(ask * (1 - give * (n - 1)));
-    return { r: 'counter', fee: counter, msg: `O ${club} quer ${brl(counter)}.` };
+  if (res.r === 'off') {
+    const msg = `O ${club} se cansou da negociação e encerrou as conversas nesta janela.`;
+    say(t, 'them', 0, msg);
+    return { r: 'reject', msg };
   }
-  if (n >= MAX_TRIES) return { r: 'reject', msg: `O ${club} recusou e encerrou as conversas nesta janela.` };
-  return { r: 'reject', msg: `O ${club} achou a proposta muito baixa. Pede perto de ${brl(ask)}.` };
+  const msg = res.insult
+    ? `Proposta muito baixa. O ${club} nem considera e continua pedindo ${brl(res.v)}.`
+    : res.v < before
+      ? `O ${club} baixou o pedido para ${brl(res.v)}.`
+      : `O ${club} não baixa de ${brl(res.v)}.`;
+  say(t, 'them', res.v, msg);
+  return { r: 'counter', fee: res.v, msg };
 };
 
 /** Arredonda a parte do salário para múltiplos de 5%. */
@@ -266,6 +305,24 @@ export const loanMinShare = (W: World, p: Player, to: number): number => {
   return roundShare(clamp(v, 0.1, 1));
 };
 
+/** Conversa com o clube pelo empréstimo: ele pede uma parte do salário acima do mínimo e desce até ele. */
+export const loanTalk = (W: World, p: Player): Talk =>
+  openTalk(W, p.id, 'loan', () => {
+    const want = loanMinShare(W, p, W.user!);
+    const ask = roundShare(Math.min(1, want + 0.15));
+    const t = newTalk(ask, want, 4, 0.5);
+    say(t, 'them', ask, `O ${W.clubs[p.c].n} empresta ${p.n} se você pagar ${pct(ask)} do salário.`);
+    return t;
+  });
+
+/** Motivo para o clube nem conversar sobre empréstimo (titular, ou o jogador não quer descer tanto de patamar). */
+export const loanBlock = (W: World, p: Player): string | null => {
+  const club = W.clubs[p.c];
+  if (!loanableRank(p, squadRank(W, p))) return `${p.n} é importante para o ${club.n}, que não empresta.`;
+  if (W.clubs[W.user!].rep < club.rep - 35) return `${p.n} não quer ir para um clube tão menor, nem emprestado.`;
+  return null;
+};
+
 /** Pedido de empréstimo até o fim da temporada; `share` é a parte do salário que o usuário paga. */
 export const loanRequest = (W: World, pid: number, share: number): ClubAnswer => {
   const mk = ensureMarket(W)!;
@@ -274,39 +331,29 @@ export const loanRequest = (W: World, pid: number, share: number): ClubAnswer =>
   if (!windowState(W).open) return { r: 'reject', msg: 'A janela de transferências está fechada.' };
   const block = sellBlock(W, p);
   if (block) return { r: 'reject', msg: block };
-  if (triesLeft(W, pid, 'loan') <= 0)
-    return { r: 'reject', msg: `O ${W.clubs[p.c].n} encerrou as conversas nesta janela.` };
-  const rank = squadRank(W, p);
   const club = W.clubs[p.c].n;
-  if (!loanableRank(p, rank)) return { r: 'reject', msg: `${p.n} é importante para o ${club}, que não empresta.` };
-  const from = W.clubs[p.c],
-    me = W.clubs[W.user!];
-  if (me.rep < from.rep - 35)
-    return { r: 'reject', msg: `${p.n} não quer ir para um clube tão menor, nem emprestado.` };
-  const n = spendTry(W, pid, 'loan');
-  const want = loanMinShare(W, p, me.id);
-  const pct = (v: number) => Math.round(v * 100) + '%';
-  if (share >= want) {
-    mk.agreed[pid] = { fee: 0, kind: 'loan', share };
-    return {
-      r: 'accept',
-      fee: 0,
-      share,
-      msg: `O ${club} aceitou emprestar ${p.n}. Você paga ${pct(share)} do salário e o ${club}, ${pct(1 - share)}.`,
-    };
+  const lb = loanBlock(W, p);
+  if (lb) return { r: 'reject', msg: lb };
+  const t = loanTalk(W, p);
+  if (t.end === 'off') return { r: 'reject', msg: `O ${club} encerrou as conversas nesta janela.` };
+  say(t, 'me', share, `Você propôs pagar ${pct(share)} do salário.`);
+  const res = haggleDown(t, share, roundShare);
+  if (res.r === 'accept') {
+    mk.agreed[pid] = { fee: 0, kind: 'loan', share: res.v };
+    const msg = `O ${club} aceitou emprestar ${p.n}. Você paga ${pct(res.v)} do salário e o ${club}, ${pct(1 - res.v)}.`;
+    say(t, 'them', res.v, msg);
+    return { r: 'accept', fee: 0, share: res.v, msg };
   }
-  if (n >= MAX_TRIES) return { r: 'reject', msg: `O ${club} encerrou as conversas nesta janela.` };
-  // contraproposta: na primeira o clube pede acima do mínimo; depois desce até ele
-  const counter = roundShare(n === 1 ? Math.min(1, want + 0.1) : want);
-  return {
-    r: 'counter',
-    fee: 0,
-    share: counter,
-    msg:
-      share < want - 0.35
-        ? `Proposta baixa. O ${club} quer que você pague pelo menos ${pct(counter)} do salário.`
-        : `O ${club} topa se você pagar ${pct(counter)} do salário (eles pagam ${pct(1 - counter)}).`,
-  };
+  if (res.r === 'off') {
+    const msg = `O ${club} desistiu do empréstimo nesta janela.`;
+    say(t, 'them', 0, msg);
+    return { r: 'reject', msg };
+  }
+  const msg = res.insult
+    ? `Proposta baixa. O ${club} quer que você pague pelo menos ${pct(res.v)} do salário.`
+    : `O ${club} topa se você pagar ${pct(res.v)} do salário (eles pagam ${pct(1 - res.v)}).`;
+  say(t, 'them', res.v, msg);
+  return { r: 'counter', fee: 0, share: res.v, msg };
 };
 
 // ---------------------------------------------------------------- etapa 2: jogador
@@ -337,8 +384,11 @@ export const playerDemand = (W: World, p: Player, kind: 'buy' | 'free' | 'renew'
   }
   if (ovr(p) > clubLevel(me) + 8) wage *= 1.15;
   if (kind === 'renew' && p.mo < 30) refuse = `${p.n} está insatisfeito e não quer renovar.`;
+  if (kind === 'renew' && p.ret != null) refuse = `${p.n} vai se aposentar no fim da temporada e não renova.`;
   wage *= 0.96 + 0.08 * fixed01(W, p.id, 'salario');
-  const years: [number, number] = p.a >= 32 ? [1, 2] : p.a >= 29 ? [1, 3] : p.a <= 23 ? [2, 5] : [1, 4];
+  // quem já anunciou a aposentadoria só assina até o fim da carreira (o contrato acaba quando ele parar)
+  const years: [number, number] =
+    p.ret != null ? [1, 1] : p.a >= 32 ? [1, 2] : p.a >= 29 ? [1, 3] : p.a <= 23 ? [2, 5] : [1, 4];
   return { wage: roundWage(wage), years, refuse };
 };
 
@@ -347,29 +397,61 @@ export type PlayerAnswer =
   | { r: 'counter'; wage: number; years: [number, number]; msg: string }
   | { r: 'reject'; msg: string };
 
+/** Conversa com o jogador sobre o salário: ele pede o que quer e aceita descer até um limite escondido. */
+export const playerTalk = (W: World, p: Player, stage: 'player' | 'renew', d: Demand): Talk =>
+  openTalk(W, p.id, stage, () => {
+    const star = p.c >= 0 && p.c !== W.user && keyRole(W, p) === 'star';
+    const t = newTalk(d.wage, roundWage(d.wage * (0.84 + 0.08 * fixed01(W, p.id, 'teto-salario'))), star ? 3 : 4, 0.45);
+    say(
+      t,
+      'them',
+      d.wage,
+      `${p.n} pede ${brl(d.wage)} por mês e um contrato de ${d.years[0]}${d.years[1] > d.years[0] ? ' a ' + d.years[1] : ''} ano${d.years[1] > 1 ? 's' : ''}.`,
+    );
+    return t;
+  });
+
+/** Responde a uma proposta de contrato. Devolve o salário fechado ou a resposta para mostrar. */
 const judgeContract = (
   W: World,
   p: Player,
   d: Demand,
   wage: number,
   years: number,
-  stage: string,
-): PlayerAnswer | null => {
-  if (d.refuse) return { r: 'reject', msg: d.refuse };
-  if (triesLeft(W, p.id, stage) <= 0) return { r: 'reject', msg: `${p.n} não quer mais conversar por enquanto.` };
-  const n = spendTry(W, p.id, stage);
-  if (years < d.years[0] || years > d.years[1])
-    return {
-      r: 'counter',
-      wage: d.wage,
-      years: d.years,
-      msg: `${p.n} quer um contrato de ${d.years[0]} a ${d.years[1]} anos.`,
-    };
-  if (wage >= d.wage * 0.95) return null;
-  if (wage >= d.wage * 0.8 && n < MAX_TRIES)
-    return { r: 'counter', wage: d.wage, years: d.years, msg: `${p.n} pede ${brl(d.wage)} por mês.` };
-  if (n >= MAX_TRIES) return { r: 'reject', msg: `${p.n} recusou e encerrou a conversa.` };
-  return { r: 'counter', wage: d.wage, years: d.years, msg: `Proposta baixa. ${p.n} pede ${brl(d.wage)} por mês.` };
+  stage: 'player' | 'renew',
+): { ans: PlayerAnswer } | { wage: number } => {
+  if (d.refuse) return { ans: { r: 'reject', msg: d.refuse } };
+  const t = playerTalk(W, p, stage, d);
+  if (t.end === 'off') return { ans: { r: 'reject', msg: `${p.n} não quer mais conversar por enquanto.` } };
+  wage = roundWage(wage);
+  say(t, 'me', wage, `Você ofereceu ${brl(wage)} por mês por ${years} ano${years > 1 ? 's' : ''}.`, years);
+  if (years < d.years[0] || years > d.years[1]) {
+    t.pat--;
+    if (t.pat <= 0) {
+      t.end = 'off';
+      const msg = `${p.n} não gostou da proposta e encerrou a conversa.`;
+      say(t, 'them', 0, msg);
+      return { ans: { r: 'reject', msg } };
+    }
+    const msg = `${p.n} quer um contrato de ${d.years[0]} a ${d.years[1]} anos, por ${brl(t.ask)} por mês.`;
+    say(t, 'them', t.ask, msg);
+    return { ans: { r: 'counter', wage: t.ask, years: d.years, msg } };
+  }
+  const before = t.ask;
+  const res = haggleDown(t, wage, roundWage);
+  if (res.r === 'accept') return { wage: res.v };
+  if (res.r === 'off') {
+    const msg = `${p.n} recusou e encerrou a conversa.`;
+    say(t, 'them', 0, msg);
+    return { ans: { r: 'reject', msg } };
+  }
+  const msg = res.insult
+    ? `Proposta baixa. ${p.n} continua pedindo ${brl(res.v)} por mês.`
+    : res.v < before
+      ? `${p.n} aceita baixar para ${brl(res.v)} por mês.`
+      : `${p.n} não abre mão de ${brl(res.v)} por mês.`;
+  say(t, 'them', res.v, msg);
+  return { ans: { r: 'counter', wage: res.v, years: d.years, msg } };
 };
 
 /** Fecha a contratação (depois do acordo com o clube) ou de um jogador livre. */
@@ -382,6 +464,7 @@ export const offerContract = (W: World, pid: number, wage: number, years: number
   if (deal?.kind === 'loan') {
     executeLoan(W, p, W.user!, deal.share);
     delete mk.agreed[pid];
+    endTalk(W, pid, 'loan');
     return { r: 'accept', msg: `${p.n} chegou emprestado até o fim da temporada.` };
   }
   const me = W.clubs[W.user!];
@@ -389,15 +472,17 @@ export const offerContract = (W: World, pid: number, wage: number, years: number
     return { r: 'reject', msg: `O elenco já tem ${MAX_SQUAD} jogadores. Venda ou dispense alguém antes.` };
   if (deal && deal.fee > me.bal) return { r: 'reject', msg: 'O clube não tem mais esse dinheiro em caixa.' };
   const d = playerDemand(W, p, free ? 'free' : 'buy');
-  const ans = judgeContract(W, p, d, wage, years, 'player');
-  if (ans) return ans;
+  const j = judgeContract(W, p, d, wage, years, 'player');
+  if ('ans' in j) return j.ans;
   const from = p.c;
-  executeTransfer(W, p, me.id, deal?.fee || 0, wage, years);
+  executeTransfer(W, p, me.id, deal?.fee || 0, j.wage, years);
   delete mk.agreed[pid];
+  endTalk(W, pid, 'club');
+  endTalk(W, pid, 'player');
   return {
     r: 'accept',
     msg: free
-      ? `${p.n} assinou até ${p.ct}.`
+      ? `${p.n} assinou até ${p.ct}, por ${brl(j.wage)} por mês.`
       : `${p.n} é do ${me.n}! Veio do ${W.clubs[from].n} por ${brl(deal!.fee)}.`,
   };
 };
@@ -407,13 +492,14 @@ export const renewContract = (W: World, pid: number, wage: number, years: number
   ensureMarket(W);
   const p = W.pmap[pid];
   const d = playerDemand(W, p, 'renew');
-  const ans = judgeContract(W, p, d, wage, years, 'renew');
-  if (ans) return ans;
-  p.sal = wage;
+  const j = judgeContract(W, p, d, wage, years, 'renew');
+  if ('ans' in j) return j.ans;
+  p.sal = j.wage;
   p.ct = W.year + years;
   p.mo = clamp(p.mo + 8, 10, 100);
-  news(W, 'Renovação: ' + p.n, `${p.n} renovou até ${p.ct}, com salário de ${brl(wage)} por mês.`, 'mkt', { pid });
-  return { r: 'accept', msg: `${p.n} renovou até ${p.ct}.` };
+  endTalk(W, pid, 'renew');
+  news(W, 'Renovação: ' + p.n, `${p.n} renovou até ${p.ct}, com salário de ${brl(j.wage)} por mês.`, 'mkt', { pid });
+  return { r: 'accept', msg: `${p.n} renovou até ${p.ct}, por ${brl(j.wage)} por mês.` };
 };
 
 // ---------------------------------------------------------------- execução
@@ -556,44 +642,78 @@ export const rejectIncoming = (W: World, id: number): void => {
   W.mk!.offers = W.mk!.offers.filter((x) => x.id !== id);
 };
 
-/**
- * Pede que o outro clube pague uma parte maior do salário num empréstimo. `o.max` guarda o máximo que ele aceita
- * pagar (propostas antigas, sem máximo, não sobem).
- */
-export const counterIncomingShare = (W: World, id: number, share: number): 'up' | 'gone' | 'same' => {
-  const mk = W.mk!;
-  const o = mk.offers.find((x) => x.id === id)!;
-  if (o.haggled) return 'same';
-  o.haggled = true;
-  const max = Math.max(o.share, o.max || 0);
-  if (share <= max) {
-    o.share = roundShare(share);
-    return 'up';
+/** Conversa de uma proposta recebida: o clube oferece `fee` (ou a parte do salário) e sobe até o máximo escondido. */
+export const offerTalk = (W: World, o: IncomingOffer): Talk => {
+  if (!o.talk) {
+    const loan = o.kind === 'loan';
+    const v = loan ? o.share : o.fee;
+    const lim = Math.max(v, loan ? Math.max(o.share, o.max || 0) : o.max);
+    o.talk = newTalk(v, lim, 3, 0.5);
+    const p = W.pmap[o.pid];
+    say(
+      o.talk,
+      'them',
+      v,
+      loan
+        ? `O ${W.clubs[o.from].n} quer ${p?.n ?? 'o jogador'} emprestado e paga ${pct(v)} do salário.`
+        : `O ${W.clubs[o.from].n} oferece ${brl(v)} por ${p?.n ?? 'o jogador'}.`,
+    );
   }
-  if (rnd(mk) < 0.45) {
-    mk.offers = mk.offers.filter((x) => x.id !== id);
-    return 'gone';
-  }
-  o.share = roundShare(max);
-  return 'up';
+  return o.talk;
 };
 
-/** Pede mais dinheiro numa proposta recebida. */
-export const counterIncoming = (W: World, id: number, fee: number): 'up' | 'gone' | 'same' => {
+export interface CounterAnswer {
+  r: 'sold' | 'counter' | 'gone';
+  msg: string;
+}
+
+/**
+ * Contraproposta do usuário numa proposta recebida: pede mais dinheiro (venda) ou que o clube pague mais do salário
+ * (empréstimo). Se o clube aceitar, o negócio fecha na hora; se perder a paciência, a proposta some.
+ */
+export const counterIncoming = (W: World, id: number, want: number): CounterAnswer => {
   const mk = W.mk!;
-  const o = mk.offers.find((x) => x.id === id)!;
-  if (o.haggled) return 'same';
-  o.haggled = true;
-  if (fee <= o.max) {
-    o.fee = roundMoney(fee);
-    return 'up';
+  const o = mk.offers.find((x) => x.id === id);
+  if (!o) return { r: 'gone', msg: 'A proposta não existe mais.' };
+  const p = W.pmap[o.pid];
+  const club = W.clubs[o.from].n;
+  const loan = o.kind === 'loan';
+  const t = offerTalk(W, o);
+  const round = loan ? roundShare : roundMoney;
+  want = round(want);
+  say(t, 'me', want, loan ? `Você pediu que paguem ${pct(want)} do salário.` : `Você pediu ${brl(want)}.`);
+  const before = t.ask;
+  const res: TalkResult = haggleUp(t, want, round);
+  if (res.r === 'accept') {
+    if (loan) o.share = res.v;
+    else o.fee = res.v;
+    const err = acceptIncoming(W, id);
+    if (err) return { r: 'gone', msg: err };
+    const msg = loan
+      ? `Fechado: ${p.n} vai emprestado ao ${club}, que paga ${pct(res.v)} do salário.`
+      : `Fechado: ${p.n} foi vendido ao ${club} por ${brl(res.v)}.`;
+    say(t, 'them', res.v, msg);
+    return { r: 'sold', msg };
   }
-  if (rnd(mk) < 0.45) {
+  if (res.r === 'off') {
     mk.offers = mk.offers.filter((x) => x.id !== id);
-    return 'gone';
+    const msg = `O ${club} achou que não ia dar acordo e desistiu da proposta.`;
+    say(t, 'them', 0, msg);
+    return { r: 'gone', msg };
   }
-  o.fee = roundMoney(o.max);
-  return 'up';
+  if (loan) o.share = res.v;
+  else o.fee = res.v;
+  const msg = res.insult
+    ? `O ${club} achou o pedido absurdo. ${loan ? `Continua pagando ${pct(res.v)} do salário.` : `Mantém ${brl(res.v)}.`}`
+    : res.v > before
+      ? loan
+        ? `O ${club} sobe para ${pct(res.v)} do salário.`
+        : `O ${club} melhora a proposta para ${brl(res.v)}.`
+      : loan
+        ? `O ${club} não passa de ${pct(res.v)} do salário.`
+        : `O ${club} não passa de ${brl(res.v)}.`;
+  say(t, 'them', res.v, msg);
+  return { r: 'counter', msg };
 };
 
 // ---------------------------------------------------------------- IA no mercado
@@ -630,14 +750,17 @@ const aiTransfers = (W: World) => {
     const minO = Math.round(lvl - 2),
       maxO = Math.round(lvl + 6);
     // livre primeiro (sai mais barato)
-    const fa = free.filter((p) => p.c < 0 && POS_GROUP[p.p] === g && ovr(p) >= minO - 2 && ovr(p) <= maxO);
+    const fa = free.filter(
+      (p) => p.c < 0 && p.ret == null && POS_GROUP[p.p] === g && ovr(p) >= minO - 2 && ovr(p) <= maxO,
+    );
     if (fa.length && (sq.length < planSize(buyer) || rnd(mk) < 0.35)) {
       const p = pickOne(mk, fa);
       executeTransfer(W, p, buyer.id, 0, calcWage(p, buyer.div), rint(mk, 1, 3));
       continue;
     }
     const cands = W.players.filter((p) => {
-      if (p.c < 0 || p.c === W.user || p.c === buyer.id || p.y || p.loan || POS_GROUP[p.p] !== g) return false;
+      if (p.c < 0 || p.c === W.user || p.c === buyer.id || p.y || p.loan || p.ret != null || POS_GROUP[p.p] !== g)
+        return false;
       const o = ovr(p);
       if (o < minO || o > maxO) return false;
       const seller = W.clubs[p.c];
@@ -676,6 +799,7 @@ const aiOffersToUser = (W: World) => {
     const span = isDays(W) ? Math.max(3, Math.min(10, ws.rounds)) : Math.max(1, Math.min(3, ws.rounds));
     const off: IncomingOffer = { ...o, id: mk.nextId++, exp: W.day + span };
     mk.offers.push(off);
+    offerTalk(W, off);
     busy.add(o.pid);
     const p = W.pmap[o.pid];
     news(
@@ -797,7 +921,7 @@ export const marketSeasonEnd = (W: World): void => {
   for (const p of W.players) {
     if (p.c >= 0) continue;
     p.a++;
-    if (p.a >= 36 || (p.a >= 33 && rnd(mk) < 0.4) || W.year - (p.fa ?? W.year) >= 2) gone.add(p.id);
+    if (p.ret != null || p.a >= 36 || (p.a >= 33 && rnd(mk) < 0.4) || W.year - (p.fa ?? W.year) >= 2) gone.add(p.id);
   }
   // contratos que acabam nesta temporada
   const left: string[] = [];

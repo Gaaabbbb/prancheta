@@ -7,11 +7,12 @@ import { autoLineup, validateLineup } from '../lineup/lineup';
 import { applyMatch } from '../match/applyMatch';
 import { Match, type KoContext, type MatchOptions } from '../match/engine';
 import { news } from '../news';
-import { recoverFitness } from '../rules';
+import { recoverFitness, RULES } from '../rules';
 import type { Club, Competition, Fixture, World } from '../types';
 import { teamStrength } from '../world/strength';
 import { dirty } from '../world/squad';
 import { youthReport, youthTick } from '../youth/youth';
+import { announceRetirements, careerTick } from '../player/evolution';
 import { advanceComp } from './advance';
 import { advanceForeignLeague, isForeignLeague, quickPlay } from './foreignLeagues';
 import { CUP_ADVANCE, resolveConflicts } from './cups';
@@ -156,7 +157,7 @@ export const playDay = (W: World, userMatch?: Match): void => {
   dailyMoney(W);
   sponsorTick(W);
   marketTick(W);
-  youthTick(W);
+  evolve(W);
   if (W.day % 10 === 0) youthReport(W);
   for (const div of DIVS) {
     const comp = W.comps[div];
@@ -165,6 +166,14 @@ export const playDay = (W: World, userMatch?: Match): void => {
   if (DIVS.every((d) => W.comps[d].done)) W.seasonDone = true;
   // segurança: se nenhuma competição tiver mais jogos, encerra
   if (!W.seasonDone && !DIVS.some((d) => W.comps[d].fx.some((f) => !f.pl))) W.seasonDone = true;
+};
+
+/** Evolução dos jogadores no dia: curva de carreira (regras atuais) ou só os jovens (original). */
+const evolve = (W: World) => {
+  if (RULES.career === 'curve') {
+    careerTick(W);
+    announceRetirements(W);
+  } else youthTick(W);
 };
 
 /** Joga as partidas de uma lista e cumpre as suspensões de quem estava suspenso. */
@@ -230,7 +239,7 @@ export const advanceDay = (W: World, userMatch?: Match): void => {
   dailyMoney(W);
   sponsorTick(W);
   marketTick(W);
-  youthTick(W);
+  evolve(W);
   if ((W.day - DAYS_START) % 30 === 0) youthReport(W);
   const comps = compList(W);
   const stages = comps.reduce((n, c) => n + c.stages.length, 0);

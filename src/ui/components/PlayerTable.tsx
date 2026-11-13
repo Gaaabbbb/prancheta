@@ -1,7 +1,6 @@
 import { ovr, RULES, type Player } from '@/core';
 import { useUi, type SortKey } from '@/store/uiStore';
 import { useWorld } from '@/store/gameStore';
-import { EvoBar } from './EvoBar';
 import { money, potTxt, rating } from '../format';
 import { sortPlayers } from '../sortPlayers';
 import { FitBar, MoraleBar, Ovr, PosTag, StatusTags } from './Badges';
@@ -33,7 +32,6 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
           <SortTh k="a" label="Idade" cls="r" />
           <SortTh k="ovr" label="OVR" cls="c" />
           <SortTh k="pt" label="Pot" cls="c" />
-          <SortTh k="prog" label="Evolução" />
           <SortTh k="f" label="Cond." />
           <SortTh k="mo" label="Moral" />
           <SortTh k="j" label="J" cls="r" />
@@ -69,9 +67,6 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
               <Ovr v={ovr(p)} />
             </td>
             <td className="c dim num">{potTxt(p)}</td>
-            <td>
-              <EvoBar W={W} p={p} />
-            </td>
             <td style={{ width: 70 }}>
               <FitBar f={p.f} />
             </td>

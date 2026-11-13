@@ -26,6 +26,8 @@ import {
   keyRole,
   untouchable,
   calcValue,
+  counterIncoming,
+  getTalk,
   type RawDb,
   type World,
 } from '../../src/core';
@@ -85,8 +87,14 @@ describe('mercado', () => {
     const p = target(W);
     const from = p.c;
     const ask = askingPrice(W, p);
-    expect(offerToClub(W, p.id, Math.round(ask * 0.5)).r).toBe('reject');
+    // proposta ofensiva: o clube nem se mexe e a paciência cai duas rodadas
+    const low = offerToClub(W, p.id, Math.round(ask * 0.5));
+    expect(low.r).toBe('counter');
+    expect(getTalk(W, p.id, 'club')!.pat).toBe(getTalk(W, p.id, 'club')!.pat0 - 2);
     expect(offerToClub(W, p.id, ask).r).toBe('accept');
+    // fecha pelo pedido atual do clube (que pode ter descido um pouco)
+    const fee = W.mk!.agreed[p.id].fee;
+    expect(fee).toBeLessThanOrEqual(ask);
     const d = playerDemand(W, p, 'buy');
     if (d.refuse) return;
     const bal = W.clubs[0].bal,
@@ -95,8 +103,8 @@ describe('mercado', () => {
     expect(ans.r).toBe('accept');
     expect(p.c).toBe(0);
     expect(p.sal).toBe(d.wage);
-    expect(W.clubs[0].bal).toBe(bal - ask);
-    expect(W.clubs[from].bal).toBe(sellerBal + ask);
+    expect(W.clubs[0].bal).toBe(bal - fee);
+    expect(W.clubs[from].bal).toBe(sellerBal + fee);
     expect(W.mk!.log[0].kind).toBe('compra');
   });
 
@@ -151,6 +159,57 @@ describe('mercado', () => {
     expect(p.c).toBe(5);
     expect(W.clubs[0].bal).toBe(bal + 9e5);
     expect(W.mk!.sell[p.id]).toBeUndefined();
+  });
+
+  it('negociação em rodadas: o clube desce a cada proposta e fecha antes de perder a paciência', () => {
+    const W = career();
+    const p = target(W);
+    const ask = askingPrice(W, p);
+    let offer = Math.round(ask * 0.8);
+    const asks: number[] = [];
+    let r = offerToClub(W, p.id, offer);
+    while (r.r === 'counter') {
+      asks.push(r.fee);
+      offer = Math.round((offer + r.fee) / 2);
+      r = offerToClub(W, p.id, offer);
+    }
+    expect(r.r).toBe('accept');
+    // o pedido só desce
+    for (let i = 1; i < asks.length; i++) expect(asks[i]).toBeLessThanOrEqual(asks[i - 1]);
+    expect(W.mk!.agreed[p.id].fee).toBeLessThan(ask);
+    const t = getTalk(W, p.id, 'club')!;
+    expect(t.log[0].by).toBe('them');
+    expect(t.log.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('teimosia: proposta baixa repetida acaba a conversa na janela', () => {
+    const W = career();
+    const p = target(W);
+    const ask = askingPrice(W, p);
+    let r = offerToClub(W, p.id, Math.round(ask * 0.4));
+    let n = 1;
+    while (r.r === 'counter' && n++ < 10) r = offerToClub(W, p.id, Math.round(ask * 0.4));
+    expect(r.r).toBe('reject');
+    expect(n).toBeLessThanOrEqual(3);
+    expect(offerToClub(W, p.id, ask * 2).r).toBe('reject');
+  });
+
+  it('proposta recebida: pedir mais faz o clube subir; pedido aceito vende na hora', () => {
+    const W = career();
+    const p = squad(W, 0).sort((a, b) => ovr(a) - ovr(b))[6];
+    W.mk!.offers.push({ id: 77, pid: p.id, from: 5, kind: 'buy', fee: 1e6, share: 1, exp: 99, max: 1.4e6 });
+    const r1 = counterIncoming(W, 77, 2e6);
+    expect(r1.r).toBe('counter');
+    const o = W.mk!.offers.find((x) => x.id === 77)!;
+    expect(o.fee).toBeGreaterThan(1e6);
+    expect(o.fee).toBeLessThanOrEqual(1.4e6);
+    const bal = W.clubs[0].bal;
+    // pedir abaixo do que eles já oferecem fecha pela oferta deles
+    const now = o.fee;
+    const r2 = counterIncoming(W, 77, Math.min(now, 1.35e6));
+    expect(r2.r).toBe('sold');
+    expect(p.c).toBe(5);
+    expect(W.clubs[0].bal).toBe(bal + now);
   });
 
   it('dispensar paga metade do que falta do contrato e deixa o jogador livre', () => {

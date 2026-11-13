@@ -51,6 +51,13 @@ export interface Rules {
   sponsorModel: 'rep' | 'div';
   /** 'rounds': o jogo anda de rodada em rodada (original); 'days': anda dia a dia, com copas */
   calendar: 'rounds' | 'days';
+  /**
+   * evolução dos jogadores:
+   * - 'legacy': jovens até 21 evoluem na temporada; os outros mudam só na virada, por faixa de idade (original)
+   * - 'curve': curva de carreira com teto escondido, evolução semanal pela minutagem, queda depois dos 30 e
+   *   aposentadoria anunciada seis meses antes
+   */
+  career: 'legacy' | 'curve';
 }
 
 export const LEGACY_RULES: Readonly<Rules> = {
@@ -73,6 +80,7 @@ export const LEGACY_RULES: Readonly<Rules> = {
   gateModel: 'fill',
   sponsorModel: 'rep',
   calendar: 'rounds',
+  career: 'legacy',
 };
 
 export const CURRENT_RULES: Readonly<Rules> = {
@@ -95,6 +103,7 @@ export const CURRENT_RULES: Readonly<Rules> = {
   gateModel: 'demand',
   sponsorModel: 'div',
   calendar: 'days',
+  career: 'curve',
 };
 
 /** Regras em vigor (mutável de propósito, para os testes trocarem). */

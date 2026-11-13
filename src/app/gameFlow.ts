@@ -19,6 +19,7 @@ import {
   userFixture,
   type FixtureRef,
   type Match,
+  type NewsItem,
   type World,
 } from '@/core';
 import { useGame } from '@/store/gameStore';
@@ -64,7 +65,7 @@ const STOP_KINDS = new Set(['mkt', 'spon', 'med', 'apt', 'disc', 'board', 'youth
  * Calendário por dias: corre os dias até a véspera do próximo jogo do usuário ou até chegar uma notícia que pede
  * atenção. Devolve quantos dias passaram e a notícia que fez parar (se houver).
  */
-const runDays = (W: World, max = 90): { n: number; stop: string | null } => {
+const runDays = (W: World, max = 90): { n: number; stop: NewsItem | null } => {
   let n = 0;
   while (!W.seasonDone && !userFixture(W, W.day + 1) && n < max) {
     // as notícias novas entram no começo da lista (que tem tamanho máximo)
@@ -74,7 +75,7 @@ const runDays = (W: World, max = 90): { n: number; stop: string | null } => {
     const at = top ? W.news.indexOf(top) : W.news.length;
     const fresh = W.news.slice(0, at < 0 ? W.news.length : at);
     const hit = fresh.find((it) => STOP_KINDS.has(it.k));
-    if (hit) return { n, stop: hit.t };
+    if (hit) return { n, stop: hit };
   }
   return { n, stop: null };
 };
@@ -93,9 +94,12 @@ export const continueGame = (): void => {
     if (W.seasonDone) return ui().openModal({ kind: 'seasonEnd' });
     const days = n === 1 ? '1 dia' : n + ' dias';
     toast(
-      stop ? `${days}. Parou por: ${stop}` : currentFixture() ? `${days}. Hoje tem jogo.` : `${days} simulados.`,
+      stop ? `${days}. Parou por: ${stop.t}` : currentFixture() ? `${days}. Hoje tem jogo.` : `${days} simulados.`,
       3500,
     );
+    // proposta por um jogador seu: abre a negociação na hora
+    const offer = stop && /^Proposta por/.test(stop.t) ? W.mk?.offers.find((o) => o.pid === stop.ref?.pid) : undefined;
+    if (offer) ui().openModal({ kind: 'offer', id: offer.id });
     return;
   }
   const n = simulateUntilUserMatch(W, (d) => !!userFixture(W, d));

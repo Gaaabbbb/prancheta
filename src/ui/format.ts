@@ -33,25 +33,8 @@ export const ovrCls = (v: number): string => (v >= 85 ? 'o9' : v >= 77 ? 'o8' : 
 
 export const fitColor = (f: number): string => (f > 80 ? 'var(--ok)' : f > 60 ? 'var(--yellow)' : 'var(--red)');
 
-/** Faixa de potencial visível (fica mais precisa conforme o garoto é observado). */
-export const potRange = (p: Player): [number, number] => {
-  const pk = p.pk == null ? 1 : p.pk,
-    o = ovr(p);
-  if (pk >= 0.97 || p.a > 23) return [Math.max(o, p.pt), Math.max(o, p.pt)];
-  const w = Math.round(2 + (1 - pk) * 10);
-  const off = Math.round((((p.id * 7919) % 7) - 3) * (1 - pk));
-  const lo = Math.max(o, p.pt - w + off),
-    hi = Math.min(99, Math.max(lo, p.pt + w + off));
-  return [lo, hi];
-};
-
-export const potTxt = (p: Player): string => {
-  const [lo, hi] = potRange(p);
-  return lo === hi ? String(lo) : lo + '–' + hi;
-};
-
-/** Evolução do OVR desde o início da temporada. */
-export const evoDelta = (p: Player): number => ovr(p) - (p.sy == null ? ovr(p) : p.sy);
+/** Potencial que aparece no jogo: um número só (a estimativa do clube; nunca abaixo do OVR atual). */
+export const potTxt = (p: Player): string => String(Math.max(ovr(p), p.pt));
 
 /** Força do elenco (média dos 13 melhores) convertida em 0..5 estrelas. */
 export const strVal = (s: number): number => {

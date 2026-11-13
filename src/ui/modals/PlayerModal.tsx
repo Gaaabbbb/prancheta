@@ -17,7 +17,7 @@ import { toast, useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { Modal, ModalHeader } from '../components/Modal';
 import { StatusTags } from '../components/Badges';
-import { evoDelta, money, ovrCls, potTxt, rating } from '../format';
+import { money, ovrCls, potTxt, rating } from '../format';
 import { youthActions } from '@/app/youthActions';
 
 const attrCls = (x: number) => (x >= 15 ? 'a-hi' : x >= 10 ? 'a-md' : 'a-lo');
@@ -38,7 +38,6 @@ export function PlayerModal({ id }: { id: number }) {
   const mine = p.c === W.user;
   const market = RULES.market;
   const watched = !!W.mk?.watch.includes(p.id);
-  const evo = evoDelta(p);
   return (
     <Modal>
       <ModalHeader>
@@ -108,16 +107,8 @@ export function PlayerModal({ id }: { id: number }) {
             <dd>{money(calcValue(p))}</dd>
             {p.y ? (
               <>
-                <dt>Evolução na temporada</dt>
-                <dd>
-                  {evo > 0 ? (
-                    <b style={{ color: 'var(--ok)' }}>+{evo}</b>
-                  ) : evo < 0 ? (
-                    <span style={{ color: '#ff9a9d' }}>{evo}</span>
-                  ) : (
-                    <span className="dim">0</span>
-                  )}
-                </dd>
+                <dt>Salário</dt>
+                <dd className="dim">categoria de base</dd>
               </>
             ) : (
               <>

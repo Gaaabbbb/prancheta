@@ -1,28 +1,35 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   calcValue,
+  clubTalk,
   ensureMarket,
+  getTalk,
   keyRole,
+  loanBlock,
   loanRequest,
-  MAX_TRIES,
+  loanTalk,
   offerContract,
   offerToClub,
   ovr,
   playerDemand,
+  playerTalk,
   POS_NAME,
   renewContract,
   roundMoney,
-  triesLeft,
+  roundShare,
+  sellBlock,
   untouchable,
+  unitTxt,
   windowState,
   type ClubAnswer,
   type PlayerAnswer,
-  unitTxt,
+  type TalkStage,
 } from '@/core';
 import { useGame, useWorld } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { Modal, ModalHeader } from '../components/Modal';
+import { Amount, Patience, TalkLog } from '../components/Negotiation';
 import { money, potTxt } from '../format';
 
 type Mode = 'buy' | 'loan' | 'free' | 'renew';
@@ -34,7 +41,12 @@ const TITLE: Record<Mode, string> = {
   renew: 'Renovar contrato',
 };
 
-/** Negociação em duas etapas: valor com o clube, depois salário e duração com o jogador. */
+const pct = (v: number) => Math.round(v * 100) + '%';
+
+/**
+ * Negociação em rodadas: primeiro o valor (ou a parte do salário, no empréstimo) com o clube, depois salário e duração
+ * com o jogador. Cada lado responde com uma contraproposta até fechar ou alguém perder a paciência.
+ */
 export function DealModal({ pid, mode }: { pid: number; mode: Mode }) {
   const W = useWorld();
   if (!W.mk) ensureMarket(W);
@@ -49,16 +61,56 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
   const agreed = W.mk?.agreed[pid];
   const clubStep = (mode === 'buy' || mode === 'loan') && !agreed;
   const value = calcValue(p);
-  const [fee, setFee] = useState(() => roundMoney(value));
-  const [share, setShare] = useState(0.5);
-  const [clubAns, setClubAns] = useState<ClubAnswer | null>(null);
-  const demand = playerDemand(W, p, mode === 'renew' ? 'renew' : mode === 'free' ? 'free' : 'buy');
-  const [wage, setWage] = useState(demand.wage);
-  const [years, setYears] = useState(demand.years[0]);
-  const [playerAns, setPlayerAns] = useState<PlayerAnswer | null>(null);
   const from = p.c >= 0 ? W.clubs[p.c] : null;
   const ws = windowState(W);
+  const needWindow = (mode === 'buy' || mode === 'loan') && !ws.open;
   const role = mode === 'buy' || mode === 'loan' ? keyRole(W, p) : null;
+  const demand = playerDemand(W, p, mode === 'renew' ? 'renew' : mode === 'free' ? 'free' : 'buy');
+  const stage: TalkStage | null = clubStep
+    ? mode === 'loan'
+      ? 'loan'
+      : 'club'
+    : agreed?.kind === 'loan'
+      ? null
+      : mode === 'renew'
+        ? 'renew'
+        : 'player';
+  // motivo para nem começar a conversa
+  const block =
+    needWindow || !stage
+      ? null
+      : stage === 'club'
+        ? sellBlock(W, p) ||
+          (untouchable(W, p) ? `${p.n} é inegociável para o ${from!.n} nesta janela. Tente na próxima.` : null)
+        : stage === 'loan'
+          ? sellBlock(W, p) || loanBlock(W, p)
+          : demand.refuse || null;
+  const talk = stage ? getTalk(W, pid, stage) : undefined;
+
+  // abre a conversa ao entrar na etapa: o outro lado diz o que quer
+  useEffect(() => {
+    if (!stage || needWindow || block) return;
+    mutate((W) => {
+      const pl = W.pmap[pid];
+      if (stage === 'club') clubTalk(W, pl);
+      else if (stage === 'loan') loanTalk(W, pl);
+      else playerTalk(W, pl, stage, demand);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, needWindow, block]);
+
+  // sem escolha do usuário, a proposta sugerida fica abaixo do pedido (ou entre a sua última e o pedido)
+  const [feeSel, setFee] = useState<number | null>(null);
+  const [shareSel, setShare] = useState<number | null>(null);
+  const [wageSel, setWage] = useState<number | null>(null);
+  const mine = talk ? [...talk.log].reverse().find((m) => m.by === 'me') : undefined;
+  const suggest = (k: number, base: number) => (talk ? (mine ? (mine.v + talk.ask) / 2 : talk.ask * k) : base);
+  const fee = feeSel ?? roundMoney(suggest(0.8, value * 0.8));
+  const share = shareSel ?? roundShare(talk && !mine ? talk.ask - 0.2 : suggest(1, 0.4));
+  const wage = wageSel ?? Math.round(suggest(0.88, demand.wage * 0.88) / 1000) * 1000;
+  const [years, setYears] = useState(demand.years[0]);
+  const [last, setLast] = useState<ClubAnswer | PlayerAnswer | null>(null);
+
   const save = () => void useGame.getState().save();
 
   /** roda uma ação do núcleo no mundo e redesenha */
@@ -70,36 +122,32 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
     return out;
   };
 
-  const sendClub = (v = fee, sh = share) => {
-    const a = run(() => (mode === 'loan' ? loanRequest(W, pid, sh) : offerToClub(W, pid, v)));
-    setClubAns(a);
-    if (a.r === 'counter' && mode === 'buy') setFee(a.fee);
-    if (a.r === 'counter' && mode === 'loan' && a.share != null) setShare(a.share);
+  const sendClub = (v: number) => {
+    const a = run(() => (mode === 'loan' ? loanRequest(W, pid, v) : offerToClub(W, pid, v)));
+    setLast(a);
+    // a próxima proposta já começa entre a sua e a deles
+    if (a.r === 'counter' && mode === 'buy') setFee(roundMoney((v + a.fee) / 2));
+    if (a.r === 'counter' && mode === 'loan' && a.share != null) setShare(roundShare((v + a.share) / 2));
+    if (a.r === 'accept') toast(a.msg, 3500);
     save();
   };
 
-  const sendPlayer = (w = wage, y = years) => {
+  const sendPlayer = (w: number, y: number) => {
     const a = run(() => (mode === 'renew' ? renewContract(W, pid, w, y) : offerContract(W, pid, w, y)));
-    setPlayerAns(a);
+    setLast(a);
     if (a.r === 'counter') {
-      setWage(a.wage);
+      setWage(Math.round((w + a.wage) / 2 / 1000) * 1000);
       setYears(Math.min(Math.max(y, a.years[0]), a.years[1]));
     }
+    save();
     if (a.r === 'accept') {
       toast(a.msg, 3500);
-      save();
       closeModal();
     }
   };
 
-  const needWindow = (mode === 'buy' || mode === 'loan') && !ws.open;
-  const ansBox = (a: ClubAnswer | PlayerAnswer | null) =>
-    a && (
-      <p className={`dealans ${a.r}`}>
-        {a.r === 'accept' ? '✓ ' : a.r === 'counter' ? '↔ ' : '✕ '}
-        {a.msg}
-      </p>
-    );
+  const open = !!talk && !talk.end;
+  const themName = stage === 'club' || stage === 'loan' ? from?.n || '' : p.n;
 
   return (
     <Modal>
@@ -112,11 +160,12 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
           <h2>{p.n}</h2>
           <div className="muted" style={{ fontSize: 13 }}>
             {POS_NAME[p.p]}, {p.a} anos · OVR {ovr(p)} · potencial {potTxt(p)} · {from ? from.n : 'sem clube'}
+            {p.ret != null && <span className="tag ret">aposenta no fim da temporada</span>}
           </div>
         </div>
       </ModalHeader>
 
-      <dl className="kv" style={{ marginBottom: 12 }}>
+      <dl className="kv dealkv">
         <dt>Valor de mercado</dt>
         <dd className="num">{money(value)}</dd>
         <dt>Salário atual</dt>
@@ -131,23 +180,27 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
         <dd className="num">{money(W.clubs[W.user!].bal)}</dd>
       </dl>
 
-      {role && clubStep && !needWindow && (
+      {role && clubStep && !needWindow && !block && (
         <p className="keynote">
-          {untouchable(W, p) ? (
+          {role === 'star' ? (
             <>
-              <b>Inegociável nesta janela.</b> {p.n} é um dos destaques do {from!.n}, que não quer nem ouvir propostas
-              agora. Tente na próxima janela.
-            </>
-          ) : role === 'star' ? (
-            <>
-              <b>Destaque do {from!.n}.</b> O clube pede bem acima do valor de mercado, só conversa com propostas perto
-              do pedido e quase não cede. Ele também pede um salário maior para sair.
+              <b>Destaque do {from!.n}.</b> O clube pede bem acima do valor de mercado, quase não cede e tem pouca
+              paciência. Ele também pede um salário maior para sair.
             </>
           ) : (
             <>
-              <b>Titular importante do {from!.n}.</b> Sai mais caro e o clube cede pouco na negociação.
+              <b>Titular importante do {from!.n}.</b> Sai mais caro e o clube cede pouco a cada rodada.
             </>
           )}
+        </p>
+      )}
+
+      {agreed && (
+        <p className="dealans accept">
+          ✓ Acerto com o {from?.n}:{' '}
+          {agreed.kind === 'loan'
+            ? `você paga ${pct(agreed.share)} do salário (${money(p.sal * agreed.share)}/mês) até o fim da temporada.`
+            : money(agreed.fee) + '.'}
         </p>
       )}
 
@@ -158,166 +211,146 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
             ? `A próxima (${ws.name.toLowerCase()}) abre em ${ws.opens.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}, daqui a ${unitTxt(W, ws.rounds)}.`
             : 'A próxima abre em 5 de janeiro, na pré-temporada.'}
         </p>
-      ) : clubStep ? (
-        <div className="dealstep">
-          <h3>
-            1. Acerto com o {from!.n}{' '}
-            <small>
-              {triesLeft(W, pid, mode === 'loan' ? 'loan' : 'club')} de {MAX_TRIES} tentativas
-            </small>
-          </h3>
-          {mode === 'buy' ? (
-            <>
-              <div className="feerow">
-                <button className="btn" onClick={() => setFee(roundMoney(fee * 0.9))} aria-label="Diminuir">
-                  −
-                </button>
-                <b className="num">{money(fee)}</b>
-                <button className="btn" onClick={() => setFee(roundMoney(fee * 1.1))} aria-label="Aumentar">
-                  +
-                </button>
-              </div>
-              <input
-                type="range"
-                min={Math.round(value * 0.4)}
-                max={Math.round(value * 2.5)}
-                step={Math.max(10000, Math.round(value / 100))}
-                value={fee}
-                onChange={(e) => setFee(roundMoney(+e.target.value))}
-                style={{ width: '100%' }}
-                aria-label="Valor da proposta"
-              />
-              <p className="muted" style={{ fontSize: 12, margin: '4px 0 10px' }}>
-                {Math.round((fee / value) * 100)}% do valor de mercado
-              </p>
-            </>
-          ) : (
-            <div className="loanbox">
-              <div className="loansplit">
-                <span>
-                  Você paga <b className="num">{Math.round(share * 100)}%</b>
-                  <small className="num">{money(p.sal * share)}/mês</small>
-                </span>
-                <span className="r">
-                  {from!.s} paga <b className="num">{Math.round((1 - share) * 100)}%</b>
-                  <small className="num">{money(p.sal * (1 - share))}/mês</small>
-                </span>
-              </div>
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={5}
-                value={Math.round(share * 100)}
-                onChange={(e) => setShare(+e.target.value / 100)}
-                style={{ width: '100%' }}
-                aria-label="Parte do salário que você paga"
-              />
-              <div className="seg" style={{ margin: '6px 0 10px' }}>
-                {[
-                  [0.3, 'Eles pagam mais'],
-                  [0.5, 'Dividir 50/50'],
-                  [0.8, 'Você paga mais'],
-                  [1, 'Salário todo'],
-                ].map(([v, l]) => (
-                  <button key={v} className={share === v ? 'on' : ''} onClick={() => setShare(v as number)}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {ansBox(clubAns)}
-          <div className="dealbtns">
-            {clubAns?.r === 'counter' && mode === 'buy' && (
-              <button className="btn pri" onClick={() => sendClub(clubAns.fee)}>
-                Aceitar {money(clubAns.fee)}
-              </button>
-            )}
-            {clubAns?.r === 'counter' && mode === 'loan' && clubAns.share != null && (
-              <button className="btn pri" onClick={() => sendClub(fee, clubAns.share)}>
-                Aceitar pagar {Math.round(clubAns.share * 100)}%
-              </button>
-            )}
-            <button className={`btn ${clubAns?.r === 'counter' ? '' : 'pri'}`} onClick={() => sendClub()}>
-              {mode === 'loan' ? `Propor ${Math.round(share * 100)}%` : 'Enviar proposta'}
-            </button>
-          </div>
-        </div>
-      ) : agreed?.kind === 'loan' ? (
+      ) : !stage ? (
         <div className="dealstep">
           <h3>2. Confirmar empréstimo</h3>
-          <p>
-            Acerto feito: você paga {Math.round(agreed.share * 100)}% do salário ({money(p.sal * agreed.share)}/mês) até
-            o fim da temporada.
-          </p>
-          {ansBox(playerAns)}
           <div className="dealbtns">
             <button className="btn pri" onClick={() => sendPlayer(0, 1)}>
               Trazer {p.n}
             </button>
           </div>
         </div>
+      ) : block ? (
+        <p className="dealans reject">✕ {block}</p>
       ) : (
         <div className="dealstep">
           <h3>
-            {mode === 'renew' || mode === 'free' ? '' : '2. '}Contrato com {p.n}{' '}
-            <small>
-              {triesLeft(W, pid, mode === 'renew' ? 'renew' : 'player')} de {MAX_TRIES} tentativas
-            </small>
+            {stage === 'club' || stage === 'loan'
+              ? `1. Negociação com o ${from!.n}`
+              : `${mode === 'buy' || mode === 'loan' ? '2. ' : ''}Contrato com ${p.n}`}
+            {talk && <Patience talk={talk} />}
           </h3>
-          {agreed && <p className="dealans accept">✓ Valor acertado com o clube: {money(agreed.fee)}.</p>}
-          {demand.refuse ? (
-            <p className="dealans reject">✕ {demand.refuse}</p>
-          ) : (
-            <>
-              <p className="muted" style={{ fontSize: 13, margin: '0 0 8px' }}>
-                {p.n} pede cerca de <b>{money(demand.wage)}/mês</b> e um contrato de {demand.years[0]} a{' '}
-                {demand.years[1]} anos.
-              </p>
-              <label className="kl">Salário mensal</label>
-              <div className="feerow">
-                <button className="btn" onClick={() => setWage(Math.round(wage * 0.95))} aria-label="Diminuir">
-                  −
-                </button>
-                <b className="num">{money(wage)}</b>
-                <button className="btn" onClick={() => setWage(Math.round(wage * 1.05))} aria-label="Aumentar">
-                  +
-                </button>
-              </div>
-              <input
-                type="range"
-                min={Math.round(demand.wage * 0.6)}
-                max={Math.round(demand.wage * 1.5)}
-                step={1000}
-                value={wage}
-                onChange={(e) => setWage(+e.target.value)}
-                style={{ width: '100%' }}
-                aria-label="Salário"
-              />
-              <label className="kl" style={{ display: 'block', marginTop: 8 }}>
-                Duração
-              </label>
-              <div className="seg" style={{ marginBottom: 10 }}>
-                {[1, 2, 3, 4, 5].map((y) => (
-                  <button key={y} className={years === y ? 'on' : ''} onClick={() => setYears(y)}>
-                    {y} ano{y > 1 ? 's' : ''}
-                  </button>
-                ))}
-              </div>
-              {ansBox(playerAns)}
-              <div className="dealbtns">
-                {playerAns?.r === 'counter' && (
-                  <button className="btn pri" onClick={() => sendPlayer(playerAns.wage, years)}>
-                    Aceitar {money(playerAns.wage)}/mês
-                  </button>
-                )}
-                <button className={`btn ${playerAns?.r === 'counter' ? '' : 'pri'}`} onClick={() => sendPlayer()}>
-                  {mode === 'renew' ? 'Propor renovação' : 'Oferecer contrato'}
-                </button>
-              </div>
-            </>
+          {talk && (
+            <TalkLog talk={talk} them={stage === 'club' || stage === 'loan' ? from : null} themName={themName} />
           )}
+
+          {talk?.end === 'off' ? (
+            <div className="dealbtns">
+              <button className="btn" onClick={closeModal}>
+                Fechar
+              </button>
+            </div>
+          ) : (
+            talk && (
+              <>
+                {stage === 'club' && (
+                  <Amount
+                    label="Valor da proposta"
+                    value={fee}
+                    onChange={(v) => setFee(roundMoney(v))}
+                    min={Math.round(value * 0.3)}
+                    max={Math.max(talk.ask, Math.round(value * 3))}
+                    step={Math.max(10000, Math.round(value / 100))}
+                    fmt={money}
+                    stepDown={(v) => roundMoney(v * 0.95)}
+                    stepUp={(v) => roundMoney(v * 1.05)}
+                    hint={
+                      <>
+                        {Math.round((fee / value) * 100)}% do valor de mercado · o {from!.s} pede {money(talk.ask)}
+                      </>
+                    }
+                  />
+                )}
+                {stage === 'loan' && (
+                  <div className="loanbox">
+                    <div className="loansplit">
+                      <span>
+                        Você paga <b className="num">{pct(share)}</b>
+                        <small className="num">{money(p.sal * share)}/mês</small>
+                      </span>
+                      <span className="r">
+                        {from!.s} paga <b className="num">{pct(1 - share)}</b>
+                        <small className="num">{money(p.sal * (1 - share))}/mês</small>
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Math.round(share * 100)}
+                      onChange={(e) => setShare(+e.target.value / 100)}
+                      style={{ width: '100%' }}
+                      aria-label="Parte do salário que você paga"
+                    />
+                    <p className="amount-hint muted">
+                      O {from!.s} quer que você pague {pct(talk.ask)} do salário.
+                    </p>
+                  </div>
+                )}
+                {(stage === 'player' || stage === 'renew') && (
+                  <>
+                    <Amount
+                      label="Salário mensal"
+                      value={wage}
+                      onChange={(v) => setWage(Math.round(v / 1000) * 1000)}
+                      min={Math.round(demand.wage * 0.5)}
+                      max={Math.max(talk.ask, Math.round(demand.wage * 1.5))}
+                      step={1000}
+                      fmt={(v) => money(v) + '/mês'}
+                      stepDown={(v) => Math.round((v * 0.97) / 1000) * 1000}
+                      stepUp={(v) => Math.round((v * 1.03) / 1000) * 1000}
+                      hint={<>Ele pede {money(talk.ask)}/mês</>}
+                    />
+                    <label className="kl" style={{ display: 'block', marginTop: 8 }}>
+                      Duração
+                    </label>
+                    <div className="seg" style={{ marginBottom: 6 }}>
+                      {[1, 2, 3, 4, 5].map((y) => (
+                        <button key={y} className={years === y ? 'on' : ''} onClick={() => setYears(y)}>
+                          {y} ano{y > 1 ? 's' : ''}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="dealbtns">
+                  {open && stage === 'club' && (
+                    <button className="btn" onClick={() => sendClub(talk.ask)}>
+                      Aceitar {money(talk.ask)}
+                    </button>
+                  )}
+                  {open && stage === 'loan' && (
+                    <button className="btn" onClick={() => sendClub(talk.ask)}>
+                      Aceitar pagar {pct(talk.ask)}
+                    </button>
+                  )}
+                  {open && (stage === 'player' || stage === 'renew') && (
+                    <button
+                      className="btn"
+                      onClick={() => sendPlayer(talk.ask, Math.min(Math.max(years, demand.years[0]), demand.years[1]))}
+                    >
+                      Aceitar {money(talk.ask)}/mês
+                    </button>
+                  )}
+                  <button
+                    className="btn pri"
+                    disabled={!open}
+                    onClick={() =>
+                      stage === 'club' ? sendClub(fee) : stage === 'loan' ? sendClub(share) : sendPlayer(wage, years)
+                    }
+                  >
+                    {stage === 'club' || stage === 'loan'
+                      ? 'Enviar proposta'
+                      : mode === 'renew'
+                        ? 'Propor renovação'
+                        : 'Oferecer contrato'}
+                  </button>
+                </div>
+              </>
+            )
+          )}
+          {last?.r === 'reject' && talk?.end !== 'off' && <p className="dealans reject">✕ {last.msg}</p>}
         </div>
       )}
     </Modal>

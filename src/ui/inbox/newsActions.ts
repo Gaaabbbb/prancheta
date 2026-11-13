@@ -56,6 +56,12 @@ export const newsActions = (W: World, it: NewsItem): NewsAction[] => {
     }
     case 'mkt': {
       const offer = /^Proposta por/.test(it.t);
+      const live = offer && pid != null ? W.mk?.offers.find((o) => o.pid === pid) : undefined;
+      if (live) {
+        out.push({ label: 'Negociar', done: 'Proposta vista', modal: { kind: 'offer', id: live.id }, primary: true });
+        if (hasPlayer) out.push(playerAct('Jogador visto'));
+        break;
+      }
       const ending = /^Contratos terminando/.test(it.t);
       out.push({
         label: offer ? 'Ver proposta' : ending ? 'Renovar contratos' : 'Abrir o Mercado',
