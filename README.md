@@ -3,6 +3,10 @@
 Manager de futebol brasileiro, da Série D à elite. Esta é a versão modular do `Prancheta.html`
 original (que continua guardado em `legacy/` como referência), feita com **Vite + React + TypeScript**.
 
+**Jogar:** https://gaaabbbb.github.io/prancheta/ (funciona no computador e no celular; no iPhone, Compartilhar >
+"Adicionar à Tela de Início"). O site é atualizado sozinho a cada envio para a `main`, pelo workflow
+`.github/workflows/pages.yml` (testes, build e publicação no GitHub Pages).
+
 ## Como rodar
 
 Precisa do [Node.js](https://nodejs.org) LTS (22 ou mais novo).
