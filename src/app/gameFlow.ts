@@ -65,7 +65,7 @@ export const currentFixture = (): FixtureRef | undefined => {
  */
 const isDecision = (it: NewsItem): boolean =>
   it.k === 'board' ||
-  (it.k === 'mkt' && /^(Proposta por|Janela de transferências|Contratos terminando)/.test(it.t)) ||
+  (it.k === 'mkt' && /^(Proposta por|Janela de transferências|Contratos terminando|Concorrência por)/.test(it.t)) ||
   (it.k === 'spon' && /(Proposta|quer ser|quer renovar|Propostas de patrocínio)/.test(it.t));
 
 /**

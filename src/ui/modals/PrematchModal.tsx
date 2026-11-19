@@ -22,7 +22,7 @@ import { useWorld } from '@/store/gameStore';
 import { useUi } from '@/store/uiStore';
 import { Crest } from '../components/Crest';
 import { Modal, ModalHeader } from '../components/Modal';
-import { FitBar, Ovr, PosTag, StatusTags, StrengthStars } from '../components/Badges';
+import { FitBar, Ovr, PosTag, RiskTag, StatusTags, StrengthStars } from '../components/Badges';
 
 export function PrematchModal() {
   const W = useWorld();
@@ -102,6 +102,7 @@ export function PrematchModal() {
                     <td className="nm">
                       {p.n}
                       <StatusTags p={p} />
+                      <RiskTag W={W} p={p} />
                     </td>
                     <td className="c">
                       <Ovr v={ovrRole(p, role)} />

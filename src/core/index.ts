@@ -11,6 +11,7 @@ export * from './player/value';
 export * from './player/names';
 export * from './player/evolution';
 export * from './player/performance';
+export * from './player/injury';
 export * from './news';
 export * from './world/squad';
 export * from './world/factory';

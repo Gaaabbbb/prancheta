@@ -3,7 +3,7 @@ import { useUi, type SortKey } from '@/store/uiStore';
 import { useWorld } from '@/store/gameStore';
 import { money, potTxt, rating } from '../format';
 import { sortPlayers } from '../sortPlayers';
-import { FitBar, MoraleBar, Ovr, PosTag, StatusTags } from './Badges';
+import { FitBar, MoraleBar, Ovr, PosTag, RiskTag, StatusTags } from './Badges';
 
 /** Cabeçalho de coluna ordenável. */
 export function SortTh({ k, label, cls, title }: { k: SortKey; label: string; cls?: string; title?: string }) {
@@ -58,6 +58,7 @@ export function PlayerTable({ players, highlight }: { players: Player[]; highlig
             <td className="nm">
               {p.n}
               <StatusTags p={p} />
+              <RiskTag W={W} p={p} />
               {p.c === W.user && W.mk?.sell[p.id] != null && <span className="tag mk">à venda</span>}
               {p.c === W.user && W.mk?.loan.includes(p.id) && <span className="tag">p/ empréstimo</span>}
               {p.loan && <span className="tag">emprestado</span>}

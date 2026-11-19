@@ -254,3 +254,12 @@ td.nowrap {
   margin: 4px 0 6px;
   text-align: center;
 }
+
+.rivalbox {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--red);
+  background: #e5484d18;
+  border-radius: var(--r);
+  font-size: 13px;
+}

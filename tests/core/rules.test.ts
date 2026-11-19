@@ -52,8 +52,9 @@ describe('regras novas', () => {
       me.lineup = xi.map((id) => (W.pmap[id] && W.pmap[id].inj <= 0 && W.pmap[id].sus <= 0 ? id : null));
       stepDay(W);
     }
-    expect(sum / n).toBeLessThan(93);
-    expect(sum / n).toBeGreaterThan(78);
+    // quem nunca roda o time chega cansado aos jogos (o desgaste não some mais no apito final)
+    expect(sum / n).toBeLessThan(85);
+    expect(sum / n).toBeGreaterThan(55);
   }, 30000);
 
   it('avisa quando um suspenso do usuário volta a ficar disponível', () => {

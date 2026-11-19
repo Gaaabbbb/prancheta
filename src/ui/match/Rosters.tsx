@@ -1,7 +1,7 @@
 import type { PointerEvent as RPointerEvent } from 'react';
 import { MAX_SUBS, ovr, type Match, type Player, type Side } from '@/core';
 import { Crest } from '../components/Crest';
-import { Ovr, PosTag } from '../components/Badges';
+import { Ovr, PosTag, RiskTag } from '../components/Badges';
 import { fitCol, type TeamColors } from './colors';
 import { type Pick } from './MatchPitch';
 import { Shirt } from '../pitch/Pitch';
@@ -79,7 +79,10 @@ export function Reserves({
             >
               <Shirt col={col} n={nums.get(p.id) ?? ''} size={26} />
               <PosTag p={p.p} />
-              <span className="nm">{p.n}</span>
+              <span className="nm">
+                {p.n}
+                <RiskTag W={m.W} p={p} short />
+              </span>
               <Ovr v={ovr(p)} />
               <Stamina f={p.f} />
             </div>

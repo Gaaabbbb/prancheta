@@ -258,6 +258,21 @@ falhar, e isso é esperado. Nesse caso, apague ou ajuste o teste afetado e mante
     parecido. Na prática, as trocas no segundo tempo passam a fazer diferença.
   - **Mercado:** os clubes brasileiros voltam a ser a maioria dos interessados nos seus jogadores; os sul-americanos
     aparecem de vez em quando (e não entram na janela complementar, que é só do mercado nacional).
+- **Desgaste, lesões e concorrência (v0.8)**:
+  - **Cansaço que fica:** o desgaste do jogo não é mais devolvido no apito final e a recuperação ficou mais lenta
+    (`recovery` 10: três dias de descanso devolvem ~25% do que falta, uma semana ~50%). Quem joga sempre chega ao segundo
+    jogo da semana com ~50% de fôlego; a IA roda o elenco e começa os jogos com ~86% em média.
+  - **Lesões ligadas ao desgaste** (`RULES.injuryModel = 'risk'`, `src/core/player/injury.ts`): cada jogador tem um
+    risco que cresce com o cansaço (com 40% de fôlego, ~4 vezes o de quem está descansado), com a idade (acima dos 29),
+    com a carga (3 ou mais jogos em 10 dias) e nos 3 jogos depois de voltar de lesão (recaída). O motor sorteia a lesão
+    pelo risco médio em campo e o lesionado pelo risco de cada um. Seis tipos com duração própria (pancada, estiramento,
+    entorse, lesão muscular, fratura, ligamento); risco alto puxa para as mais graves. Quem volta tem no máximo 70% de
+    fôlego. Numa temporada simulada: ~0,26 lesão por jogo e ~16% com mais de um mês. A IA poupa quem está com risco alto.
+  - **Selo de risco** (médio ou alto, com o motivo na dica) na Tática, no pré-jogo, no Elenco, na partida (campo e
+    reservas) e na ficha do jogador, que também mostra o tipo da lesão e o tempo fora.
+  - **Concorrência na negociação** (`rivalBids`): enquanto você negocia uma compra, outro clube brasileiro pode fazer
+    proposta pelo mesmo jogador. O clube dono sobe o pedido, a notícia para o Avançar, e você tem 3 dias para fechar
+    antes que o rival leve o jogador.
 - Pequenas correções: o placar agregado do mata-mata ficava fora do lugar; os gols do relatório da partida agora
   ficam do lado do time que marcou; a legenda da Série D só cita a repescagem nos anos em que ela existe; a notícia de título agora cita a divisão
   em que o clube foi campeão (antes, o campeão da Série B aparecia como campeão da Série A).

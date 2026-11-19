@@ -59,6 +59,15 @@ export interface Player {
   /** temporada em que ficou sem clube */
   fa?: number;
   _injNow?: boolean;
+  /** risco no momento da lesão (para a gravidade) */
+  _injW?: number;
+  /** dias dos últimos jogos (carga) */
+  gm?: number[];
+  /** jogos desde a volta de lesão (risco de recaída) */
+  rtn?: number;
+  /** tipo da lesão atual e afastamento previsto em dias */
+  injT?: string;
+  injD?: number;
   _promoted?: boolean;
 }
 

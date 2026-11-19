@@ -265,6 +265,7 @@ export const offerToClub = (W: World, pid: number, fee: number): ClubAnswer => {
   const before = t.ask;
   const res = haggleDown(t, fee, roundMoney);
   if (res.r === 'accept') {
+    delete t.rival;
     mk.agreed[pid] = { fee: res.v, kind: 'buy', share: 1 };
     const msg = `O ${club} aceitou ${brl(res.v)}. Agora acerte o contrato com o jogador.`;
     say(t, 'them', res.v, msg);
@@ -863,6 +864,63 @@ const aiOffersToUser = (W: World) => {
   }
 };
 
+/** Dias que o usuário tem para fechar depois que um rival entra na disputa (ou rodadas, no calendário antigo). */
+const RIVAL_DAYS = 3;
+
+/**
+ * Concorrência: enquanto o usuário negocia a compra, outro clube pode fazer proposta pelo mesmo jogador. O clube dono
+ * sobe o pedido e o limite; se o usuário não fechar o acordo em poucos dias, o rival leva o jogador.
+ * `force` (testes) faz o rival aparecer na hora.
+ */
+export const rivalBids = (W: World, force = false): void => {
+  const mk = W.mk;
+  if (!mk?.talks || mk.win !== windowId(W)) return;
+  for (const [key, t] of Object.entries(mk.talks)) {
+    const [pidS, stage] = key.split(':');
+    if (stage !== 'club' || t.end) continue;
+    const p = W.pmap[+pidS];
+    if (!p || p.c < 0 || p.c === W.user || mk.agreed[p.id]) continue;
+    const owner = W.clubs[p.c];
+    if (t.rival) {
+      if (W.day < t.rival.until) continue;
+      // prazo acabou: o rival fecha
+      const rival = W.clubs[t.rival.club];
+      if (rival.bal < t.rival.fee || squad(W, rival.id).length >= MAX_SQUAD) {
+        delete t.rival;
+        continue;
+      }
+      const fee = t.rival.fee;
+      executeTransfer(W, p, rival.id, fee, Math.max(p.sal, calcWage(p, rival.div)), rint(mk, 2, 4));
+      t.end = 'off';
+      const msg = `O ${owner.n} fechou com o ${rival.n}: ${p.n} foi vendido por ${brl(fee)}.`;
+      say(t, 'them', 0, msg);
+      news(W, `${p.n} foi para o ${rival.n}`, msg + ' A negociação com você terminou.', 'mkt', { pid: p.id });
+      continue;
+    }
+    if (!force && rnd(mk) > perTick(W, 0.25)) continue;
+    // rival: clube brasileiro de nível parecido, com dinheiro para pagar
+    const o = ovr(p);
+    const cands = W.clubs.filter(
+      (c) =>
+        c.id !== W.user &&
+        c.id !== owner.id &&
+        c.div !== 'SUL' &&
+        Math.abs(clubLevel(c) - o) <= 8 &&
+        c.bal > t.ask &&
+        squad(W, c.id).length < MAX_SQUAD - 1,
+    );
+    if (!cands.length) continue;
+    const rival = pickOne(mk, cands);
+    const fee = roundMoney(Math.max(t.ask, t.lim) * (0.98 + rnd(mk) * 0.12));
+    t.lim = Math.max(t.lim, roundMoney(fee * 1.02));
+    t.ask = Math.max(t.ask, roundMoney(fee * 1.06));
+    t.rival = { club: rival.id, fee, until: W.day + (isDays(W) ? RIVAL_DAYS : 1) };
+    const msg = `O ${rival.n} também fez proposta: ${brl(fee)}. Agora o ${owner.n} pede ${brl(t.ask)}, e você tem ${isDays(W) ? RIVAL_DAYS + ' dias' : 'uma rodada'} para fechar antes do rival.`;
+    say(t, 'them', t.ask, msg);
+    news(W, `Concorrência por ${p.n}`, msg, 'mkt', { pid: p.id });
+  }
+};
+
 /** Um dia de mercado (depois dos jogos). */
 export const marketTick = (W: World): void => {
   if (!ensureMarket(W)) return;
@@ -903,6 +961,7 @@ export const marketTick = (W: World): void => {
     mk.agreed = {};
     return;
   }
+  rivalBids(W);
   aiTransfers(W);
   aiOffersToUser(W);
 };

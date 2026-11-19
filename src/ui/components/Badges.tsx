@@ -1,4 +1,14 @@
-import { POS_GROUP, youthFac, type Club, type Player, type Pos } from '@/core';
+import {
+  injuryRisk,
+  POS_GROUP,
+  riskLevel,
+  RULES,
+  youthFac,
+  type Club,
+  type Player,
+  type Pos,
+  type World,
+} from '@/core';
 import { fitColor, ovrCls, strVal } from '../format';
 
 export const Ovr = ({ v }: { v: number }) => <span className={`ovr ${ovrCls(v)}`}>{v}</span>;
@@ -80,6 +90,22 @@ export const StatusTags = ({ p }: { p: Player }) => (
     )}
   </>
 );
+
+/** Selo de risco de lesão (só médio e alto), com o motivo na dica. */
+export const RiskTag = ({ W, p, short }: { W: World; p: Player; short?: boolean }) => {
+  if (RULES.injuryModel !== 'risk' || p.inj > 0 || p.c < 0) return null;
+  const r = injuryRisk(W, p);
+  const lv = riskLevel(r.w);
+  if (lv === 'baixo') return null;
+  return (
+    <span
+      className={`tag risk ${lv === 'alto' ? 'hi' : 'md'}`}
+      title={`Risco de lesão ${lv}: ${r.why.join(', ') || 'desgaste'}`}
+    >
+      {short ? '⚠' : `risco ${lv}`}
+    </span>
+  );
+};
 
 /** Botões segmentados (escolha única). */
 export function Seg<T extends string | number>({

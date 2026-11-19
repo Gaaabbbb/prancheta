@@ -8,6 +8,7 @@ import { FORMATIONS, MENT } from '../constants/formations';
 import { clamp } from '../math';
 import { RULES } from '../rules';
 import { formFactor } from '../player/performance';
+import { injuryRisk } from '../player/injury';
 import { ovr, ovrRole } from '../player/ratings';
 import { chance, pick, rand, rf, ri, wpick } from '../rng';
 import type { Club, Player, SideStats, Tactic, World } from '../types';
@@ -45,6 +46,8 @@ const DEF_W: ZoneTable = [
 ];
 const TICK = 90 / 214;
 export const MAX_SUBS = 5;
+/** Chance de lesão por lance com risco médio 1 (modelo 'risk'); calibrada para ~0,27 lesão por jogo. */
+const INJ_BASE = 0.00098;
 
 export interface OnField {
   pl: Player;
@@ -279,6 +282,7 @@ export class Match {
   private _lastAI?: number;
   private _lastMom?: number;
   private _fp?: number;
+  private _risk?: { m: number; w: [number, number] };
 
   constructor(W: World, home: Club, away: Club, opts?: MatchOptions) {
     opts = opts || {};
@@ -432,7 +436,12 @@ export class Match {
     // falta / lesão
     const foulP = 0.115 * (0.8 + ot.pres * 0.2) * (this.zone >= 2 ? 1.25 : 0.8);
     if (chance(foulP)) return this.foul(s, o);
-    if (chance(0.0006 * 2 * this.injuryRisk() * RULES.injuryRate)) return this.injury(chance(0.5) ? s : o);
+    if (RULES.injuryModel === 'risk') {
+      // lesão pelo risco de cada jogador em campo (cansaço, idade, carga, recaída)
+      const r = this.riskNow();
+      if (chance(INJ_BASE * ((r[0] + r[1]) / 2) * RULES.injuryRate))
+        return this.injury(rand() * (r[0] + r[1]) < r[s.idx] ? s : o);
+    } else if (chance(0.0006 * 2 * this.injuryRisk() * RULES.injuryRate)) return this.injury(chance(0.5) ? s : o);
     switch (this.zone) {
       case 0: {
         if (chance(0.18 - t.temp * 0.05)) {
@@ -743,8 +752,18 @@ export class Match {
   injury(side: Side): void {
     const cand = side.on.filter((x) => !side.out[x.pl.id]);
     if (!cand.length) return;
+    let o: OnField;
+    if (RULES.injuryModel === 'risk') {
+      // quem tem mais risco se machuca mais
+      const ws = cand.map((x) => injuryRisk(this.W, x.pl).w);
+      let r = rand() * ws.reduce((t, v) => t + v, 0),
+        i = 0;
+      while (i < cand.length - 1 && r >= ws[i]) r -= ws[i++];
+      o = cand[i];
+      o.pl._injW = ws[i];
+    }
     // jogadores cansados se machucam mais (com tiredInjury = 0, todos têm o mesmo peso, como no original)
-    const o = RULES.tiredInjury ? pickTired(cand, RULES.tiredInjury) : pick(cand);
+    else o = RULES.tiredInjury ? pickTired(cand, RULES.tiredInjury) : pick(cand);
     o.pl._injNow = true;
     side.out[o.pl.id] = 'inj';
     this.emit('inj', side.idx, { p: o.pl }, 2);
@@ -879,6 +898,16 @@ export class Match {
         done++;
       }
     }
+  }
+
+  /** Risco médio de lesão em campo de cada time (recalculado a cada 3 minutos). */
+  riskNow(): [number, number] {
+    const m = Math.floor(this.min / 3);
+    if (this._risk && this._risk.m === m) return this._risk.w;
+    const avg = (s: Side) => (s.on.length ? s.on.reduce((t, o) => t + injuryRisk(this.W, o.pl).w, 0) / s.on.length : 1);
+    const w: [number, number] = [avg(this.sides[0]), avg(this.sides[1])];
+    this._risk = { m, w };
+    return w;
   }
 
   /** Multiplicador da chance de lesão pelo cansaço médio em campo (1 = original). */

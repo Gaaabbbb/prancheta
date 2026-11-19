@@ -230,6 +230,14 @@ function DealBody({ pid, mode }: { pid: number; mode: Mode }) {
               : `${mode === 'buy' || mode === 'loan' ? '2. ' : ''}Contrato com ${p.n}`}
             {talk && <Patience talk={talk} />}
           </h3>
+          {talk?.rival && !talk.end && stage === 'club' && (
+            <p className="rivalbox">
+              <b>Concorrência:</b> o {W.clubs[talk.rival.club].n} ofereceu {money(talk.rival.fee)} por {p.n}.{' '}
+              {talk.rival.until - W.day <= 0
+                ? 'Feche hoje ou ele leva o jogador.'
+                : `Você tem ${unitTxt(W, talk.rival.until - W.day)} para fechar antes dele.`}
+            </p>
+          )}
           {talk && (
             <TalkLog talk={talk} them={stage === 'club' || stage === 'loan' ? from : null} themName={themName} />
           )}

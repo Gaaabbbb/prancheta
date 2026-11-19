@@ -3,6 +3,7 @@ import { RULES } from '../rules';
 import { chance, ri } from '../rng';
 import type { World } from '../types';
 import type { Match } from './engine';
+import { daysToOut, notePlayed, rollInjury } from '../player/injury';
 
 /** Aplica os efeitos pós-jogo nos jogadores: estatísticas, cartões, lesões e moral. */
 export const applyMatch = (W: World, m: Match) => {
@@ -32,9 +33,18 @@ export const applyMatch = (W: World, m: Match) => {
       if (RULES.postMatchRecovery && s.f0[pid] != null && pl.f < s.f0[pid])
         pl.f += (s.f0[pid] - pl.f) * RULES.postMatchRecovery;
       if (pl._injNow) {
-        pl.inj = chance(RULES.longInjury) ? ri(6, 16) : ri(1, 4);
+        if (RULES.injuryModel === 'risk') {
+          const t = rollInjury(pl._injW || 1);
+          const days = ri(t.days[0], t.days[1]);
+          pl.inj = daysToOut(W, days);
+          pl.injT = t.name;
+          pl.injD = days;
+          delete pl.rtn;
+        } else pl.inj = chance(RULES.longInjury) ? ri(6, 16) : ri(1, 4);
         delete pl._injNow;
+        delete pl._injW;
       }
+      notePlayed(pl, W.day);
     }
     // reservas não usados perdem um pouco de moral
     for (const pl of s.bench) if (!s.played.has(pl.id)) pl.mo = clamp(pl.mo - 0.5, 10, 100);

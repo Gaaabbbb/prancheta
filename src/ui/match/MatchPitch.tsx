@@ -1,5 +1,5 @@
 import { type PointerEvent as RPointerEvent } from 'react';
-import { FORMATIONS, type Match, type MatchEvent, type Side } from '@/core';
+import { FORMATIONS, injuryRisk, riskLevel, RULES, type Match, type MatchEvent, type Side } from '@/core';
 import { fitCol } from './colors';
 import { placeFormation } from '../pitch/layout';
 import { shortName } from '../pitch/numbers';
@@ -44,6 +44,8 @@ export function MatchPitch({
               const goals = m.goals.filter((g) => g.pid === p.id && g.side === s.idx).length;
               const rat = s.rat[p.id] ?? 6;
               const hurt = s.out[p.id] === 'inj';
+              const risk = RULES.injuryModel === 'risk' && !hurt ? injuryRisk(m.W, p) : null;
+              const lv = risk ? riskLevel(risk.w) : 'baixo';
               return (
                 <PlayerToken
                   key={p.id}
@@ -67,6 +69,14 @@ export function MatchPitch({
                       {goals > 0 && <i className="pgoal">{goals > 1 ? goals : ''}⚽</i>}
                       {s.yel[p.id] ? <i className="pyc" /> : null}
                       {hurt && <i className="phurt">✚</i>}
+                      {lv !== 'baixo' && (
+                        <i
+                          className={`prisk ${lv === 'alto' ? 'hi' : 'md'}`}
+                          title={`Risco de lesão ${lv}: ${risk!.why.join(', ')}`}
+                        >
+                          !
+                        </i>
+                      )}
                     </>
                   }
                 />

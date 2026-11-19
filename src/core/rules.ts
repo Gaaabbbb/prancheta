@@ -60,6 +60,12 @@ export interface Rules {
   career: 'legacy' | 'curve';
   /** fração do cansaço do jogo que passa logo depois da partida (0 = nada, como no original) */
   postMatchRecovery: number;
+  /**
+   * lesões:
+   * - 'legacy': chance por lance com peso fraco do cansaço e duração curta ou longa (original)
+   * - 'risk': risco por jogador (cansaço, idade, carga de jogos, recaída), tipos de lesão com duração própria
+   */
+  injuryModel: 'legacy' | 'risk';
 }
 
 export const LEGACY_RULES: Readonly<Rules> = {
@@ -84,13 +90,14 @@ export const LEGACY_RULES: Readonly<Rules> = {
   calendar: 'rounds',
   career: 'legacy',
   postMatchRecovery: 0,
+  injuryModel: 'legacy',
 };
 
 export const CURRENT_RULES: Readonly<Rules> = {
   youthGrowth: 0.5,
   fatigue: 2.2,
   recoveryMode: 'rest',
-  recovery: 7.5,
+  recovery: 10,
   fitBase: 0.67,
   fitImpact: 0.33,
   aiFitBase: 0.65,
@@ -107,7 +114,8 @@ export const CURRENT_RULES: Readonly<Rules> = {
   sponsorModel: 'div',
   calendar: 'days',
   career: 'curve',
-  postMatchRecovery: 0.38,
+  postMatchRecovery: 0,
+  injuryModel: 'risk',
 };
 
 /** Regras em vigor (mutável de propósito, para os testes trocarem). */

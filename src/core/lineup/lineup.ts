@@ -4,10 +4,17 @@ import type { Pos } from '../constants/attributes';
 import { RULES } from '../rules';
 import type { Club, Player, World } from '../types';
 import { squad } from '../world/squad';
+import { injuryRisk } from '../player/injury';
 
 export const BENCH_SIZE = 9;
 
-const fitScore = (pl: Player, role: Pos) => ovrRole(pl, role) * (RULES.aiFitBase + (RULES.aiFit * pl.f) / 100);
+const fitScore = (pl: Player, role: Pos, W?: World) => {
+  const s = ovrRole(pl, role) * (RULES.aiFitBase + (RULES.aiFit * pl.f) / 100);
+  if (!W || RULES.injuryModel !== 'risk') return s;
+  // a IA poupa quem está com risco alto de lesão
+  const w = injuryRisk(W, pl).w;
+  return s * (w >= 3 ? 0.86 : w >= 2 ? 0.94 : 1);
+};
 const benchScore = (p: Player) => ovr(p) * (RULES.benchFitBase + (RULES.benchFit * p.f) / 100);
 
 /** Monta o banco: um goleiro e os melhores restantes. */
@@ -39,7 +46,7 @@ export const autoLineup = (W: World, club: Club): Club => {
       bs = -1;
     for (const pl of pool) {
       if (usedIds.has(pl.id)) continue;
-      const s = fitScore(pl, role);
+      const s = fitScore(pl, role, W);
       if (s > bs) {
         bs = s;
         best = pl;
@@ -59,7 +66,7 @@ export const autoLineup = (W: World, club: Club): Club => {
         if (!a || !b) continue;
         const ri = slots[i][0],
           rj = slots[j][0];
-        if (fitScore(a, rj) + fitScore(b, ri) > fitScore(a, ri) + fitScore(b, rj) + 0.5) {
+        if (fitScore(a, rj, W) + fitScore(b, ri, W) > fitScore(a, ri, W) + fitScore(b, rj, W) + 0.5) {
           lineup[i] = b.id;
           lineup[j] = a.id;
         }

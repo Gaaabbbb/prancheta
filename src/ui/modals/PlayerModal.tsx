@@ -11,6 +11,9 @@ import {
   RULES,
   tidyLineup,
   toggleWatch,
+  injuryRisk,
+  outTxt,
+  riskLevel,
 } from '@/core';
 import { useGame, useWorld } from '@/store/gameStore';
 import { toast, useUi } from '@/store/uiStore';
@@ -101,6 +104,32 @@ export function PlayerModal({ id }: { id: number }) {
           <dl className="kv">
             <dt>Condição física</dt>
             <dd>{Math.round(p.f)}%</dd>
+            {RULES.injuryModel === 'risk' && c && p.inj > 0 && (
+              <>
+                <dt>Lesão</dt>
+                <dd style={{ color: '#ff9a9d' }}>
+                  {p.injT || 'Lesionado'}
+                  {p.injD ? ` · fora por ${outTxt(Math.max(1, p.inj * 4))}` : ` · ${p.inj} jogo(s)`}
+                </dd>
+              </>
+            )}
+            {RULES.injuryModel === 'risk' && c && p.inj <= 0 && !p.y && (
+              <>
+                <dt>Risco de lesão</dt>
+                <dd>
+                  {(() => {
+                    const r = injuryRisk(W, p);
+                    const lv = riskLevel(r.w);
+                    return (
+                      <span style={{ color: lv === 'alto' ? '#ff9a9d' : lv === 'médio' ? '#ffc58a' : 'var(--ok)' }}>
+                        {lv}
+                        {r.why.length ? ` (${r.why.join(', ')})` : ''}
+                      </span>
+                    );
+                  })()}
+                </dd>
+              </>
+            )}
             <dt>Moral</dt>
             <dd>{Math.round(p.mo)}</dd>
             <dt>Valor de mercado</dt>

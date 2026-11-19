@@ -27,6 +27,8 @@ export interface Talk {
   log: TalkMsg[];
   /** fim da conversa */
   end?: 'deal' | 'off';
+  /** clube rival que entrou na disputa: proposta e último dia para o usuário fechar antes dele */
+  rival?: { club: number; fee: number; until: number };
 }
 
 export type TalkResult =

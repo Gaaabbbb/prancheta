@@ -20,7 +20,7 @@ import {
 } from '@/core';
 import { useGame } from '@/store/gameStore';
 import { toast } from '@/store/uiStore';
-import { Ovr, PosTag, StatusTags, FitBar, MoraleBar } from '../components/Badges';
+import { Ovr, PosTag, RiskTag, StatusTags, FitBar, MoraleBar } from '../components/Badges';
 import { SavedTactics } from '../components/SavedTactics';
 import { sortPlayers } from '../sortPlayers';
 import { TacticControls } from '../components/TacticControls';
@@ -152,7 +152,11 @@ export function Tactics({ W }: PageProps) {
       sel: sameSpot(sel, spot),
       dim: !available(p),
       title: tip(p, role),
-      tag: !available(p) ? <span className="xtag">{p.inj > 0 ? `lesionado (${p.inj})` : 'suspenso'}</span> : undefined,
+      tag: !available(p) ? (
+        <span className="xtag">{p.inj > 0 ? `lesionado (${p.inj})` : 'suspenso'}</span>
+      ) : (
+        <RiskTag W={W} p={p} />
+      ),
     };
   };
 
@@ -291,6 +295,7 @@ export function Tactics({ W }: PageProps) {
                       <td className="nm">
                         {p.n}
                         <StatusTags p={p} />
+                        <RiskTag W={W} p={p} />
                       </td>
                       <td className="c">
                         <Ovr v={ovr(p)} />

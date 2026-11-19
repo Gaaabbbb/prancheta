@@ -13,6 +13,9 @@ import { teamStrength } from '../world/strength';
 import { dirty } from '../world/squad';
 import { youthReport, youthTick } from '../youth/youth';
 import { announceRetirements, careerTick } from '../player/evolution';
+import { backFromInjury, INJURY_TYPES, outTxt } from '../player/injury';
+
+const INJURY_TXT: Record<string, string> = Object.fromEntries(INJURY_TYPES.map((t) => [t.name, t.txt]));
 import { advanceComp } from './advance';
 import { advanceForeignLeague, isForeignLeague, quickPlay } from './foreignLeagues';
 import { CUP_ADVANCE, resolveConflicts } from './cups';
@@ -93,10 +96,12 @@ export const userAfterMatch = (W: World, comp: Competition, f: Fixture, m: Match
       news(
         W,
         'Lesão: ' + p.n,
-        p.n +
-          (isDays(W)
-            ? ' vai desfalcar o time por cerca de ' + p.inj * 4 + ' dias.'
-            : ' vai desfalcar o time por ' + p.inj + ' jogo(s).'),
+        p.injD && p.injT
+          ? `${p.n} sofreu ${INJURY_TXT[p.injT] || 'uma lesão'} e fica fora por ${outTxt(p.injD)}.`
+          : p.n +
+              (isDays(W)
+                ? ' vai desfalcar o time por cerca de ' + p.inj * 4 + ' dias.'
+                : ' vai desfalcar o time por ' + p.inj + ' jogo(s).'),
         'med',
         { pid },
       );
@@ -150,6 +155,7 @@ export const playDay = (W: World, userMatch?: Match): void => {
     p.f = recoverFitness(p.f, p.at[9], p.c >= 0 ? rest[W.clubs[p.c].div] : 7);
     if (p.inj > 0) {
       p.inj--;
+      if (p.inj === 0) backFromInjury(p);
       if (p.inj === 0 && p.c === W.user)
         news(W, 'Departamento médico', p.n + ' está recuperado e liberado para jogar.', 'med', { pid: p.id });
     }
@@ -231,8 +237,16 @@ export const advanceDay = (W: World, userMatch?: Match): void => {
       if (p.injd >= 4) {
         p.injd = 0;
         p.inj--;
+        if (p.inj === 0) backFromInjury(p);
         if (p.inj === 0 && p.c === W.user)
-          news(W, 'Departamento médico', p.n + ' está recuperado e liberado para jogar.', 'med', { pid: p.id });
+          news(
+            W,
+            'Departamento médico',
+            p.n +
+              ' está recuperado e liberado, mas volta sem 100% do fôlego e com risco de recaída nos próximos jogos.',
+            'med',
+            { pid: p.id },
+          );
       }
     }
   }

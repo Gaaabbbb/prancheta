@@ -153,6 +153,14 @@ table.t td.nm {
   background: #f59e4233;
   color: #ffc58a;
 }
+.tag.risk.md {
+  background: #f59e4229;
+  color: #ffc58a;
+}
+.tag.risk.hi {
+  background: #e5484d33;
+  color: #ff9a9d;
+}
 .tag.ret {
   background: #a78bfa26;
   color: #c4b5fd;
